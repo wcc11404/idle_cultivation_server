@@ -23,15 +23,22 @@ idle_cultivation_server/
 │   │   └── admin.py            # 管理后台相关
 │   ├── core/                   # 核心模块
 │   │   ├── config.py           # 配置管理
-│   │   └── security.py         # 安全相关
+│   │   ├── security.py         # 安全相关
+│   │   └── config_loader.py    # 配置文件加载
 │   ├── db/                     # 数据库相关
 │   │   ├── database.py         # 数据库连接
 │   │   └── models.py           # 数据模型
 │   └── schemas/                # 数据验证模型
 │       ├── auth.py             # 认证相关
 │       └── game.py             # 游戏数据相关
+├── config/                     # 配置文件软链接
+│   ├── items.json
+│   ├── realms.json
+│   ├── recipes.json
+│   └── spells.json
 ├── sql/                        # SQL 脚本
 │   └── init.sql                # 数据库初始化脚本
+├── start.sh                    # 启动脚本
 ├── requirements.txt            # 依赖包
 └── README.md                   # 项目说明
 ```
@@ -73,15 +80,21 @@ psql -d idle_cultivation_game -f sql/init.sql
 ### 2. 运行服务
 
 ```bash
-# 启动服务
-python main.py
+# 启动服务（后台运行）
+bash start.sh
+
+# 查看服务状态
+ps aux | grep uvicorn
+
+# 查看服务日志
+tail -f server.log
 ```
 
-服务将在 `http://localhost:8444` 运行。
+服务将在 `http://172.25.6.6:8444` 运行。
 
 ### 3. 访问 API 文档
 
-打开浏览器访问：`http://localhost:8444/api/docs`
+打开浏览器访问：`http://172.25.6.6:8444/api/docs`
 
 ## API 接口
 
