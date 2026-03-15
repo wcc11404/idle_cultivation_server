@@ -6,10 +6,11 @@ async def init_db():
     """初始化数据库连接"""
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
-        modules={"models": ["app.db.models"]}
+        modules={"models": ["app.db.models"]},
+        use_tz=True,
+        timezone="Asia/Shanghai"
     )
-    # 生成数据库表
-    await Tortoise.generate_schemas()
+    await Tortoise.generate_schemas(safe=True)
 
 
 async def close_db():

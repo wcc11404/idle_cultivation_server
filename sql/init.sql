@@ -16,8 +16,8 @@ CREATE TABLE accounts (
     server_id VARCHAR(20) DEFAULT 'default',  -- 区服ID
     token_version INT DEFAULT 0,              -- 单设备登录控制，每次登录+1
     is_banned BOOLEAN DEFAULT FALSE,          -- 封号标记
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 玩家数据表
@@ -26,8 +26,7 @@ CREATE TABLE player_data (
     server_id VARCHAR(20) DEFAULT 'default',  -- 冗余存储，便于分区查询
     game_version VARCHAR(20) DEFAULT 'v1.0.0', -- 游戏版本号，记录玩家上次保存的版本
     data JSONB NOT NULL,                      -- 所有游戏数据
-    last_online_at TIMESTAMP DEFAULT NOW(),   -- 用于离线收益计算
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 索引

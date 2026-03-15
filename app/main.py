@@ -1,14 +1,25 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.config import settings
 from app.db.database import init_db, close_db
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    await init_db()
+    yield
+    await close_db()
+
 
 # 创建 FastAPI 应用实例
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # 配置 CORS
@@ -22,18 +33,6 @@ app.add_middleware(
 
 # 注册 API 路由
 app.include_router(api_router, prefix=settings.API_V1_STR)
-
-# 启动事件
-@app.on_event("startup")
-async def startup_event():
-    """启动时初始化数据库"""
-    await init_db()
-
-# 关闭事件
-@app.on_event("shutdown")
-async def shutdown_event():
-    """关闭时关闭数据库连接"""
-    await close_db()
 
 # 根路径
 @app.get("/")

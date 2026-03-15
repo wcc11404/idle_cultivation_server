@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.schemas.game import SaveGameRequest, SaveGameResponse, LoadGameResponse, BreakthroughRequest, BreakthroughResponse, UseItemRequest, UseItemResponse, BattleVictoryRequest, BattleVictoryResponse
 from app.db.models import Account, PlayerData
 from app.core.security import decode_token
+from app.core.config_loader import get_initial_player_data
 from datetime import datetime
 import random
 
@@ -45,39 +46,7 @@ async def load_game(current_user: Account = Depends(get_current_user)):
     """加载游戏数据"""
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
-        # 创建初始数据
-        initial_data = {
-            "player": {
-                "realm": "炼气期",
-                "realm_level": 1,
-                "health": 500.0,
-                "spirit_energy": 0.0,
-                "nickname": f"修仙者{current_user.id[:6]}",
-                "avatar_id": "default_1",
-                "title_id": ""
-            },
-            "inventory": {
-                "capacity": 50,
-                "slots": {}
-            },
-            "spell_system": {
-                "player_spells": {},
-                "equipped_spells": {
-                    "tuna": None,
-                    "active": [],
-                    "passive": []
-                }
-            },
-            "alchemy_system": {
-                "equipped_furnace_id": "",
-                "learned_recipes": ["health_pill"]
-            },
-            "lianli_system": {
-                "tower_highest_floor": 0,
-                "daily_dungeon_data": {}
-            },
-            "timestamp": int(datetime.now().timestamp())
-        }
+        initial_data = get_initial_player_data(str(current_user.id))
         player_data = await PlayerData.create(
             account_id=current_user.id,
             data=initial_data
@@ -102,13 +71,11 @@ async def save_game(request: SaveGameRequest, current_user: Account = Depends(ge
     else:
         # 更新数据
         player_data.data = request.data
-        player_data.last_online_at = datetime.now()
-        player_data.updated_at = datetime.now()
         await player_data.save()
     
     return SaveGameResponse(
         success=True,
-        last_online_at=int(player_data.last_online_at.timestamp())
+        last_online_at=int(player_data.updated_at.timestamp())
     )
 
 
