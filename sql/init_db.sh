@@ -1,15 +1,9 @@
 #!/bin/bash
 
-# 启动服务端脚本
-echo "启动 Idle Cultivation Server..."
+# 初始化数据库脚本
+echo "开始初始化数据库..."
 
-# 激活虚拟环境
-source venv/bin/activate
-
-# 检查并启动 PostgreSQL 服务
-echo "检查 PostgreSQL 服务状态..."
-
-# 检测系统类型
+# 检查 PostgreSQL 服务状态
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
     echo "检测到 macOS 系统"
@@ -46,20 +40,36 @@ else
     fi
 fi
 
-# 检查端口是否被占用，如果占用则杀死进程
-PORT=8444
-echo "检查端口 $PORT 是否被占用..."
-PID=$(lsof -i:$PORT | grep -E 'uvicorn|Python|Google' | awk '{print $2}')
-if [ -n "$PID" ]; then
-    echo "端口 $PORT 被进程 $PID 占用，正在终止..."
-    kill -9 $PID 2>/dev/null
-    sleep 1
-    echo "进程已终止"
+# 创建数据库
+echo "创建数据库 idle_cultivation_game..."
+createdb idle_cultivation_game
+if [ $? -eq 0 ]; then
+    echo "数据库创建成功"
+else
+    echo "数据库创建失败，可能已存在"
 fi
 
-# 直接使用 uvicorn 命令启动，指定主机地址
-echo "启动 FastAPI 服务..."
-nohup uvicorn app.main:app --host 127.0.0.1 --port $PORT --reload > server.log 2>&1 &
-echo "服务已后台启动，日志输出到 server.log"
-echo "服务地址: http://127.0.0.1:$PORT"
-echo "API 文档: http://127.0.0.1:$PORT/api/docs"
+# 初始化表结构
+echo "初始化表结构..."
+psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
+if [ $? -eq 0 ]; then
+    echo "表结构初始化成功"
+else
+    echo "表结构初始化失败"
+    exit 1
+fi
+
+# 验证数据库
+echo "验证数据库..."
+psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
+if [ $? -eq 0 ]; then
+    echo "数据库验证成功"
+else
+    echo "数据库验证失败"
+    exit 1
+fi
+
+echo "数据库初始化完成！"
+echo "测试账号：test / test123"
+echo "服务地址：http://127.0.0.1:8444"
+echo "API 文档：http://127.0.0.1:8444/api/docs"

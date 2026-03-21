@@ -90,11 +90,11 @@ ps aux | grep uvicorn
 tail -f server.log
 ```
 
-服务将在 `http://172.25.6.6:8444` 运行。
+服务将在 `http://127.0.0.1:8444` 运行。
 
 ### 3. 访问 API 文档
 
-打开浏览器访问：`http://172.25.6.6:8444/api/docs`
+打开浏览器访问：`http://127.0.0.1:8444/api/docs`
 
 ## API 接口
 

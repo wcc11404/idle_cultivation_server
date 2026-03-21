@@ -76,9 +76,9 @@ def get_initial_player_data(account_id: str) -> dict:
         "spell_system": {
             "player_spells": {},
             "equipped_spells": {
-                "tuna": None,
-                "active": [],
-                "passive": []
+                "0": [],
+                "1": [],
+                "2": []
             }
         },
         "alchemy_system": {

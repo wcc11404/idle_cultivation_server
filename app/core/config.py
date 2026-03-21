@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     
     # 数据库配置
-    DATABASE_URL: str = "postgres://postgres:postgres@localhost:5432/idle_cultivation_game"
+    DATABASE_URL: str = "postgres://hsams:hsams@localhost:5432/idle_cultivation_game"
     
     # JWT配置
     SECRET_KEY: str = "your-secret-key-here"
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_DAYS: int = 7
     
     # 服务端配置
-    SERVER_HOST: str = "172.25.6.6"
+    SERVER_HOST: str = "127.0.0.1"
     SERVER_PORT: int = 8444
     
     class Config:

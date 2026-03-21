@@ -8,6 +8,7 @@ from app.core.logger import logger
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import time
+import json
 
 router = APIRouter()
 security = HTTPBearer()
@@ -17,7 +18,7 @@ security = HTTPBearer()
 async def register(request: RegisterRequest):
     """注册账号"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/register - username: {request.username}")
+    logger.info(f"[IN] POST /auth/register - {json.dumps(request.dict(), ensure_ascii=False)}")
     
     existing_account = await Account.get_or_none(username=request.username)
     if existing_account:
@@ -37,15 +38,23 @@ async def register(request: RegisterRequest):
         data=initial_data
     )
     
-    logger.info(f"[OUT] POST /auth/register - 注册成功 - account_id: {account.id} - 耗时: {time.time() - start_time:.4f}s")
-    return {"success": True, "account_id": str(account.id), "message": "注册成功"}
+    # 为新注册用户生成初始token
+    access_token_expires = timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+    access_token = create_access_token(
+        data={"account_id": str(account.id), "version": account.token_version},
+        expires_delta=access_token_expires
+    )
+    
+    response_data = {"success": True, "account_id": str(account.id), "token": access_token, "message": "注册成功"}
+    logger.info(f"[OUT] POST /auth/register - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    return response_data
 
 
 @router.post("/login")
 async def login(request: LoginRequest):
     """登录账号"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/login - username: {request.username}")
+    logger.info(f"[IN] POST /auth/login - {json.dumps(request.dict(), ensure_ascii=False)}")
     
     account = await Account.get_or_none(username=request.username)
     if not account:
@@ -86,22 +95,7 @@ async def login(request: LoginRequest):
             data=initial_data
         )
     
-    now = datetime.now(timezone.utc)
-    last_online = player_data.updated_at
-    if last_online.tzinfo is None:
-        last_online = last_online.replace(tzinfo=timezone.utc)
-    offline_seconds = int((now - last_online).total_seconds())
-    offline_seconds = min(offline_seconds, 4 * 3600)
-    
-    offline_reward = {
-        "spirit_energy": int(offline_seconds * 0.1),
-        "spirit_stones": int(offline_seconds * 10 / 3600)
-    }
-    
-    await player_data.save()
-    
-    logger.info(f"[OUT] POST /auth/login - 登录成功 - account_id: {account.id} - 耗时: {time.time() - start_time:.4f}s")
-    return {
+    response_data = {
         "success": True,
         "token": access_token,
         "expires_in": int(access_token_expires.total_seconds()),
@@ -110,17 +104,17 @@ async def login(request: LoginRequest):
             "username": account.username,
             "server_id": account.server_id
         },
-        "data": player_data.data,
-        "offline_reward": offline_reward if offline_seconds > 60 else None,
-        "offline_seconds": offline_seconds
+        "data": player_data.data
     }
+    logger.info(f"[OUT] POST /auth/login - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    return response_data
 
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Token续期"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/refresh")
+    logger.info(f"[IN] POST /auth/refresh - token: {credentials.credentials}")
     
     token = credentials.credentials
     payload = decode_token(token)
@@ -157,21 +151,25 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
         expires_delta=access_token_expires
     )
     
-    logger.info(f"[OUT] POST /auth/refresh - 续期成功 - account_id: {account_id} - 耗时: {time.time() - start_time:.4f}s")
-    return RefreshResponse(
+    response_data = RefreshResponse(
         success=True,
         token=new_token,
         expires_in=int(access_token_expires.total_seconds())
     )
+    logger.info(f"[OUT] POST /auth/refresh - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    return response_data
 
 
 @router.post("/logout", response_model=dict)
 async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """登出"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/logout")
+    logger.info(f"[IN] POST /auth/logout - token: {credentials.credentials}")
     
     # 这里可以做一些清理工作，比如记录登出时间等
     
-    logger.info(f"[OUT] POST /auth/logout - 登出成功 - 耗时: {time.time() - start_time:.4f}s")
-    return {"success": True, "message": "登出成功"}
+    response_data = {"success": True, "message": "登出成功"}
+    logger.info(f"[OUT] POST /auth/logout - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    return response_data
+
+
