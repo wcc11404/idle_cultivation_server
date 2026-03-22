@@ -33,9 +33,14 @@ async def register(request: RegisterRequest):
     
     initial_data = get_initial_player_data(str(account.id))
     
+    # 为新注册用户设置一个特殊的 last_online_at 值（使用 epoch 时间0）
+    from datetime import datetime, timezone
+    epoch_time = datetime.fromtimestamp(0, timezone.utc)
+    
     await PlayerData.create(
         account_id=account.id,
-        data=initial_data
+        data=initial_data,
+        last_online_at=epoch_time
     )
     
     # 为新注册用户生成初始token
@@ -95,6 +100,45 @@ async def login(request: LoginRequest):
             data=initial_data
         )
     
+    # 检查是否需要每日重置
+    def check_daily_reset(player_data):
+        from datetime import datetime, timezone, timedelta
+        current_time = datetime.now(timezone.utc)
+        last_login = player_data.last_online_at
+        
+        # 计算上次登录日期和当前日期（基于重置时间）
+        def get_reset_date(t):
+            reset_time = t.replace(hour=settings.DAILY_RESET_HOUR, minute=0, second=0, microsecond=0)
+            if t < reset_time:
+                return reset_time - timedelta(days=1)
+            return reset_time
+        
+        last_reset_date = get_reset_date(last_login)
+        current_reset_date = get_reset_date(current_time)
+        
+        # 如果日期不同，执行重置
+        if last_reset_date != current_reset_date:
+            logger.info(f"[GAME] 执行每日重置 - account_id: {account.id}")
+            # 重置破镜草洞穴次数
+            if "lianli_system" in player_data.data and "daily_dungeon_data" in player_data.data["lianli_system"]:
+                daily_dungeon_data = player_data.data["lianli_system"]["daily_dungeon_data"]
+                if "foundation_herb_cave" in daily_dungeon_data:
+                    max_count = daily_dungeon_data["foundation_herb_cave"].get("max_count", 3)
+                    daily_dungeon_data["foundation_herb_cave"]["remaining_count"] = max_count
+            return True
+        return False
+    
+    # 执行每日重置检查
+    if check_daily_reset(player_data):
+        await player_data.save()
+    
+    # 首次登录时，将 last_online_at 从 epoch 0 更新为当前时间
+    from datetime import datetime, timezone
+    epoch_time = datetime.fromtimestamp(0, timezone.utc)
+    if player_data.last_online_at == epoch_time:
+        player_data.last_online_at = datetime.now(timezone.utc)
+        await player_data.save()
+    
     response_data = {
         "success": True,
         "token": access_token,
@@ -114,10 +158,11 @@ async def login(request: LoginRequest):
 async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Token续期"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/refresh - token: {credentials.credentials}")
-    
     token = credentials.credentials
     payload = decode_token(token)
+    account_id = payload.get("account_id") if payload else ""
+    token_version = payload.get("version") if payload else ""
+    logger.info(f"[IN] POST /auth/refresh - token: {token} - account_id: {account_id} - token_version: {token_version}")
     
     if not payload:
         logger.warning(f"[OUT] POST /auth/refresh - INVALID_TOKEN - 耗时: {time.time() - start_time:.4f}s")
@@ -164,7 +209,11 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
 async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """登出"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/logout - token: {credentials.credentials}")
+    token = credentials.credentials
+    payload = decode_token(token)
+    account_id = payload.get("account_id") if payload else ""
+    token_version = payload.get("version") if payload else ""
+    logger.info(f"[IN] POST /auth/logout - token: {token} - account_id: {account_id} - token_version: {token_version}")
     
     # 这里可以做一些清理工作，比如记录登出时间等
     

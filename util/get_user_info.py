@@ -46,6 +46,7 @@ async def get_user_info(username):
         print("\n=== 游戏数据 ===")
         if player_data:
             print(f"最后更新时间: {player_data.updated_at.astimezone(CST).strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"最后在线时间: {player_data.last_online_at.astimezone(CST).strftime('%Y-%m-%d %H:%M:%S')}")
             print(f"游戏版本: {player_data.game_version}")
             print("\n详细游戏数据:")
             print(json.dumps(player_data.data, indent=2, ensure_ascii=False))

@@ -49,7 +49,7 @@ fi
 # 检查端口是否被占用，如果占用则杀死进程
 PORT=8444
 echo "检查端口 $PORT 是否被占用..."
-PID=$(lsof -i:$PORT | grep -E 'uvicorn|Python|Google' | awk '{print $2}')
+PID=$(lsof -i:$PORT | grep -E 'uvicorn|python|Python|Google' | awk '{print $2}')
 if [ -n "$PID" ]; then
     echo "端口 $PORT 被进程 $PID 占用，正在终止..."
     kill -9 $PID 2>/dev/null
@@ -59,7 +59,7 @@ fi
 
 # 直接使用 uvicorn 命令启动，指定主机地址
 echo "启动 FastAPI 服务..."
-nohup uvicorn app.main:app --host 127.0.0.1 --port $PORT --reload > server.log 2>&1 &
+nohup uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload > server.log 2>&1 &
 echo "服务已后台启动，日志输出到 server.log"
-echo "服务地址: http://127.0.0.1:$PORT"
-echo "API 文档: http://127.0.0.1:$PORT/api/docs"
+echo "服务地址: http://0.0.0.0:$PORT"
+echo "API 文档: http://0.0.0.0:$PORT/api/docs"

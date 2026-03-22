@@ -112,6 +112,10 @@ tail -f server.log
 - `POST /api/game/player/breakthrough` - 突破境界
 - `POST /api/game/inventory/use_item` - 使用物品
 - `POST /api/game/battle/victory` - 战斗胜利
+- `GET /api/game/dungeon/info` - 获取副本信息
+- `POST /api/game/dungeon/finish` - 完成副本（扣减次数）
+- `POST /api/game/claim_offline_reward` - 领取离线奖励
+- `GET /api/game/rank` - 获取排行榜
 
 ### 管理后台相关
 

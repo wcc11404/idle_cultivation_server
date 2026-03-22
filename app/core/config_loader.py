@@ -62,16 +62,26 @@ def get_initial_player_data(account_id: str) -> dict:
         "player": {
             "realm": initial_realm,
             "realm_level": 1,
-            "health": float(level_data["health"]),
+            "health": level_data["health"],
             "spirit_energy": 0.0,
             "max_spirit_energy": level_data["max_spirit_energy"],
+            ### 玩家信息
             "nickname": f"修仙者{str(account_id)[:6]}",
             "avatar_id": "default_1",
-            "title_id": ""
+            "title_id": "",
         },
         "inventory": {
             "capacity": 50,
-            "slots": {}
+            "slots": {
+                "0": {
+                    "count": 1,
+                    "id": "starter_pack"
+                },
+                "1": {
+                    "count": 1,
+                    "id": "test_pack"
+                }
+            }
         },
         "spell_system": {
             "player_spells": {},
@@ -83,10 +93,16 @@ def get_initial_player_data(account_id: str) -> dict:
         },
         "alchemy_system": {
             "equipped_furnace_id": "",
-            "learned_recipes": ["health_pill"]
+            "learned_recipes": []
         },
         "lianli_system": {
             "tower_highest_floor": 0,
-            "daily_dungeon_data": {}
-        }
+            "daily_dungeon_data": {
+                "foundation_herb_cave": {
+                    "max_count": 3,
+                    "remaining_count": 3
+                }
+            }
+        },
+        "version": "1.0"
     }

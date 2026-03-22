@@ -26,6 +26,7 @@ class PlayerData(models.Model):
     server_id = fields.CharField(max_length=20, default="default")
     game_version = fields.CharField(max_length=20, default="v1.0.0")
     data = fields.JSONField(null=False)
+    last_online_at = fields.DatetimeField(auto_now=True, timezone=True)
     updated_at = fields.DatetimeField(auto_now=True, timezone=True)
 
     class Meta:

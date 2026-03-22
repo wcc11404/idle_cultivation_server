@@ -40,18 +40,46 @@ else
     fi
 fi
 
+# 删除现有数据库
+echo "删除现有数据库 idle_cultivation_game..."
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS 系统
+    dropdb --if-exists idle_cultivation_game
+else
+    # Linux 系统
+    sudo -u postgres dropdb --if-exists idle_cultivation_game
+fi
+if [ $? -eq 0 ]; then
+    echo "数据库删除成功"
+else
+    echo "数据库删除失败，可能不存在"
+fi
+
 # 创建数据库
 echo "创建数据库 idle_cultivation_game..."
-createdb idle_cultivation_game
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS 系统
+    createdb idle_cultivation_game
+else
+    # Linux 系统
+    sudo -u postgres createdb idle_cultivation_game
+fi
 if [ $? -eq 0 ]; then
     echo "数据库创建成功"
 else
-    echo "数据库创建失败，可能已存在"
+    echo "数据库创建失败"
+    exit 1
 fi
 
 # 初始化表结构
 echo "初始化表结构..."
-psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS 系统
+    psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
+else
+    # Linux 系统
+    sudo -u postgres psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
+fi
 if [ $? -eq 0 ]; then
     echo "表结构初始化成功"
 else
@@ -61,7 +89,13 @@ fi
 
 # 验证数据库
 echo "验证数据库..."
-psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS 系统
+    psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
+else
+    # Linux 系统
+    sudo -u postgres psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
+fi
 if [ $? -eq 0 ]; then
     echo "数据库验证成功"
 else
