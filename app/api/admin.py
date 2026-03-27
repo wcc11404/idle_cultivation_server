@@ -57,7 +57,6 @@ async def get_admin(credentials: HTTPAuthorizationCredentials = Depends(security
             detail="无效的管理员 token"
         )
     
-    logger.info("[ADMIN] 管理员认证成功")
     return True
 
 

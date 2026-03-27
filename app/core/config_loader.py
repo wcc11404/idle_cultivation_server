@@ -59,34 +59,53 @@ def get_initial_player_data(account_id: str) -> dict:
     level_data = get_initial_level_data()
     
     return {
+        "account_info": {
+            "nickname": f"修仙者{str(account_id)[:6]}",
+            "avatar_id": "abstract",
+            "title_id": "",
+            "is_vip": False,
+            "vip_expire_time": None
+        },
         "player": {
             "realm": initial_realm,
             "realm_level": 1,
-            "health": float(level_data["health"]),
+            "health": level_data["health"],
             "spirit_energy": 0.0,
-            "max_spirit_energy": level_data["max_spirit_energy"],
-            "nickname": f"修仙者{str(account_id)[:6]}",
-            "avatar_id": "default_1",
-            "title_id": ""
+            # "max_spirit_energy": level_data["max_spirit_energy"]
         },
         "inventory": {
             "capacity": 50,
-            "slots": {}
+            "slots": {
+                "0": {
+                    "count": 1,
+                    "id": "starter_pack"
+                },
+                "1": {
+                    "count": 1,
+                    "id": "test_pack"
+                }
+            }
         },
         "spell_system": {
             "player_spells": {},
             "equipped_spells": {
-                "tuna": None,
-                "active": [],
-                "passive": []
+                "0": [],
+                "1": [],
+                "2": []
             }
         },
         "alchemy_system": {
             "equipped_furnace_id": "",
-            "learned_recipes": ["health_pill"]
+            "learned_recipes": []
         },
         "lianli_system": {
             "tower_highest_floor": 0,
-            "daily_dungeon_data": {}
-        }
+            "daily_dungeon_data": {
+                "foundation_herb_cave": {
+                    "max_count": 3,
+                    "remaining_count": 3
+                }
+            }
+        },
+        "version": "1.0"
     }

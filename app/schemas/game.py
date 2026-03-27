@@ -65,3 +65,37 @@ class BattleVictoryResponse(BaseModel):
     success: bool
     loot: list
     new_highest_floor: Optional[int] = None
+
+
+class DungeonInfoResponse(BaseModel):
+    """副本信息响应"""
+    success: bool
+    dungeon_data: dict
+
+
+class EnterDungeonRequest(BaseModel):
+    """进入副本请求"""
+    dungeon_id: str
+
+
+class EnterDungeonResponse(BaseModel):
+    """进入副本响应"""
+    success: bool
+    remaining_count: int
+    message: str
+
+
+class RankItem(BaseModel):
+    """排行榜项目"""
+    nickname: str
+    realm: str
+    level: int
+    spirit_energy: float
+    title_id: str
+    rank: int
+
+
+class RankResponse(BaseModel):
+    """排行榜响应"""
+    success: bool
+    ranks: list[RankItem]

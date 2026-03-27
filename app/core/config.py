@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import platform
 
 
 class Settings(BaseSettings):
@@ -10,16 +11,25 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     
     # 数据库配置
-    DATABASE_URL: str = "postgres://postgres:postgres@localhost:5432/idle_cultivation_game"
+    @property
+    def DATABASE_URL(self) -> str:
+        # 根据操作系统使用不同的数据库用户
+        if platform.system() == "Darwin":  # macOS
+            return "postgres://hsams:hsams@localhost:5432/idle_cultivation_game"
+        else:  # Linux
+            return "postgres://postgres:postgres@localhost:5432/idle_cultivation_game"
     
     # JWT配置
-    SECRET_KEY: str = "your-secret-key-here"
+    SECRET_KEY: str = "e68891f1323f5579e79adf3f9e1852336e22e5761b12e9f6a2fd6bf3eca827b5"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_DAYS: int = 7
     
     # 服务端配置
-    SERVER_HOST: str = "172.25.6.6"
+    SERVER_HOST: str = "0.0.0.0"
     SERVER_PORT: int = 8444
+    
+    # 每日重置时间（小时）
+    DAILY_RESET_HOUR: int = 4
     
     class Config:
         env_file = ".env"
