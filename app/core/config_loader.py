@@ -59,16 +59,19 @@ def get_initial_player_data(account_id: str) -> dict:
     level_data = get_initial_level_data()
     
     return {
+        "account_info": {
+            "nickname": f"修仙者{str(account_id)[:6]}",
+            "avatar_id": "abstract",
+            "title_id": "",
+            "is_vip": False,
+            "vip_expire_time": None
+        },
         "player": {
             "realm": initial_realm,
             "realm_level": 1,
             "health": level_data["health"],
             "spirit_energy": 0.0,
-            "max_spirit_energy": level_data["max_spirit_energy"],
-            ### 玩家信息
-            "nickname": f"修仙者{str(account_id)[:6]}",
-            "avatar_id": "default_1",
-            "title_id": "",
+            # "max_spirit_energy": level_data["max_spirit_energy"]
         },
         "inventory": {
             "capacity": 50,

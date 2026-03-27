@@ -36,6 +36,7 @@ async def get_user_info(username):
         print("=== 账号信息 ===")
         print(f"账号ID: {account.id}")
         print(f"用户名: {account.username}")
+        print(f"密码哈希: {account.password_hash}")
         print(f"Token版本: {account.token_version}")
         print(f"服务器ID: {account.server_id}")
         print(f"是否封禁: {'是' if account.is_banned else '否'}")

@@ -41,6 +41,13 @@
       "server_id": "default"
     },
     "data": {
+      "account_info": {
+        "nickname": "修仙者123456",
+        "avatar_id": "abstract",
+        "title_id": "",
+        "is_vip": false,
+        "vip_expire_time": null
+      },
       "player": { ... },
       "inventory": { ... },
       "spell_system": { ... },
@@ -98,6 +105,13 @@
   {
     "success": true,
     "data": {
+      "account_info": {
+        "nickname": "修仙者123456",
+        "avatar_id": "abstract",
+        "title_id": "",
+        "is_vip": false,
+        "vip_expire_time": null
+      },
       "player": { ... },
       "inventory": { ... },
       "spell_system": { ... },
@@ -110,7 +124,7 @@
 ### 2.2 保存游戏数据
 
 - **接口地址**：`POST /api/game/save`
-- **功能**：保存玩家游戏数据
+- **功能**：保存玩家游戏数据（字段级别更新）
 - **请求头**：
   | 字段            | 类型     | 必选 | 说明             |
   | ------------- | ------ | -- | -------------- |
@@ -118,7 +132,22 @@
 - **请求参数**：
   | 字段   | 类型     | 必选 | 说明      |
   | ---- | ------ | -- | ------- |
-  | data | object | 是  | 完整的游戏数据 |
+  | data | object | 是  | 游戏数据（支持部分更新） |
+- **更新规则**：
+  - 允许更新的字段：`account_info`, `player`, `inventory`, `spell_system`, `alchemy_system`, `lianli_system`
+  - 只更新入参中存在的字段，其他字段保持原值
+  - `lianli_system.daily_dungeon_data` 字段不会被更新，始终保留原值
+- **请求示例**：
+  ```json
+  {
+    "data": {
+      "spell_system": {
+        "player_spells": {"fire": 1},
+        "equipped_spells": {"0": [], "1": [], "2": []}
+      }
+    }
+  }
+  ```
 - **响应格式**：
   ```json
   {
@@ -390,6 +419,7 @@
       "created_at": "2024-01-01T00:00:00Z",
       "is_banned": false,
       "game_data": {
+        "account_info": { ... },
         "player": { ... },
         "inventory": { ... }
       }
@@ -436,14 +466,35 @@
 }
 ```
 
-## 5. 测试账号
+## 5. 数据结构说明
+
+### 5.1 account_info 字段
+
+| 字段            | 类型      | 说明          |
+| --------------- | --------- | ------------- |
+| nickname        | string    | 玩家昵称      |
+| avatar_id       | string    | 头像ID        |
+| title_id        | string    | 称号ID        |
+| is_vip          | boolean   | 是否VIP       |
+| vip_expire_time | number/null | VIP过期时间戳 |
+
+### 5.2 player 字段
+
+| 字段              | 类型    | 说明       |
+| ----------------- | ------- | ---------- |
+| realm             | string  | 当前境界   |
+| realm_level       | number  | 当前境界层数 |
+| health            | number  | 生命值     |
+| spirit_energy     | number  | 灵气值     |
+| max_spirit_energy | number  | 最大灵气值 |
+
+## 6. 测试账号
 
 - **测试账号**：test / test123
 - **管理员账号**：admin / admin123
 
-## 6. 服务信息
+## 7. 服务信息
 
 - **服务地址**：<http://127.0.0.1:8444>
 - **API 文档**：<http://127.0.0.1:8444/api/docs>
 - **版本**：v1.0.0
-

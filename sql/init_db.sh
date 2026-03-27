@@ -10,17 +10,17 @@ if [ "$(uname)" = "Darwin" ]; then
     PG_STATUS=$(brew services list | grep postgresql)
     
     if echo "$PG_STATUS" | grep -q "started"; then
-        echo "PostgreSQL 服务已运行"
-    else
-        echo "PostgreSQL 服务未运行，正在启动..."
-        brew services start postgresql@14
-        if [ $? -eq 0 ]; then
-            echo "PostgreSQL 服务启动成功"
+            echo "PostgreSQL 服务已运行"
         else
-            echo "PostgreSQL 服务启动失败，请检查权限"
-            exit 1
+            echo "PostgreSQL 服务未运行，正在启动..."
+            brew services start postgresql@16
+            if [ $? -eq 0 ]; then
+                echo "PostgreSQL 服务启动成功"
+            else
+                echo "PostgreSQL 服务启动失败，请检查权限"
+                exit 1
+            fi
         fi
-    fi
 else
     # Linux 系统
     echo "检测到 Linux 系统"

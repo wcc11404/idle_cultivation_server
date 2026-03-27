@@ -13,8 +13,11 @@ class Settings(BaseSettings):
     # 数据库配置
     @property
     def DATABASE_URL(self) -> str:
-        # 统一使用 postgres 用户
-        return "postgres://postgres:postgres@localhost:5432/idle_cultivation_game"
+        # 根据操作系统使用不同的数据库用户
+        if platform.system() == "Darwin":  # macOS
+            return "postgres://hsams:hsams@localhost:5432/idle_cultivation_game"
+        else:  # Linux
+            return "postgres://postgres:postgres@localhost:5432/idle_cultivation_game"
     
     # JWT配置
     SECRET_KEY: str = "e68891f1323f5579e79adf3f9e1852336e22e5761b12e9f6a2fd6bf3eca827b5"

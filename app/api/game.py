@@ -88,6 +88,9 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
     
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     
+    # 允许更新的字段列表
+    allowed_fields = ["account_info", "player", "inventory", "spell_system", "alchemy_system", "lianli_system"]
+    
     # 不做数据类型转换，由客户端保证数据类型的正确性
     game_data = request.data
     
@@ -99,8 +102,32 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
             data=game_data
         )
     else:
-        # 更新数据
-        player_data.data = game_data
+        # 更新数据 - 字段级别更新
+        existing_data = player_data.data
+        
+        # 遍历入参中的字段，只更新允许的字段
+        for field in allowed_fields:
+            if field in game_data:
+                if field == "lianli_system":
+                    # lianli_system 特殊处理：保留 daily_dungeon_data
+                    if "lianli_system" not in existing_data:
+                        existing_data["lianli_system"] = {}
+                    
+                    # 保存原有的 daily_dungeon_data
+                    original_daily_dungeon = existing_data["lianli_system"].get("daily_dungeon_data", {})
+                    
+                    # 更新 lianli_system 的其他字段
+                    for sub_field in game_data["lianli_system"]:
+                        if sub_field != "daily_dungeon_data":
+                            existing_data["lianli_system"][sub_field] = game_data["lianli_system"][sub_field]
+                    
+                    # 恢复原有的 daily_dungeon_data
+                    existing_data["lianli_system"]["daily_dungeon_data"] = original_daily_dungeon
+                else:
+                    # 其他字段直接更新
+                    existing_data[field] = game_data[field]
+        
+        player_data.data = existing_data
         player_data.last_online_at = datetime.now(timezone.utc)
         await player_data.save()
     
@@ -416,12 +443,12 @@ async def finish_dungeon(request: EnterDungeonRequest, credentials: HTTPAuthoriz
     remaining_count = dungeon_info.get("remaining_count", 0)
     if remaining_count <= 0:
         response_data = EnterDungeonResponse(
-        success=False,
-        remaining_count=0,
-        message="副本次数已用完"
-    )
-    logger.info(f"[OUT] POST /game/dungeon/finish - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
-    return response_data
+            success=False,
+            remaining_count=0,
+            message="副本次数已用完"
+        )
+        logger.info(f"[OUT] POST /game/dungeon/finish - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+        return response_data
     
     # 扣减次数
     dungeon_info["remaining_count"] = remaining_count - 1
@@ -451,12 +478,16 @@ async def get_rank(server_id: str = "default"):
     for account in accounts:
         player_data = await PlayerData.get_or_none(account_id=account.id)
         if player_data:
+            # 从account_info获取nickname和title_id
+            account_info = player_data.data.get("account_info", {})
+            nickname = account_info.get("nickname", "")
+            title_id = account_info.get("title_id", "")
+            
+            # 从player获取其他数据
             player = player_data.data.get("player", {})
-            nickname = player.get("nickname", "")
             realm = player.get("realm", "")
             level = player.get("realm_level", 0)
             spirit_energy = player.get("spirit_energy", 0.0)
-            title_id = player.get("title_id", "")
             
             # 转换spirit_energy为浮点数
             if isinstance(spirit_energy, str):
