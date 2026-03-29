@@ -41,7 +41,6 @@ class UseItemRequest(BaseModel):
     """使用物品请求"""
     item_id: str
     count: int = 1
-    current_inventory: dict
 
 
 class UseItemResponse(BaseModel):

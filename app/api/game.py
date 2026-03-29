@@ -505,7 +505,7 @@ async def get_rank(server_id: str = "default"):
     # 按照境界和层数排序
     # 这里需要一个境界优先级映射
     realm_priority = {
-        "练气期": 1,
+        "炼气期": 1,
         "筑基期": 2,
         "金丹期": 3,
         "元婴期": 4,

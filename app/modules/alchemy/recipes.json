@@ -1,0 +1,55 @@
+{
+	"recipes": {
+		"health_pill": {
+			"id": "health_pill",
+			"name": "补血丹",
+			"success_value": 50,
+			"base_time": 3.0,
+			"materials": {
+				"mat_herb": 2
+			},
+			"spirit_energy": 1,
+			"product": "health_pill",
+			"product_count": 1
+		},
+		"spirit_pill": {
+			"id": "spirit_pill",
+			"name": "补气丹",
+			"success_value": 40,
+			"base_time": 10.0,
+			"materials": {
+				"mat_herb": 10
+			},
+			"spirit_energy": 1,
+			"product": "spirit_pill",
+			"product_count": 1
+		},
+		"foundation_pill": {
+			"id": "foundation_pill",
+			"name": "筑基丹",
+			"success_value": 30,
+			"base_time": 30.0,
+			"materials": {
+				"foundation_herb": 3,
+				"mat_herb": 10
+			},
+			"spirit_energy": 5,
+			"product": "foundation_pill",
+			"product_count": 1
+		},
+		"golden_core_pill": {
+			"id": "golden_core_pill",
+			"name": "金丹丹",
+			"success_value": 20,
+			"base_time": 40.0,
+			"materials": {
+				"foundation_herb": 3,
+				"foundation_pill": 3,
+				"mat_herb": 10
+			},
+			"spirit_energy": 10,
+			"product": "golden_core_pill",
+			"product_count": 1
+		}
+	}
+}
