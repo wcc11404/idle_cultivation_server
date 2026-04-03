@@ -77,9 +77,7 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
     inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
     spell_system = SpellSystem.from_db_data(db_data.get("spell_system", {}))
     alchemy_system = AlchemySystem.from_db_data(
-        db_data.get("alchemy_system", {}),
-        spell_system,
-        inventory_system
+        db_data.get("alchemy_system", {})
     )
     
     result = inventory_system.use_item(request.item_id, player, spell_system, alchemy_system)

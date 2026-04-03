@@ -53,3 +53,45 @@ class RecipeData:
         """检查丹方是否存在"""
         cls._load_config()
         return recipe_id in cls._RECIPES_CONFIG
+    
+    @classmethod
+    def get_recipe_name(cls, recipe_id: str) -> str:
+        """获取丹方名称"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("name", "未知丹方")
+    
+    @classmethod
+    def get_recipe_success_value(cls, recipe_id: str) -> int:
+        """获取丹方基础成功值"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("success_value", 0)
+    
+    @classmethod
+    def get_recipe_base_time(cls, recipe_id: str) -> float:
+        """获取丹方基础耗时"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("base_time", 0.0)
+    
+    @classmethod
+    def get_recipe_materials(cls, recipe_id: str) -> Dict[str, int]:
+        """获取丹方材料需求"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("materials", {}).copy()
+    
+    @classmethod
+    def get_recipe_product(cls, recipe_id: str) -> str:
+        """获取丹方成品ID"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("product", "")
+    
+    @classmethod
+    def get_recipe_product_count(cls, recipe_id: str) -> int:
+        """获取丹方成品数量"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("product_count", 1)
+    
+    @classmethod
+    def get_recipe_spirit_energy(cls, recipe_id: str) -> int:
+        """获取丹方灵气消耗"""
+        recipe = cls.get_recipe(recipe_id)
+        return recipe.get("spirit_energy", 0)

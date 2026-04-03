@@ -3,7 +3,7 @@ from app.schemas.auth import RegisterRequest, LoginRequest, LoginResponse, Refre
 from app.db.models import Account, PlayerData
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_token
 from app.core.config import settings
-from app.core.config_loader import get_initial_player_data
+from app.core.init_player_info import get_initial_player_data
 from app.core.logger import logger
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials

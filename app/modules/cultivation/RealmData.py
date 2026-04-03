@@ -208,3 +208,10 @@ class RealmData:
         """获取完整配置（用于其他模块）"""
         cls._load_config()
         return cls._REALMS_CONFIG
+    
+    @classmethod
+    def get_first_realm(cls) -> str:
+        """获取第一个境界"""
+        cls._load_config()
+        realm_order = cls._REALMS_CONFIG.get("realm_order", [])
+        return realm_order[0] if realm_order else "炼气期"

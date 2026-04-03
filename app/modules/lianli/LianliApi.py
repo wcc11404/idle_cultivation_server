@@ -10,8 +10,9 @@ from app.db.models import Account, PlayerData as DBPlayerData
 from app.core.security import decode_token
 from app.core.logger import logger
 from app.modules import (
-    PlayerData, LianliSystem, LianliData, SpellSystem, InventorySystem
+    PlayerData, LianliSystem, SpellSystem, InventorySystem
 )
+from .AreasData import AreasData
 from datetime import datetime, timezone
 import time
 import json
@@ -75,16 +76,14 @@ async def get_lianli_status(credentials: HTTPAuthorizationCredentials = Depends(
     db_data = player_data.data
     
     lianli_system = LianliSystem.from_db_data(
-        db_data.get("lianli_system", {}),
-        SpellSystem.from_db_data(db_data.get("spell_system", {})),
-        InventorySystem.from_db_data(db_data.get("inventory", {}))
+        db_data.get("lianli_system", {})
     )
     
     response_data = {
         "success": True,
         "tower_highest_floor": lianli_system.tower_highest_floor,
         "daily_dungeon_data": lianli_system.daily_dungeon_data,
-        "areas_config": LianliData.get_areas_config()
+        "areas_config": AreasData.get_areas_config()
     }
     logger.info(f"[OUT] GET /game/lianli/status - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -116,9 +115,7 @@ async def execute_battle(request: dict, credentials: HTTPAuthorizationCredential
     inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
     
     lianli_system = LianliSystem.from_db_data(
-        db_data.get("lianli_system", {}),
-        spell_system,
-        inventory_system
+        db_data.get("lianli_system", {})
     )
     
     area_id = request.get("area_id")
@@ -142,13 +139,15 @@ async def execute_battle(request: dict, credentials: HTTPAuthorizationCredential
     result = lianli_system.execute_battle(
         player, 
         enemy_data, 
+        spell_system,
+        inventory_system,
         combat_buffs
     )
     
     if result["victory"]:
         if is_tower:
             lianli_system.finish_tower_battle(floor, True)
-        elif lianli_system.is_special_area(area_id) or lianli_system.is_daily_dungeon(area_id):
+        elif AreasData.is_special_area(area_id) or AreasData.is_daily_dungeon(area_id):
             lianli_system.use_daily_dungeon_count(area_id)
         
         db_data["player"] = player.to_dict()
@@ -203,15 +202,13 @@ async def get_dungeon_info(credentials: HTTPAuthorizationCredentials = Depends(s
     db_data = player_data.data
     
     lianli_system = LianliSystem.from_db_data(
-        db_data.get("lianli_system", {}),
-        SpellSystem.from_db_data(db_data.get("spell_system", {})),
-        InventorySystem.from_db_data(db_data.get("inventory", {}))
+        db_data.get("lianli_system", {})
     )
     
     response_data = {
         "success": True,
         "dungeon_data": lianli_system.daily_dungeon_data,
-        "areas_config": LianliData.get_areas_config()
+        "areas_config": AreasData.get_areas_config()
     }
     logger.info(f"[OUT] GET /game/dungeon/info - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -239,9 +236,7 @@ async def finish_dungeon(request: dict, credentials: HTTPAuthorizationCredential
     db_data = player_data.data
     
     lianli_system = LianliSystem.from_db_data(
-        db_data.get("lianli_system", {}),
-        SpellSystem.from_db_data(db_data.get("spell_system", {})),
-        InventorySystem.from_db_data(db_data.get("inventory", {}))
+        db_data.get("lianli_system", {})
     )
     
     dungeon_id = request.get("dungeon_id")

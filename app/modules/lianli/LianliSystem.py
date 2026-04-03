@@ -18,7 +18,8 @@ from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import random
 
 from ..player.AttributeCalculator import AttributeCalculator
-from .LianliData import LianliData
+from .AreasData import AreasData
+from .EnemiesData import EnemiesData
 
 if TYPE_CHECKING:
     from ..player.PlayerData import PlayerData
@@ -43,55 +44,29 @@ class LianliSystem:
     
     ATB_MAX = 100.0
     TICK_INTERVAL = 0.1
-    DEFAULT_ENEMY_ATTACK = 50.0
     PERCENTAGE_BASE = 100.0
     
-    def __init__(self, spell_system: 'SpellSystem', inventory_system: 'InventorySystem'):
+    def __init__(self):
         """
         初始化历练系统
-        
-        Args:
-            spell_system: 术法系统
-            inventory_system: 背包系统
         """
-        self.spell_system = spell_system
-        self.inventory_system = inventory_system
-        
         self.tower_highest_floor: int = 0
         self.daily_dungeon_data: Dict[str, Dict] = {}
-    
-    def _get_areas_config(self) -> dict:
-        """获取区域配置"""
-        return LianliData.get_areas_config()
-    
-    def _get_enemies_config(self) -> dict:
-        """获取敌人配置"""
-        return LianliData.get_enemies_config()
-    
-    def is_normal_area(self, area_id: str) -> bool:
-        """判断是否为普通区域"""
-        area_config = LianliData.get_area_info(area_id)
-        return area_config.get("type", "normal") == "normal"
-    
-    def is_special_area(self, area_id: str) -> bool:
-        """判断是否为特殊区域（每日限制）"""
-        area_config = LianliData.get_area_info(area_id)
-        return area_config.get("type", "normal") == "special"
-    
-    def is_daily_dungeon(self, area_id: str) -> bool:
-        """判断是否为每日副本"""
-        area_config = LianliData.get_area_info(area_id)
-        return area_config.get("type", "normal") == "daily"
-    
-    def is_single_boss_area(self, area_id: str) -> bool:
-        """判断是否为单BOSS区域"""
-        area_config = LianliData.get_area_info(area_id)
-        return area_config.get("is_single_boss", False)
+        
+        # 初始化所有每日区域的次数限制
+        daily_area_ids = AreasData.get_daily_area_ids()
+        for area_id in daily_area_ids:
+            area_config = AreasData.get_area_info(area_id)
+            max_count = area_config.get("daily_count", 3)
+            self.daily_dungeon_data[area_id] = {
+                "max_count": max_count,
+                "remaining_count": max_count
+            }
     
     def get_daily_dungeon_count(self, area_id: str) -> int:
         """获取每日副本次数"""
         if area_id not in self.daily_dungeon_data:
-            area_config = LianliData.get_area_info(area_id)
+            area_config = AreasData.get_area_info(area_id)
             max_count = area_config.get("daily_count", 3)
             self.daily_dungeon_data[area_id] = {
                 "max_count": max_count,
@@ -102,7 +77,7 @@ class LianliSystem:
     def use_daily_dungeon_count(self, area_id: str):
         """使用每日副本次数"""
         if area_id not in self.daily_dungeon_data:
-            area_config = LianliData.get_area_info(area_id)
+            area_config = AreasData.get_area_info(area_id)
             max_count = area_config.get("daily_count", 3)
             self.daily_dungeon_data[area_id] = {
                 "max_count": max_count,
@@ -116,281 +91,408 @@ class LianliSystem:
     
     def reset_daily_dungeons(self):
         """重置每日副本次数"""
-        areas_config = self._get_areas_config()
         for area_id in self.daily_dungeon_data:
-            area_config = LianliData.get_area_info(area_id)
+            area_config = AreasData.get_area_info(area_id)
             max_count = area_config.get("daily_count", 3)
             self.daily_dungeon_data[area_id]["remaining_count"] = max_count
     
-    def generate_enemy(self, area_id: str, floor: int = None) -> Dict[str, Any]:
+    def generate_enemy(self, area_id: str) -> Dict[str, Any]:
         """
         生成敌人
         
         Args:
             area_id: 区域 ID
-            floor: 无尽塔层数（可选）
         
         Returns:
             敌人数据
         """
-        area_config = LianliData.get_area_info(area_id)
+        is_tower = AreasData.is_tower_area(area_id)
         
-        if floor is not None:
-            template_id = self._get_random_tower_template()
-            enemy_level = floor
+        if is_tower:
+            template_id = AreasData.get_tower_random_template()
+            enemy_level = self.tower_highest_floor + 1
+            drops = {}
         else:
-            enemies = area_config.get("enemies", [])
+            enemy_config = AreasData.get_random_enemy_config(area_id)
+            if not enemy_config:
+                return {}
+            
+            enemies = enemy_config.get("enemies", [])
             if not enemies:
                 return {}
             
-            enemy_config = random.choice(enemies)
-            template_id = enemy_config.get("template")
-            min_level = enemy_config.get("min_level", 1)
-            max_level = enemy_config.get("max_level", 1)
+            enemy = enemies[0]
+            template_id = enemy.get("template", "")
+            min_level = enemy.get("min_level", 1)
+            max_level = enemy.get("max_level", 1)
             enemy_level = random.randint(min_level, max_level)
+            drops = enemy_config.get("drops", {})
         
-        return self._generate_enemy_from_template(template_id, enemy_level)
-    
-    def _get_random_tower_template(self) -> str:
-        """获取随机无尽塔敌人模板"""
-        enemies_config = self._get_enemies_config()
-        tower_enemies = [eid for eid, econfig in enemies_config.items() 
-                        if econfig.get("can_appear_in_tower", False)]
-        if tower_enemies:
-            return random.choice(tower_enemies)
-        return list(enemies_config.keys())[0] if enemies_config else ""
-    
-    def _generate_enemy_from_template(self, template_id: str, level: int) -> Dict[str, Any]:
-        """从模板生成敌人"""
-        template = LianliData.get_enemy_template(template_id)
-        
-        if not template:
+        generated_enemy = EnemiesData.generate_enemy(template_id, enemy_level)
+        if not generated_enemy:
             return {}
         
-        level_multiplier = 1.0 + (level - 1) * 0.1
+        stats = generated_enemy.get("stats", {})
         
         enemy_data = {
-            "id": template_id,
-            "name": template.get("name", "未知敌人"),
-            "level": level,
-            "health": int(template.get("health", 100) * level_multiplier),
-            "attack": template.get("attack", 10) * level_multiplier,
-            "defense": template.get("defense", 5) * level_multiplier,
-            "speed": template.get("speed", 7),
-            "drops": template.get("drops", {}),
-            "is_elite": template.get("is_elite", False)
+            "template_id": template_id,
+            "name": generated_enemy.get("name", "敌人"),
+            "level": enemy_level,
+            "health": stats.get("health", 1000),
+            "attack": stats.get("attack", 50.0),
+            "defense": stats.get("defense", 0),
+            "speed": stats.get("speed", 9),
+            "drops": drops
         }
         
         return enemy_data
     
-    def _get_player_combat_attributes(self, player_data: 'PlayerData', combat_buffs: dict = None) -> dict:
+    def calculate_loot(self, enemy_data: Dict[str, Any], area_id: str = None) -> List[Dict[str, Any]]:
         """
-        获取玩家战斗属性
+        计算掉落（外层函数）
         
         Args:
-            player_data: 玩家数据（已加载境界属性）
-            combat_buffs: 战斗临时buff
-        
-        Returns:
-            战斗属性字典
-        """
-        spell_bonuses = self.spell_system.get_attribute_bonuses() if self.spell_system else {}
-        
-        max_health = int(player_data.max_health * spell_bonuses.get("health", 1.0))
-        attack = player_data.attack * spell_bonuses.get("attack", 1.0)
-        defense = player_data.defense * spell_bonuses.get("defense", 1.0)
-        speed = player_data.speed + spell_bonuses.get("speed", 0.0)
-        
-        if combat_buffs:
-            max_health = int(max_health * (1.0 + combat_buffs.get("health_percent", 0.0)))
-            attack = attack * (1.0 + combat_buffs.get("attack_percent", 0.0))
-            defense = defense * (1.0 + combat_buffs.get("defense_percent", 0.0))
-            speed = speed + combat_buffs.get("speed_bonus", 0.0)
-        
-        return {
-            "max_health": max_health,
-            "attack": attack,
-            "defense": defense,
-            "speed": speed
-        }
-    
-    def execute_battle(self, player_data: 'PlayerData', enemy_data: dict, 
-                      combat_buffs: dict = None) -> Dict[str, Any]:
-        """
-        执行战斗（服务端权威）
-        
-        Args:
-            player_data: 玩家数据（需先调用 load_attributes_from_realm）
             enemy_data: 敌人数据
-            combat_buffs: 战斗临时buff
+            area_id: 区域 ID
         
         Returns:
-            {
-                "victory": bool,
-                "battle_timeline": [...],
-                "total_time": 10.5,
-                "loot": [...],
-                "player_health_after": 50,
-                "enemy_health_after": 0
-            }
+            掉落列表
         """
-        if combat_buffs is None:
-            combat_buffs = {}
-        
-        if player_data.health <= 0:
-            return {
-                "victory": False,
-                "reason": "气血不足，无法战斗",
-                "battle_timeline": [],
-                "total_time": 0.0,
-                "loot": [],
-                "player_health_after": player_data.health,
-                "enemy_health_after": enemy_data.get("health", 0)
-            }
-        
-        combat_attrs = self._get_player_combat_attributes(player_data, combat_buffs)
-        
-        player_atb = 0.0
-        enemy_atb = 0.0
-        player_health = float(player_data.health)
-        player_max_health = float(combat_attrs["max_health"])
-        enemy_health = float(enemy_data.get("health", 100))
-        enemy_max_health = enemy_health
-        
-        battle_timeline = []
-        current_time = 0.0
-        
-        while True:
-            current_time += self.TICK_INTERVAL
-            
-            player_atb += combat_attrs["speed"] * self.TICK_INTERVAL
-            enemy_atb += enemy_data.get("speed", 7) * self.TICK_INTERVAL
-            
-            player_ready = player_atb >= self.ATB_MAX
-            enemy_ready = enemy_atb >= self.ATB_MAX
-            
-            if player_ready and enemy_ready:
-                if combat_attrs["speed"] > enemy_data.get("speed", 7):
-                    player_atb, enemy_health, battle_timeline = self._player_action(
-                        current_time, player_atb, enemy_health,
-                        combat_attrs, enemy_data, battle_timeline
-                    )
-                    if enemy_health <= 0:
-                        break
-                    
-                    enemy_atb, player_health, battle_timeline = self._enemy_action(
-                        current_time, enemy_atb, player_health,
-                        enemy_data, combat_attrs, battle_timeline
-                    )
-                else:
-                    enemy_atb, player_health, battle_timeline = self._enemy_action(
-                        current_time, enemy_atb, player_health,
-                        enemy_data, combat_attrs, battle_timeline
-                    )
-                    if player_health <= 0:
-                        break
-                    
-                    player_atb, enemy_health, battle_timeline = self._player_action(
-                        current_time, player_atb, enemy_health,
-                        combat_attrs, enemy_data, battle_timeline
-                    )
-            elif player_ready:
-                player_atb, enemy_health, battle_timeline = self._player_action(
-                    current_time, player_atb, enemy_health,
-                    combat_attrs, enemy_data, battle_timeline
-                )
-            elif enemy_ready:
-                enemy_atb, player_health, battle_timeline = self._enemy_action(
-                    current_time, enemy_atb, player_health,
-                    enemy_data, combat_attrs, battle_timeline
-                )
-            
-            if player_health <= 0 or enemy_health <= 0:
-                break
-        
-        victory = enemy_health <= 0 and player_health > 0
-        
         loot = []
-        if victory:
-            loot = self._calculate_loot(enemy_data)
-            for loot_item in loot:
-                self.inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
         
-        player_data.health = int(player_health)
-        
-        return {
-            "victory": victory,
-            "battle_timeline": battle_timeline,
-            "total_time": round(current_time, 2),
-            "loot": loot,
-            "player_health_after": player_data.health,
-            "enemy_health_after": max(0, int(enemy_health))
-        }
-    
-    def _player_action(self, current_time: float, player_atb: float, enemy_health: float,
-                       combat_attrs: dict, enemy_data: dict, battle_timeline: list) -> tuple:
-        """玩家攻击行动"""
-        attack = combat_attrs["attack"]
-        defense = enemy_data.get("defense", 0)
-        
-        spell_result = self.spell_system.trigger_attack_spell() if self.spell_system else None
-        skill_name = "普通攻击"
-        damage_percent = 100.0
-        
-        if spell_result and spell_result.get("triggered", False):
-            skill_name = spell_result.get("spell_name", "术法")
-            damage_percent = spell_result.get("damage_percent", 100.0)
-        
-        damage = AttributeCalculator.calculate_damage(attack, defense, damage_percent)
-        enemy_health = max(0.0, enemy_health - damage)
-        
-        battle_timeline.append({
-            "time": round(current_time, 2),
-            "type": "player_attack",
-            "skill": skill_name,
-            "damage": round(damage, 2),
-            "enemy_health_after": round(enemy_health, 2)
-        })
-        
-        return player_atb - self.ATB_MAX, enemy_health, battle_timeline
-    
-    def _enemy_action(self, current_time: float, enemy_atb: float, player_health: float,
-                      enemy_data: dict, combat_attrs: dict, battle_timeline: list) -> tuple:
-        """敌人攻击行动"""
-        attack = enemy_data.get("attack", self.DEFAULT_ENEMY_ATTACK)
-        defense = combat_attrs["defense"]
-        
-        damage = AttributeCalculator.calculate_damage(attack, defense)
-        player_health = max(0.0, player_health - damage)
-        
-        battle_timeline.append({
-            "time": round(current_time, 2),
-            "type": "enemy_attack",
-            "skill": "普通攻击",
-            "damage": round(damage, 2),
-            "player_health_after": round(player_health, 2)
-        })
-        
-        return enemy_atb - self.ATB_MAX, player_health, battle_timeline
-    
-    def _calculate_loot(self, enemy_data: dict) -> List[Dict[str, Any]]:
-        """计算掉落"""
-        loot = []
-        drops = enemy_data.get("drops", {})
-        
-        for item_id, drop_info in drops.items():
+        # 标准区域的掉落配置都是在 enemys 的drop字段下
+        drops_config = enemy_data.get("drops", {})
+        for item_id in drops_config.keys():
+            drop_info = drops_config[item_id]
             chance = drop_info.get("chance", 1.0)
             if random.random() <= chance:
                 min_amount = drop_info.get("min", 0)
                 max_amount = drop_info.get("max", 0)
                 amount = random.randint(min_amount, max_amount)
                 if amount > 0:
-                    loot.append({
-                        "item_id": item_id,
-                        "amount": amount
-                    })
+                    loot.append({"item_id": item_id, "amount": amount})
+        
+        # 无尽塔的奖励需要通过特定逻辑计算
+        if area_id and AreasData.is_tower_area(area_id):
+            current_floor = self.tower_highest_floor + 1
+            if AreasData.is_tower_reward_floor(current_floor):
+                tower_rewards = AreasData.get_tower_reward_for_floor(current_floor)
+                for item_id in tower_rewards.keys():
+                    amount = tower_rewards[item_id]
+                    loot.append({"item_id": item_id, "amount": amount})
         
         return loot
+    
+    def can_start_battle(self, area_id: str, player_data: 'PlayerData') -> Dict[str, Any]:
+        """
+        判断是否可以开始战斗
+        
+        Args:
+            area_id: 区域 ID
+            player_data: 玩家数据
+        
+        Returns:
+            {
+                "can_start": bool,
+                "reason": str
+            }
+        """
+        if player_data.health <= 0:
+            return {
+                "can_start": False,
+                "reason": "气血不足，无法战斗"
+            }
+        
+        if area_id == AreasData.get_tower_area_id():
+            max_floor = AreasData.get_tower_max_floor()
+            if self.tower_highest_floor >= max_floor:
+                return {
+                    "can_start": False,
+                    "reason": "已达无尽塔最高层"
+                }
+        
+        if AreasData.is_daily_area(area_id):
+            count = self.get_daily_dungeon_count(area_id)
+            if count <= 0:
+                return {
+                    "can_start": False,
+                    "reason": "今日副本次数已用完"
+                }
+        
+        return {
+            "can_start": True,
+            "reason": ""
+        }
+    
+    def start_lianli_battle(self, area_id: str,
+                            player_data: 'PlayerData',
+                            spell_system: Optional['SpellSystem'] = None,
+                            inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
+        """
+        历练全流程函数
+        
+        Args:
+            area_id: 区域 ID
+            player_data: 玩家数据
+            spell_system: 术法系统
+            inventory_system: 背包系统
+        
+        Returns:
+            完整的战斗结果
+        """
+        # 检查是否可以开始战斗
+        check_result = self.can_start_battle(area_id, player_data)
+        if not check_result["can_start"]:
+            return {
+                "victory": False,
+                "reason": check_result["reason"],
+                "battle_timeline": [],
+                "total_time": 0.0,
+                "loot": [],
+                "player_health_after": player_data.health,
+                "enemy_health_after": 0
+            }
+        
+        # 生成敌人
+        enemy_data = self.generate_enemy(area_id)
+        
+        # 执行战斗
+        battle_result = self.execute_battle(
+            player_data, enemy_data, spell_system
+        )
+        
+        # 更新玩家战斗后的气血
+        player_data.health = min(player_data.static_max_health, battle_result["player_health_after"])
+        
+        # 战斗胜利后的结算处理
+        if battle_result["victory"]:
+            # 每日区域的剩余次数更新
+            if AreasData.is_daily_area(area_id):
+                self.use_daily_dungeon_count(area_id)
+            
+            # 奖励物品更新
+            loot = self.calculate_loot(enemy_data, area_id)
+            if inventory_system:
+                for loot_item in loot:
+                    inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
+            battle_result["loot"] = loot
+
+            # 无尽塔的最高层数更新
+            if AreasData.is_tower_area(area_id):
+                current_floor = self.tower_highest_floor + 1
+                self.finish_tower_battle(current_floor, battle_result["victory"])
+        
+        return battle_result
+    
+    def execute_battle(self, player_data: 'PlayerData', enemy_data: dict, 
+                      spell_system: Optional['SpellSystem']) -> Dict[str, Any]:
+        """
+        执行战斗（只处理战斗部分）
+        
+        Args:
+            player_data: 玩家数据
+            enemy_data: 敌人数据
+            spell_system: 术法系统
+        
+        Returns:
+            {
+                "victory": bool,
+                "battle_timeline": [...],
+                "total_time": 10.5,
+                "player_health_after": 50,
+                "enemy_health_after": 0
+            }
+        """
+        # 初始化战斗属性
+        player_atb = 0.0
+        player_attributes = player_data.get_battle_attributes()
+        # combat_buffs = {
+        #     "attack_percent": 0.0,
+        #     "defense_percent": 0.0,
+        #     "speed_bonus": 0.0,
+        #     "health_bonus": 0.0
+        # }
+        
+        enemy_atb = 0.0
+        enemy_attributes = {
+            "health": float(enemy_data.get("health", 100)),
+            "max_health": float(enemy_data.get("max_health", enemy_data.get("health", 100))),
+            "speed": enemy_data.get("speed", 7),
+            "attack": enemy_data.get("attack", 10),
+            "defense": enemy_data.get("defense", 5)
+        }
+     
+        battle_timeline = []
+        current_time = 0.0
+        
+        # 触发开局术法
+        if spell_system:
+            battle_timeline = self._opening_action(
+                spell_system, player_attributes, battle_timeline
+            )
+        # 计算动态属性
+        # player_attributes = AttributeCalculator.calculate_dynamic_attributes(player_attributes, combat_buffs)
+        
+        # 战斗循环
+        while True:
+            # 推进时间和atb行动值
+            current_time += self.TICK_INTERVAL
+            
+            player_atb += player_attributes["speed"]
+            enemy_atb += enemy_attributes["speed"]
+            
+            player_ready = player_atb >= self.ATB_MAX
+            enemy_ready = enemy_atb >= self.ATB_MAX
+            
+            # 判断玩家和敌人是否准备就绪
+            # 如果都准备就绪，根据速度判断行动顺序
+            if player_ready and enemy_ready:
+                if player_attributes["speed"] > enemy_attributes["speed"]:
+                    player_atb, battle_timeline = self._player_action(
+                        current_time, player_atb, player_attributes, enemy_attributes, 
+                        battle_timeline, spell_system
+                    )
+                    if enemy_attributes["health"] <= 0:
+                        break
+                    
+                    enemy_atb, battle_timeline = self._enemy_action(
+                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                    )
+                else:
+                    enemy_atb, battle_timeline = self._enemy_action(
+                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                    )
+                    if player_attributes["health"] <= 0:
+                        break
+                    
+                    player_atb, battle_timeline = self._player_action(
+                        current_time, player_atb, player_attributes, enemy_attributes, 
+                        battle_timeline, spell_system
+                    )
+            elif player_ready:
+                player_atb, battle_timeline = self._player_action(
+                    current_time, player_atb, player_attributes, enemy_attributes, 
+                    battle_timeline, spell_system
+                )
+            elif enemy_ready:
+                enemy_atb, battle_timeline = self._enemy_action(
+                    current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                )
+            
+            # 检查战斗是否结束
+            # 如果玩家或敌人气血为0，战斗结束
+            if player_attributes["health"] <= 0 or enemy_attributes["health"] <= 0:
+                break
+        
+        # 检查战斗结果
+        victory = enemy_attributes["health"] <= 0 and player_attributes["health"] > 0
+        
+        # 单独处理气血buff导致的玩家气血变化可能超过静态最大气血的情况
+        # if combat_buffs.get("health_bonus", 0.0) > 0:
+            # player_attributes["health"] = min(player_data.static_max_health, player_attributes["health"])
+        
+        return {
+            "victory": victory,
+            "battle_timeline": battle_timeline,
+            "total_time": round(current_time, 2),
+            "player_health_after": player_attributes["health"],
+            "enemy_health_after": enemy_attributes["health"]
+        }
+    
+    def _opening_action(self, spell_system: 'SpellSystem', 
+                              player_attributes: dict, battle_timeline: List) -> List[Dict[str, Any]]:
+        """
+        触发战斗开始时的被动术法
+        
+        Args:
+            player_data: 玩家数据
+            spell_system: 术法系统
+            combat_buffs: 战斗buff
+            static_max_health: 玩家静态最大气血
+        
+        Returns:
+            战斗时间线事件列表
+        """
+        if not spell_system:
+            return battle_timeline
+        
+        opening_spells = spell_system.trigger_opening_spell()
+        
+        for spell in opening_spells:
+            spell_use_result = spell_system.use_spell(spell["spell_id"], player_attributes)
+            
+            battle_timeline.append({
+                "time": 0.0,
+                "type": "player_action",
+                "log": spell_use_result["log"]
+            })
+        
+        return battle_timeline
+    
+    def _player_action(self, current_time: float, player_atb: float, 
+                       player_attributes: dict, enemy_attributes: dict, 
+                       battle_timeline: list,
+                       spell_system: Optional['SpellSystem'] = None) -> tuple:
+        """玩家攻击行动"""
+        spell_id = ""
+        
+        if spell_system:
+            # 触发主动术法
+            active_spell_result = spell_system.trigger_active_spell()
+            if active_spell_result.get("triggered", False):
+                spell_id = active_spell_result.get("spell_id", "")
+                # 使用术法
+                spell_use_result = spell_system.use_spell(spell_id, player_attributes, enemy_attributes)
+                if spell_use_result.get("used", False):
+                    # 根据术法效果类型处理
+                    battle_action = {
+                        "time": round(current_time, 2),
+                        "type": "player_action",
+                    }
+                    battle_action.update(spell_use_result["log"])
+                    battle_timeline.append(battle_action)
+                else:
+                    # 术法使用失败，使用普通攻击
+                    spell_id = ""
+        
+        if not spell_id:
+            # 普通攻击
+            damage = AttributeCalculator.calculate_damage(
+                player_attributes["attack"], enemy_attributes["defense"]
+            )
+            enemy_attributes["health"] = max(0.0, enemy_attributes["health"] - damage)
+            battle_timeline.append({
+                "time": round(current_time, 2),
+                "type": "player_action",
+                "log": {
+                    "spell_id": "norm_attack",
+                    "effect_type": "instant_damage",
+                    "damage": round(damage, 2),
+                    "target_health_after": round(enemy_attributes["health"], 2)
+                }
+            })
+        
+        return player_atb - self.ATB_MAX, battle_timeline
+    
+    def _enemy_action(self, current_time: float, enemy_atb: float,
+                      player_attributes: dict, enemy_attributes: dict, 
+                      battle_timeline: list) -> tuple:
+        """敌人攻击行动"""
+        attack = enemy_attributes["attack"]
+        defense = player_attributes["defense"]
+        
+        damage = AttributeCalculator.calculate_damage(attack, defense)
+        player_attributes["health"] = max(0.0, player_attributes["health"] - damage)
+        
+        battle_timeline.append({
+            "time": round(current_time, 2),
+            "type": "enemy_action",
+            "spell_id": "norm_attack",
+            "damage": round(damage, 2),
+            "target_health_after": round(player_attributes["health"], 2)
+        })
+        
+        return enemy_atb - self.ATB_MAX, battle_timeline
     
     def finish_tower_battle(self, floor: int, victory: bool):
         """完成无尽塔战斗"""
@@ -405,10 +507,84 @@ class LianliSystem:
         }
     
     @classmethod
-    def from_db_data(cls, db_data: dict, 
-                     spell_system: 'SpellSystem', inventory_system: 'InventorySystem') -> 'LianliSystem':
+    def from_db_data(cls, db_data: dict) -> 'LianliSystem':
         """从数据库数据创建"""
-        instance = cls(spell_system, inventory_system)
+        instance = cls()
         instance.tower_highest_floor = db_data.get("tower_highest_floor", 0)
         instance.daily_dungeon_data = db_data.get("daily_dungeon_data", {})
         return instance
+
+
+if __name__ == "__main__":
+    from ..spell.SpellSystem import SpellSystem
+    from ..player.PlayerData import PlayerData
+    
+    print("=" * 60)
+    print("历练系统测试")
+    print("=" * 60)
+    
+    spell_system = SpellSystem()
+    # 解锁并装备术法
+    spell_system.unlock_spell("basic_boxing_techniques")
+    spell_system.equip_spell("basic_boxing_techniques")
+    
+    spell_system.unlock_spell("basic_health")
+    spell_system.equip_spell("basic_health")
+    
+    spell_system.unlock_spell("basic_defense")
+    spell_system.equip_spell("basic_defense")
+    
+    print(f"已解锁并装备基础拳法、基础气血、基础防御")
+    print(f"装备的主动术法: {spell_system.equipped_spells.get('active', [])}")
+    print(f"装备的开场术法: {spell_system.equipped_spells.get('opening', [])}")
+    
+    player_data = PlayerData(
+        health=76.0,
+        spirit_energy=20.0,
+        realm="炼气期",
+        realm_level=5,
+        spell_system=spell_system
+    )
+    print(f"\n玩家信息:")
+    print(f"  境界: {player_data.realm}{player_data.realm_level}层")
+    print(f"  气血: {player_data.health}/{player_data.static_max_health}")
+    print(f"  攻击: {player_data.static_attack}")
+    print(f"  防御: {player_data.static_defense}")
+    print(f"  速度: {player_data.static_speed}")
+    
+    lianli_system = LianliSystem()
+    
+    print(f"\n开始挑战区域: qi_refining_outer")
+    print("-" * 60)
+    
+    result = lianli_system.start_lianli_battle(
+        area_id="qi_refining_outer",
+        player_data=player_data,
+        spell_system=spell_system,
+        inventory_system=None
+    )
+    
+    print(f"\n战斗结果:")
+    print(f"  胜利: {result['victory']}")
+    print(f"  总时间: {result['total_time']}秒")
+    print(f"  战斗后气血: {result['player_health_after']}")
+    print(f"  敌人剩余气血: {result['enemy_health_after']}")
+    print(f"  掉落: {result.get('loot', [])}")
+    
+    print(f"\n战斗时间线 (共{len(result['battle_timeline'])}个事件):")
+    print("-" * 60)
+    for i, event in enumerate(result['battle_timeline'], 1):
+        event_type = event.get('type', 'unknown')
+        time = event.get('time', 0)
+        
+        if event_type == 'opening_spell':
+            print(f"[{i:2d}] {time:6.2f}s | 开场术法: {event.get('spell_id', 'unknown')} - {event.get('log_effect', '效果触发')}")
+        elif event_type == 'player_attack':
+            print(f"[{i:2d}] {time:6.2f}s | 玩家攻击: {event.get('spell_id', 'unknown')} -> 伤害 {event.get('damage'):.2f}, 敌人剩余气血 {event.get('enemy_health_after'):.2f}")
+        elif event_type == 'enemy_attack':
+            print(f"[{i:2d}] {time:6.2f}s | 敌人攻击: {event.get('spell_id', 'unknown')} -> 伤害 {event.get('damage'):.2f}, 玩家剩余气血 {event.get('player_health_after'):.2f}")
+        else:
+            print(f"[{i:2d}] {time:6.2f}s | {event_type}: {event}")
+    
+    print("=" * 60)
+    print("测试完成")

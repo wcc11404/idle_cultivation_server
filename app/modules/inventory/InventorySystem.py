@@ -92,8 +92,8 @@ class InventorySystem:
         if not ItemData.item_exists(item_id):
             return 0
         
-        max_stack = ItemSystem.get_max_stack(item_id)
-        can_stack = ItemSystem.can_stack(item_id)
+        max_stack = ItemData.get_max_stack(item_id)
+        can_stack = ItemData.can_stack(item_id)
         
         remaining_count = count
         
@@ -274,29 +274,29 @@ class InventorySystem:
         if not self.has_item(item_id, 1):
             return {"success": False, "reason": "物品不足", "effect": {}}
         
-        if not ItemSystem.item_exists(item_id):
+        if not ItemData.item_exists(item_id):
             return {"success": False, "reason": "物品不存在", "effect": {}}
         
-        item_type = ItemSystem.get_item_type(item_id)
+        item_type = ItemData.get_item_type(item_id)
         
         # 消耗品类型（丹药等）
-        if item_type == ItemSystem.ITEM_TYPE_CONSUMABLE:
+        if item_type == ItemData.ITEM_TYPE_CONSUMABLE:
             return self._use_consumable(item_id, player_data)
         
         # 宝箱/礼包类型
-        elif item_type == ItemSystem.ITEM_TYPE_GIFT:
+        elif item_type == ItemData.ITEM_TYPE_GIFT:
             return self._use_gift(item_id)
         
         # 解锁术法类型
-        elif item_type == ItemSystem.ITEM_TYPE_UNLOCK_SPELL:
+        elif item_type == ItemData.ITEM_TYPE_UNLOCK_SPELL:
             return self._use_unlock_spell(item_id, spell_system)
         
         # 解锁丹方类型
-        elif item_type == ItemSystem.ITEM_TYPE_UNLOCK_RECIPE:
+        elif item_type == ItemData.ITEM_TYPE_UNLOCK_RECIPE:
             return self._use_unlock_recipe(item_id, alchemy_system)
         
         # 解锁炼丹炉类型
-        elif item_type == ItemSystem.ITEM_TYPE_UNLOCK_FURNACE:
+        elif item_type == ItemData.ITEM_TYPE_UNLOCK_FURNACE:
             return self._use_unlock_furnace(item_id, alchemy_system)
         
         else:
@@ -304,7 +304,7 @@ class InventorySystem:
     
     def _use_consumable(self, item_id: str, player_data: 'PlayerData') -> Dict[str, Any]:
         """使用消耗品"""
-        effect = ItemSystem.get_item_effect(item_id)
+        effect = ItemData.get_item_effect(item_id)
         actual_effect = {}
         
         effect_type = effect.get("type", "")
@@ -351,7 +351,7 @@ class InventorySystem:
     
     def _use_gift(self, item_id: str) -> Dict[str, Any]:
         """打开宝箱/礼包"""
-        content = ItemSystem.get_item_content(item_id)
+        content = ItemData.get_item_content(item_id)
         
         if not content:
             return {"success": False, "reason": "礼包内容为空", "effect": {}}
@@ -375,7 +375,7 @@ class InventorySystem:
         if not spell_system:
             return {"success": False, "reason": "术法系统未初始化", "effect": {}}
         
-        effect = ItemSystem.get_item_effect(item_id)
+        effect = ItemData.get_item_effect(item_id)
         spell_id = effect.get("spell_id", "")
         
         if not spell_id:
@@ -398,7 +398,7 @@ class InventorySystem:
         if not alchemy_system:
             return {"success": False, "reason": "炼丹系统未初始化", "effect": {}}
         
-        effect = ItemSystem.get_item_effect(item_id)
+        effect = ItemData.get_item_effect(item_id)
         recipe_id = effect.get("recipe_id", "")
         
         if not recipe_id:

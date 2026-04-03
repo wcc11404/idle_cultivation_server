@@ -7,6 +7,7 @@
 from typing import TYPE_CHECKING
 
 from .AttributeCalculator import AttributeCalculator
+from ..cultivation.RealmData import RealmData
 
 if TYPE_CHECKING:
     from ..spell.SpellSystem import SpellSystem
@@ -22,26 +23,22 @@ class PlayerData:
       health_regen_per_second, spirit_gain_speed, attack, defense
     """
     
-    def __init__(self, health: int, spirit_energy: float, realm: str, realm_level: int):
+    def __init__(self, health: float, spirit_energy: float, realm: str, realm_level: int, spell_system: 'SpellSystem' = None):
+        # 动态数据，会存入数据库
         self.health = health
         self.spirit_energy = spirit_energy
         self.realm = realm
         self.realm_level = realm_level
+        self.spell_system = spell_system
         
-        self.max_health: int = 0
-        self.max_spirit_energy: int = 0
-        self.speed: float = 0.0
-        self.attack: float = 0.0
-        self.defense: float = 0.0
-        self.health_regen_per_second: float = 0.0
-        self.spirit_gain_speed: float = 0.0
-        
+        # 基础属性，只随境界变化而变化，不存数据库，每次境界变化都会重新计算
         self._load_attributes_from_realm()
+        
+        # 静态最终属性，根据基础属性和术法等附属系统计算得到，不存数据库，每次境界变化和附属系统变化都会重新计算
+        self._load_static_attributes()
     
     def _load_attributes_from_realm(self):
         """从境界系统加载属性（内部方法）"""
-        from ..cultivation.RealmData import RealmData
-        
         attrs = RealmData.get_realm_attributes(self.realm, self.realm_level)
         self.max_health = attrs.get("max_health", 100)
         self.max_spirit_energy = attrs.get("max_spirit_energy", 100)
@@ -50,38 +47,60 @@ class PlayerData:
         self.defense = attrs.get("defense", 5.0)
         self.health_regen_per_second = attrs.get("health_regen_per_second", 1.0)
         self.spirit_gain_speed = attrs.get("spirit_gain_speed", 1.0)
+        
+    def _load_static_attributes(self):
+        """根据所有附属系统带来的增益，计算最终静态属性（内部方法）"""
+        self.static_max_health = AttributeCalculator.calculate_static_max_health(self, self.spell_system)
+        self.static_max_spirit_energy = AttributeCalculator.calculate_static_max_spirit_energy(self, self.spell_system)
+        self.static_speed = AttributeCalculator.calculate_static_speed(self, self.spell_system)
+        self.static_attack = AttributeCalculator.calculate_static_attack(self, self.spell_system)
+        self.static_defense = AttributeCalculator.calculate_static_defense(self, self.spell_system)
+        self.static_health_regen_per_second = self.health_regen_per_second
+        self.static_spirit_gain_speed = AttributeCalculator.calculate_static_spirit_gain_speed(self, self.spell_system)
     
+    def get_battle_attributes(self):
+        """获取一个战斗属性字典，包含当前气血、最大气血、速度、攻击、防御"""
+        return {
+            "health": self.health,
+            "max_health": self.static_max_health,
+            "speed": self.static_speed,
+            "attack": self.static_attack,
+            "defense": self.static_defense
+        }
+        
     def reload_attributes(self):
-        """重新加载属性（境界变化后调用）"""
+        """重新加载属性（境界变化后或者附属系统增益有变化后调用）"""
         self._load_attributes_from_realm()
+        self._load_static_attributes()
     
-    def add_health(self, amount: int, spell_system: 'SpellSystem' = None) -> int:
-        max_hp = AttributeCalculator.calculate_static_max_health(self, spell_system)
+    def add_health(self, amount: float) -> float:
+        """添加气血"""
         old_health = self.health
-        self.health = min(self.health + amount, max_hp)
+        self.health = min(self.health + amount, self.static_max_health)
         return self.health - old_health
     
-    def reduce_health(self, amount: int) -> int:
+    def reduce_health(self, amount: float) -> float:
+        """减少气血"""
         old_health = self.health
-        self.health = max(0, self.health - amount)
+        self.health = max(0.0, self.health - amount)
         return old_health - self.health
     
-    def add_spirit_energy(self, amount: float, spell_system: 'SpellSystem' = None) -> float:
-        final_max_spirit = float(AttributeCalculator.calculate_static_max_spirit_energy(self, spell_system))
-        
-        if self.spirit_energy >= final_max_spirit:
+    def add_spirit_energy(self, amount: float) -> float:
+        """添加灵气（不可突破最大灵气上限）"""
+        if self.spirit_energy >= self.static_max_spirit_energy:
             return 0.0
-        
         old_spirit = self.spirit_energy
-        self.spirit_energy = min(self.spirit_energy + amount, final_max_spirit)
+        self.spirit_energy = min(self.spirit_energy + amount, self.static_max_spirit_energy)
         return self.spirit_energy - old_spirit
     
     def add_spirit_energy_breakthrough(self, amount: float) -> float:
+        """添加灵气（可突破最大灵气上限）"""
         old_spirit = self.spirit_energy
         self.spirit_energy = self.spirit_energy + amount
         return self.spirit_energy - old_spirit
     
     def reduce_spirit_energy(self, amount: float) -> float:
+        """减少灵气"""
         old_spirit = self.spirit_energy
         self.spirit_energy = max(0.0, self.spirit_energy - amount)
         return old_spirit - self.spirit_energy
@@ -97,7 +116,7 @@ class PlayerData:
     @classmethod
     def from_dict(cls, data: dict) -> 'PlayerData':
         return cls(
-            health=data.get("health", 100),
+            health=float(data.get("health", 100.0)),
             spirit_energy=float(data.get("spirit_energy", 0.0)),
             realm=data.get("realm", "炼气期"),
             realm_level=data.get("realm_level", 1)

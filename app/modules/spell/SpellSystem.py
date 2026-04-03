@@ -7,6 +7,7 @@
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import random
 
+from app.modules.player.AttributeCalculator import AttributeCalculator
 from .SpellData import SpellData
 
 if TYPE_CHECKING:
@@ -21,10 +22,15 @@ class SpellSystem:
     def __init__(self):
         """初始化术法系统"""
         self.player_spells: Dict[str, Dict[str, Any]] = {}
-        self.equipped_spells: Dict[int, List[str]] = {
-            SpellData.SLOT_BREATHING: [],
-            SpellData.SLOT_ACTIVE: [],
-            SpellData.SLOT_PASSIVE: []
+        self.equipped_spells: Dict[str, List[str]] = {
+            SpellData.SPELL_TYPE_BREATHING: [],
+            SpellData.SPELL_TYPE_ACTIVE: [],
+            SpellData.SPELL_TYPE_OPENING: []
+        }
+        self.slot_limits: Dict[str, int] = {
+            SpellData.SPELL_TYPE_BREATHING: 1,
+            SpellData.SPELL_TYPE_ACTIVE: 2,
+            SpellData.SPELL_TYPE_OPENING: 2
         }
         self._cached_bonuses: Dict[str, float] = {
             "health": 1.0,
@@ -110,37 +116,40 @@ class SpellSystem:
             {
                 "success": bool,
                 "reason": str,
-                "spell_type": int
+                "spell_type": str
             }
         """
         if not SpellData.spell_exists(spell_id):
-            return {"success": False, "reason": "术法不存在", "spell_type": -1}
+            return {"success": False, "reason": "术法不存在", "spell_type": ""}
         
         if not self.has_spell(spell_id):
-            return {"success": False, "reason": "未获取该术法", "spell_type": -1}
+            return {"success": False, "reason": "未获取该术法", "spell_type": ""}
         
         if self.is_spell_equipped(spell_id):
-            return {"success": False, "reason": "术法已装备", "spell_type": -1}
+            return {"success": False, "reason": "术法已装备", "spell_type": ""}
         
         spell_type = SpellData.get_spell_type(spell_id)
         
-        if spell_type == SpellData.SPELL_TYPE_MISC:
+        if spell_type == SpellData.SPELL_TYPE_PRODUCTION:
             return {"success": False, "reason": "杂学术法无法装备", "spell_type": spell_type}
         
-        limit = SpellData.get_slot_limit(spell_type)
-        current_count = len(self.equipped_spells.get(spell_type, []))
+        # 槽位类型与术法类型一致
+        slot_type = spell_type
+        
+        limit = self.slot_limits.get(slot_type, 0)
+        current_count = len(self.equipped_spells.get(slot_type, []))
         
         if limit >= 0 and current_count >= limit:
             return {
                 "success": False,
-                "reason": f"装备数量已达上限（{limit}个）",
+                "reason": f"{slot_type}槽位已达上限",
                 "spell_type": spell_type
             }
         
-        if spell_type not in self.equipped_spells:
-            self.equipped_spells[spell_type] = []
+        if slot_type not in self.equipped_spells:
+            self.equipped_spells[slot_type] = []
         
-        self.equipped_spells[spell_type].append(spell_id)
+        self.equipped_spells[slot_type].append(spell_id)
         
         return {
             "success": True,
@@ -159,19 +168,22 @@ class SpellSystem:
             {
                 "success": bool,
                 "reason": str,
-                "spell_type": int
+                "spell_type": str
             }
         """
         if not SpellData.spell_exists(spell_id):
-            return {"success": False, "reason": "术法不存在", "spell_type": -1}
+            return {"success": False, "reason": "术法不存在", "spell_type": ""}
         
         if not self.is_spell_equipped(spell_id):
-            return {"success": False, "reason": "术法未装备", "spell_type": -1}
+            return {"success": False, "reason": "术法未装备", "spell_type": ""}
         
         spell_type = SpellData.get_spell_type(spell_id)
         
-        if spell_type in self.equipped_spells and spell_id in self.equipped_spells[spell_type]:
-            self.equipped_spells[spell_type].remove(spell_id)
+        # 槽位类型与术法类型一致
+        slot_type = spell_type
+        
+        if slot_type != "" and slot_type in self.equipped_spells and spell_id in self.equipped_spells[slot_type]:
+            self.equipped_spells[slot_type].remove(spell_id)
         
         return {
             "success": True,
@@ -186,13 +198,12 @@ class SpellSystem:
                 return True
         return False
     
-    def upgrade_spell(self, spell_id: str, player_data: 'PlayerData') -> Dict[str, Any]:
+    def upgrade_spell(self, spell_id: str) -> Dict[str, Any]:
         """
         升级术法
         
         Args:
             spell_id: 术法ID
-            player_data: 玩家数据（用于扣除灵气）
         
         Returns:
             {
@@ -291,8 +302,9 @@ class SpellSystem:
             "charged_amount": available
         }
     
-    def add_spell_use_count(self, spell_id: str):
+    def add_spell_use_count(self, spell_id: str, count: int = 1):
         """增加术法使用次数"""
+        count_gained = 0
         if spell_id in self.player_spells:
             spell_info = self.player_spells[spell_id]
             if spell_info.get("obtained", False):
@@ -304,13 +316,15 @@ class SpellSystem:
                     use_count_required = level_data.get("use_count_required", 0)
                     
                     if spell_info["use_count"] < use_count_required:
-                        spell_info["use_count"] += 1
+                        count_gained = min(count, use_count_required - spell_info["use_count"])
+                        spell_info["use_count"] += count_gained
+        return count_gained
     
     def get_breathing_heal_bonus(self) -> float:
         """获取吐纳术法的气血恢复加成"""
         total_heal = 0.0
         
-        for spell_id in self.equipped_spells.get(SpellData.SLOT_BREATHING, []):
+        for spell_id in self.equipped_spells.get(SpellData.SPELL_TYPE_BREATHING, []):
             if spell_id not in self.player_spells:
                 continue
             
@@ -321,26 +335,60 @@ class SpellSystem:
             level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
             effect = level_data.get("effect", {})
             
-            if effect.get("type") == "passive_heal":
+            if effect.get("type") == "breathing_heal":
                 heal_percent = effect.get("heal_percent", 0.0)
                 total_heal += heal_percent
         
         return total_heal
     
-    def trigger_attack_spell(self) -> Dict[str, Any]:
+    def trigger_opening_spell(self) -> List[Dict[str, Any]]:
         """
-        触发攻击术法
+        触发开场术法（被动术法）
+        
+        Returns:
+            [
+                {
+                    "triggered": bool,
+                    "spell_id": str
+                }
+            ]
+        """
+        results = []
+        opening_spells = self.equipped_spells.get(SpellData.SPELL_TYPE_OPENING, [])
+        
+        for spell_id in opening_spells:
+            if spell_id not in self.player_spells:
+                continue
+            
+            spell_info = self.player_spells[spell_id]
+            if not spell_info.get("obtained", False) or spell_info.get("level", 0) <= 0:
+                continue
+            
+            level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
+            effect = level_data.get("effect", {})
+            effect_type = effect.get("effect_type", "")
+            
+            if effect_type == "undispellable_buff":
+                results.append({
+                    "triggered": True,
+                    "spell_id": spell_id,
+                })
+        
+        return results
+    
+    def trigger_active_spell(self) -> Dict[str, Any]:
+        """
+        触发主动术法
         
         Returns:
             {
                 "triggered": bool,
-                "spell_name": str,
-                "damage_percent": float
+                "spell_id": str
             }
         """
-        active_spells = self.equipped_spells.get(SpellData.SLOT_ACTIVE, [])
+        active_spells = self.equipped_spells.get(SpellData.SPELL_TYPE_ACTIVE, [])
         if not active_spells:
-            return {"triggered": False, "spell_name": "", "damage_percent": 100.0}
+            return {"triggered": False, "spell_id": ""}
         
         spell_chances = []
         total_chance = 0.0
@@ -356,18 +404,17 @@ class SpellSystem:
             level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
             effect = level_data.get("effect", {})
             
-            if effect.get("type") == "active_damage":
-                chance = effect.get("trigger_chance", 0.0)
-                damage_percent = effect.get("damage_percent", 100.0)
+            # 所有类型的术法只要有释放几率都参与计算
+            chance = effect.get("trigger_chance", 0.0)
+            if chance > 0:
                 spell_chances.append({
                     "spell_id": spell_id,
-                    "chance": chance,
-                    "damage_percent": damage_percent
+                    "chance": chance
                 })
                 total_chance += chance
         
         if not spell_chances:
-            return {"triggered": False, "spell_name": "", "damage_percent": 100.0}
+            return {"triggered": False, "spell_id": ""}
         
         if total_chance > self.MAX_TOTAL_TRIGGER_CHANCE:
             scale_factor = self.MAX_TOTAL_TRIGGER_CHANCE / total_chance
@@ -378,24 +425,132 @@ class SpellSystem:
         normal_attack_chance = max(0.2, 1.0 - total_chance)
         
         if random.random() < normal_attack_chance:
-            return {"triggered": False, "spell_name": "", "damage_percent": 100.0}
+            return {"triggered": False, "spell_id": ""}
         
         selected = random.choice(spell_chances)
-        spell_name = SpellData.get_spell_name(selected["spell_id"])
-        
-        self.add_spell_use_count(selected["spell_id"])
         
         return {
             "triggered": True,
-            "spell_name": spell_name,
-            "damage_percent": selected["damage_percent"]
+            "spell_id": selected["spell_id"]
+        }
+    
+    def use_spell(self, spell_id: str, self_attributes: dict, target_attributes: dict = None) -> Dict[str, Any]:
+        """
+        使用术法
+        
+        Args:
+            spell_id: 术法ID
+            self_attributes: 自身属性
+            target_attributes: 目标属性
+            
+        属性结构:
+        {
+            "health": float,
+            "max_health": float,
+            "speed": float,
+            "attack": float,
+            "defense": float
+        }
+        
+        Returns:
+            {
+                "used": bool,
+                "effect_type": str,
+                "log": dict  # 用于战斗日志的信息
+            }
+        """
+        # 异常校验
+        if spell_id not in self.player_spells:
+            return {"used": False, "effect_type": "", "log": {}}
+        spell_info = self.player_spells[spell_id]
+        if not spell_info.get("obtained", False) or spell_info.get("level", 0) <= 0:
+            return {"used": False, "effect_type": "", "log": {}}
+        
+        # 获取术法效果
+        level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
+        effect = level_data.get("effect", {})
+        effect_type = effect.get("effect_type", "")
+        
+        # 根据效果类型处理
+        if effect_type == "instant_damage":
+            return self._use_instant_damage_spell(spell_id, effect, self_attributes, target_attributes)
+        elif effect_type == "undispellable_buff":
+            return self._use_undispellable_buff_spell(spell_id, effect, self_attributes)
+        # 可以在这里添加其他类型的效果处理
+        
+        return {"used": False, "effect_type": effect_type, "log": {}}
+    
+    def _use_instant_damage_spell(self, spell_id: str, effect: dict, self_attributes: dict, target_attributes: dict) -> Dict[str, Any]:
+        """
+        使用即时伤害术法
+        """
+        damage_percent = effect.get("damage_percent", 1.0)
+        attack = self_attributes.get("attack", 0.0)
+        defense = target_attributes.get("defense", 0.0)
+        
+        # 计算伤害
+        damage = AttributeCalculator.calculate_damage(attack, defense, damage_percent)
+        
+        # 应用伤害
+        target_attributes["health"] = max(0.0, target_attributes["health"] - damage)
+        
+        return {
+            "used": True,
+            "log": {
+                "spell_id": spell_id,
+                "effect_type": "instant_damage",
+                "damage": round(damage, 2),
+                "target_health_after": round(target_attributes["health"], 2)
+            }
+        }
+    
+    def _use_undispellable_buff_spell(self, spell_id: str, effect: dict, self_attributes: dict) -> Dict[str, Any]:
+        """
+        使用不可驱散的buff术法
+        """
+        log = {
+            "spell_id": spell_id,
+            "effect_type": "undispellable_buff",
+            "log_effect": effect.get("log_effect", "")
+        }
+        buff_type = effect.get("buff_type", "")
+        buff_percent = effect.get("buff_percent", 0.0)
+        buff_value = effect.get("buff_value", 0.0)
+        
+        # 应用buff
+        if buff_percent > 0:
+            if buff_type == "defense":
+                self_attributes["defense"] *= (1.0 + buff_percent)
+            elif buff_type == "attack":
+                self_attributes["attack"] *= (1.0 + buff_percent)
+            elif buff_type == "health":
+                # 提升气血和气血上限
+                max_health_increase = self_attributes.get("max_health", 0.0) * buff_percent
+                self_attributes["max_health"] += max_health_increase
+                self_attributes["health"] += max_health_increase
+                log["self_health_after"] = round(self_attributes["health"], 2)
+                log["self_max_health_after"] = round(self_attributes["max_health"], 2)
+        elif buff_value > 0:
+            if buff_type == "speed":
+                self_attributes["speed"] += buff_value
+                log["speed_increase"] = round(buff_value, 2)
+        else:
+            return {
+                "used": False,
+                "log": log
+            }
+        
+        return {
+            "used": True,
+            "log": log
         }
     
     def to_db_data(self) -> dict:
         """转换为数据库存储格式"""
         return {
             "player_spells": self.player_spells,
-            "equipped_spells": self.equipped_spells
+            "equipped_spells": self.equipped_spells,
+            "slot_limits": self.slot_limits
         }
     
     @classmethod
@@ -404,9 +559,14 @@ class SpellSystem:
         instance = cls()
         instance.player_spells = db_data.get("player_spells", {})
         instance.equipped_spells = db_data.get("equipped_spells", {
-            SpellData.SLOT_BREATHING: [],
-            SpellData.SLOT_ACTIVE: [],
-            SpellData.SLOT_PASSIVE: []
+            SpellData.SPELL_TYPE_BREATHING: [],
+            SpellData.SPELL_TYPE_ACTIVE: [],
+            SpellData.SPELL_TYPE_OPENING: []
+        })
+        instance.slot_limits = db_data.get("slot_limits", {
+            SpellData.SPELL_TYPE_BREATHING: 1,
+            SpellData.SPELL_TYPE_ACTIVE: 2,
+            SpellData.SPELL_TYPE_OPENING: 2
         })
         instance.recalculate_bonuses()
         return instance

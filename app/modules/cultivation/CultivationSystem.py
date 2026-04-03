@@ -12,6 +12,7 @@ from typing import Dict, Any, TYPE_CHECKING
 
 from ..player.AttributeCalculator import AttributeCalculator
 from .RealmData import RealmData
+from ..spell.SpellData import SpellData
 
 if TYPE_CHECKING:
     from ..player.PlayerData import PlayerData
@@ -29,7 +30,7 @@ class CultivationSystem:
     @staticmethod
     def calculate_health_regen_per_second(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
         """
-        计算每秒气血恢复速度
+        计算每秒气血恢复速度，玩家静态气血恢复速度 + 已装备的吐纳术法加成
         
         修炼时自动恢复气血，这个功能是修炼系统特有的
         
@@ -40,13 +41,12 @@ class CultivationSystem:
         Returns:
             每秒气血恢复量
         """
-        base_regen = float(player.health_regen_per_second)
+        base_regen = float(player.static_health_regen_per_second)
         
         if spell_system:
             breathing_bonus = spell_system.get_breathing_heal_bonus()
             if breathing_bonus > 0:
-                static_max_health = AttributeCalculator.calculate_static_max_health(player, spell_system)
-                base_regen += float(static_max_health) * breathing_bonus
+                base_regen += float(player.static_max_health) * breathing_bonus
         
         return base_regen
     
@@ -67,18 +67,21 @@ class CultivationSystem:
                 "health_gained": float
             }
         """
-        spirit_speed = AttributeCalculator.calculate_spirit_gain_speed(player, spell_system)
-        spirit_gained = spirit_speed * delta_seconds
+        # 计算修炼tick内获得的气血和灵力
+        spirit_gained = player.static_spirit_gain_speed * delta_seconds
+        health_gained = CultivationSystem.calculate_health_regen_per_second(player, spell_system) * delta_seconds
         
-        health_speed = CultivationSystem.calculate_health_regen_per_second(player, spell_system)
-        health_gained = health_speed * delta_seconds
-        
-        actual_spirit = player.add_spirit_energy(spirit_gained, spell_system)
-        actual_health = player.add_health(int(health_gained), spell_system)
+        actual_spirit = player.add_spirit_energy(spirit_gained)
+        actual_health = player.add_health(int(health_gained))
+        # 已装备的第一个吐纳术法，熟练度增加
+        if len(spell_system.equip_spells[SpellData.SLOT_BREATHING]) > 0:
+            spell_id = spell_system.equip_spells[SpellData.SLOT_BREATHING][0]
+            used_count_gained = spell_system.add_spell_use_count(spell_id, round(delta_seconds, 0))
         
         return {
             "spirit_gained": actual_spirit,
-            "health_gained": float(actual_health)
+            "health_gained": actual_health,
+            "used_count_gained": used_count_gained
         }
     
     @staticmethod
@@ -101,10 +104,8 @@ class CultivationSystem:
                 "spirit_stones_gained": int
             }
         """
-        spirit_speed = AttributeCalculator.calculate_spirit_gain_speed(player, spell_system)
-        spirit_theoretical = spirit_speed * offline_seconds
-        
-        actual_spirit = player.add_spirit_energy(spirit_theoretical, spell_system)
+        spirit_theoretical = player.static_spirit_gain_speed * offline_seconds
+        actual_spirit = player.add_spirit_energy(spirit_theoretical)
         
         spirit_stones = int(offline_seconds / 60)
         if spirit_stones > 0:

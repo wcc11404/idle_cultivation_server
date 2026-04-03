@@ -27,12 +27,12 @@ class AttributeCalculator:
     """
     
     @staticmethod
-    def calculate_static_max_health(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> int:
+    def calculate_static_max_health(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终最大气血"""
-        base = player.max_health
+        base = float(player.max_health)
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("health", 1.0)
-            return int(base * bonus)
+            base = base * bonus
         return base
     
     @staticmethod
@@ -63,17 +63,17 @@ class AttributeCalculator:
         return base
     
     @staticmethod
-    def calculate_static_max_spirit_energy(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> int:
+    def calculate_static_max_spirit_energy(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终最大灵气"""
-        base = player.max_spirit_energy
+        base = float(player.max_spirit_energy)
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("max_spirit", 1.0)
-            return int(base * bonus)
+            base = base * bonus
         return base
     
     @staticmethod
-    def calculate_spirit_gain_speed(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
-        """计算每秒灵气获取速度"""
+    def calculate_static_spirit_gain_speed(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+        """计算静态最终每秒灵气获取速度"""
         base_speed = player.spirit_gain_speed
         if spell_system:
             spell_bonus = spell_system.get_attribute_bonuses().get("spirit_gain", 1.0)
@@ -105,7 +105,7 @@ class AttributeCalculator:
             "defense": AttributeCalculator.calculate_static_defense(player, spell_system),
             "speed": AttributeCalculator.calculate_static_speed(player, spell_system),
             "max_spirit_energy": AttributeCalculator.calculate_static_max_spirit_energy(player, spell_system),
-            "spirit_gain_speed": AttributeCalculator.calculate_spirit_gain_speed(player, spell_system)
+            "spirit_gain_speed": AttributeCalculator.calculate_static_spirit_gain_speed(player, spell_system)
         }
     
     @staticmethod
@@ -119,41 +119,41 @@ class AttributeCalculator:
         
         Returns:
             {
-                "max_health": int,
+                "health": float,
+                "max_health": float,
                 "attack": float,
                 "defense": float,
-                "speed": float,
-                "max_spirit_energy": int,
-                "spirit_gain_speed": float
+                "speed": float
             }
         """
         if not combat_buffs:
             return static_attributes.copy()
         
+        health_bonus = combat_buffs.get("health_bonus", 0.0)
+        
         return {
-            "max_health": int(static_attributes["max_health"] * (1.0 + combat_buffs.get("health_percent", 0.0))),
+            "health": static_attributes.get("health", static_attributes["max_health"]) + health_bonus,
+            "max_health": static_attributes["max_health"] + health_bonus,
             "attack": static_attributes["attack"] * (1.0 + combat_buffs.get("attack_percent", 0.0)),
             "defense": static_attributes["defense"] * (1.0 + combat_buffs.get("defense_percent", 0.0)),
-            "speed": static_attributes["speed"] + combat_buffs.get("speed_bonus", 0.0),
-            "max_spirit_energy": static_attributes["max_spirit_energy"],
-            "spirit_gain_speed": static_attributes["spirit_gain_speed"]
+            "speed": static_attributes["speed"] + combat_buffs.get("speed_bonus", 0.0)
         }
     
     @staticmethod
-    def calculate_damage(attack: float, defense: float, damage_percent: float = 100.0) -> float:
+    def calculate_damage(attack: float, defense: float, damage_percent: float = 1.0) -> float:
         """
         计算伤害
         
         Args:
             attack: 攻击力
             defense: 防御力
-            damage_percent: 伤害百分比（默认100%）
+            damage_percent: 伤害百分比（默认1.0即100%）
         
         Returns:
             最终伤害值
         """
         base_damage = attack - defense
-        final_damage = base_damage * (damage_percent / 100.0)
+        final_damage = base_damage * damage_percent
         return max(1.0, final_damage)
     
     @staticmethod

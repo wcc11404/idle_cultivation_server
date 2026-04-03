@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.schemas.game import SaveGameRequest, SaveGameResponse, LoadGameResponse
 from app.db.models import Account, PlayerData
 from app.core.security import decode_token
-from app.core.config_loader import get_initial_player_data
+from app.core.init_player_info import get_initial_player_data
 from app.core.logger import logger
 from datetime import datetime, timezone
 import time

@@ -10,6 +10,7 @@ from app.db.models import Account, PlayerData as DBPlayerData
 from app.core.security import decode_token
 from app.core.logger import logger
 from app.modules import PlayerData, AlchemySystem, RecipeData, SpellSystem, InventorySystem
+from .AlchemyWorkshop import AlchemyWorkshop
 from datetime import datetime, timezone
 import time
 import json
@@ -76,15 +77,15 @@ async def craft_pills(request: dict, credentials: HTTPAuthorizationCredentials =
     spell_system = SpellSystem.from_db_data(db_data.get("spell_system", {}))
     inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
     alchemy_system = AlchemySystem.from_db_data(
-        db_data.get("alchemy_system", {}),
-        spell_system,
-        inventory_system
+        db_data.get("alchemy_system", {})
     )
     
     recipe_id = request.get("recipe_id")
     count = request.get("count", 1)
     
-    result = alchemy_system.craft_pills(recipe_id, count, player)
+    result = AlchemyWorkshop.craft_pills(
+        alchemy_system, recipe_id, count, player, spell_system, inventory_system
+    )
     
     if result["success"]:
         db_data["player"] = player.to_dict()

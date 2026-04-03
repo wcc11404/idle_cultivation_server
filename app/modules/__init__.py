@@ -7,7 +7,7 @@
 from .spell import SpellData, SpellSystem
 from .inventory import ItemData, InventorySystem
 from .alchemy import RecipeData, AlchemySystem
-from .lianli import LianliData, LianliSystem
+from .lianli import AreasData, EnemiesData, LianliSystem
 from .cultivation import CultivationSystem, RealmData
 from .player import PlayerData, AttributeCalculator
 
@@ -15,7 +15,7 @@ __all__ = [
     'SpellData', 'SpellSystem',
     'ItemData', 'InventorySystem',
     'RecipeData', 'AlchemySystem',
-    'LianliData', 'LianliSystem',
+    'AreasData', 'EnemiesData', 'LianliSystem',
     'CultivationSystem', 'RealmData',
     'PlayerData', 'AttributeCalculator'
 ]

@@ -32,11 +32,10 @@ class AlchemyWorkshop:
         Returns:
             成功率（1-100）
         """
-        recipe_config = RecipeData.get_recipe(recipe_id)
-        if not recipe_config:
+        if not RecipeData.recipe_exists(recipe_id):
             return 0
         
-        base_value = recipe_config.get("success_value", 50)
+        base_value = RecipeData.get_recipe_success_value(recipe_id)
         
         alchemy_bonus = alchemy_system.get_alchemy_bonus(spell_system)
         furnace_bonus = alchemy_system.get_furnace_bonus()
@@ -58,11 +57,10 @@ class AlchemyWorkshop:
         Returns:
             每颗丹药的炼制时间
         """
-        recipe_config = RecipeData.get_recipe(recipe_id)
-        if not recipe_config:
+        if not RecipeData.recipe_exists(recipe_id):
             return 0.0
         
-        base_time = recipe_config.get("base_time", 10.0)
+        base_time = RecipeData.get_recipe_base_time(recipe_id)
         
         alchemy_bonus = alchemy_system.get_alchemy_bonus(spell_system)
         furnace_bonus = alchemy_system.get_furnace_bonus()
@@ -94,11 +92,10 @@ class AlchemyWorkshop:
             "missing": []
         }
         
-        recipe_config = RecipeData.get_recipe(recipe_id)
-        if not recipe_config:
+        if not RecipeData.recipe_exists(recipe_id):
             return result
         
-        materials = recipe_config.get("materials", {})
+        materials = RecipeData.get_recipe_materials(recipe_id)
         
         for material_id, material_count in materials.items():
             required = material_count * count
@@ -138,11 +135,10 @@ class AlchemyWorkshop:
             "has": 0
         }
         
-        recipe_config = RecipeData.get_recipe(recipe_id)
-        if not recipe_config:
+        if not RecipeData.recipe_exists(recipe_id):
             return result
         
-        spirit_per_pill = recipe_config.get("spirit_energy", 0)
+        spirit_per_pill = RecipeData.get_recipe_spirit_energy(recipe_id)
         
         result["required"] = spirit_per_pill * count
         result["has"] = int(player_data.spirit_energy)
@@ -211,11 +207,10 @@ class AlchemyWorkshop:
                 "products": {}
             }
         
-        recipe_config = RecipeData.get_recipe(recipe_id)
-        materials = recipe_config.get("materials", {})
-        spirit_per_pill = recipe_config.get("spirit_energy", 0)
-        product_id = recipe_config.get("product", "")
-        product_count_per_pill = recipe_config.get("product_count", 1)
+        materials = RecipeData.get_recipe_materials(recipe_id)
+        spirit_per_pill = RecipeData.get_recipe_spirit_energy(recipe_id)
+        product_id = RecipeData.get_recipe_product(recipe_id)
+        product_count_per_pill = RecipeData.get_recipe_product_count(recipe_id)
         
         for material_id, material_count in materials.items():
             inventory_system.remove_item(material_id, material_count * count)
