@@ -14,7 +14,7 @@ from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
 from app.core.Logger import logger
 from app.modules import (
-    PlayerSystem, LianliSystem, SpellSystem, InventorySystem, AlchemySystem
+    PlayerSystem, LianliSystem, SpellSystem, InventorySystem, AlchemySystem, AccountSystem
 )
 from datetime import datetime, timezone
 import time
@@ -140,9 +140,10 @@ async def finish_battle(request: LianliSettleRequest, credentials: HTTPAuthoriza
     spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
     inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
     lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
+    account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
     
     result = lianli_system.finish_battle(
-        request.speed, request.index, player, spell_system, inventory_system
+        request.speed, request.index, player, spell_system, inventory_system, account_system
     )
     
     if result["success"]:
@@ -150,6 +151,7 @@ async def finish_battle(request: LianliSettleRequest, credentials: HTTPAuthoriza
         db_data["spell_system"] = spell_system.to_dict()
         db_data["inventory"] = inventory_system.to_dict()
         db_data["lianli_system"] = lianli_system.to_dict()
+        db_data["account_info"] = account_system.to_dict()
         
         player_data.data = db_data
         player_data.last_online_at = datetime.now(timezone.utc)
