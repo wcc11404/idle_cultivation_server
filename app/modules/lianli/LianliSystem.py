@@ -16,6 +16,7 @@
 
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 import random
+import time
 
 from ..player.AttributeCalculator import AttributeCalculator
 from .AreasData import AreasData
@@ -229,8 +230,7 @@ class LianliSystem:
     
     def start_battle_simulation(self, area_id: str,
                                  player_data: 'PlayerSystem',
-                                 spell_system: Optional['SpellSystem'] = None,
-                                 inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
+                                 spell_system: Optional['SpellSystem'] = None) -> Dict[str, Any]:
         """
         开始战斗模拟（不更新数据库）
         
@@ -238,7 +238,6 @@ class LianliSystem:
             area_id: 区域 ID
             player_data: 玩家数据
             spell_system: 术法系统
-            inventory_system: 背包系统（未使用，保留参数兼容性）
         
         Returns:
             完整的战斗模拟结果
@@ -266,7 +265,6 @@ class LianliSystem:
         if battle_result["victory"]:
             loot = self.calculate_loot(enemy_data, area_id)
         
-        import time
         current_time = time.time()
         
         self.is_battling = True
@@ -296,7 +294,7 @@ class LianliSystem:
             "reason": ""
         }
     
-    def settle_battle(self, speed: float, index: Optional[int], 
+    def finish_battle(self, speed: float, index: Optional[int], 
                       player_data: 'PlayerSystem',
                       spell_system: Optional['SpellSystem'] = None,
                       inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
@@ -324,7 +322,6 @@ class LianliSystem:
                 "exp_gained": 0
             }
         
-        import time
         current_time = time.time()
         
         battle_data = self.current_battle_data
@@ -704,8 +701,7 @@ if __name__ == "__main__":
     result = lianli_system.start_battle_simulation(
         area_id="qi_refining_outer",
         player_data=player_data,
-        spell_system=spell_system,
-        inventory_system=None
+        spell_system=spell_system
     )
     
     print(f"\n战斗结果:")

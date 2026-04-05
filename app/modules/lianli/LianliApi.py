@@ -87,7 +87,7 @@ async def simulate_battle(request: LianliBattleRequest, credentials: HTTPAuthori
         return response_data
     
     result = lianli_system.start_battle_simulation(
-        request.area_id, player, spell_system, inventory_system
+        request.area_id, player, spell_system
     )
     
     if result["success"]:
@@ -142,7 +142,7 @@ async def finish_battle(request: LianliSettleRequest, credentials: HTTPAuthoriza
     inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
     lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
     
-    result = lianli_system.settle_battle(
+    result = lianli_system.finish_battle(
         request.speed, request.index, player, spell_system, inventory_system
     )
     
