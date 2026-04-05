@@ -21,10 +21,7 @@ class LoadGameResponse(BaseResponse):
 
 class BreakthroughRequest(BaseRequest):
     """突破境界请求"""
-    current_realm: str
-    current_level: int
-    spirit_energy: float
-    inventory_items: dict
+    pass
 
 
 class BreakthroughResponse(BaseResponse):

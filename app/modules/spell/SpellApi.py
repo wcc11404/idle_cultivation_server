@@ -231,7 +231,7 @@ async def get_spell_list(credentials: HTTPAuthorizationCredentials = Depends(sec
     
     response_data = {
         "success": True,
-        "player_spells": spell_system.player_spells,
+        "spells": spell_system.player_spells,
         "equipped_spells": spell_system.equipped_spells,
         "spells_config": SpellData.get_spells_config()
     }
