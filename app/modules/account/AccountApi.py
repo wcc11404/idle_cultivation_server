@@ -25,22 +25,46 @@ async def register(request: RegisterRequest):
     is_valid, message = Validator.validate_username(request.username)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {"success": False, "error_code": 400, "message": message}
+        return {
+            "success": False,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
+            "error_code": 400,
+            "message": message
+        }
     
     is_valid, message = Validator.validate_password(request.password)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {"success": False, "error_code": 400, "message": message}
+        return {
+            "success": False,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
+            "error_code": 400,
+            "message": message
+        }
     
     is_valid, message = Validator.validate_username_password_different(request.username, request.password)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {"success": False, "error_code": 400, "message": message}
+        return {
+            "success": False,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
+            "error_code": 400,
+            "message": message
+        }
     
     existing_account = await Account.get_or_none(username=request.username)
     if existing_account:
         logger.info(f"[OUT] POST /auth/register - 用户名已存在 - 耗时: {time.time() - start_time:.4f}s")
-        return {"success": False, "error_code": 400, "message": "用户名已存在"}
+        return {
+            "success": False,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
+            "error_code": 400,
+            "message": "用户名已存在"
+        }
     
     password_hash = get_password_hash(request.password)
     account = await Account.create(
@@ -67,7 +91,14 @@ async def register(request: RegisterRequest):
         expires_delta=access_token_expires
     )
     
-    response_data = {"success": True, "account_id": str(account.id), "token": access_token, "message": "注册成功"}
+    response_data = {
+        "success": True,
+        "operation_id": request.operation_id,
+        "timestamp": request.timestamp,
+        "account_id": str(account.id),
+        "token": access_token,
+        "message": "注册成功"
+    }
     logger.info(f"[OUT] POST /auth/register - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
 

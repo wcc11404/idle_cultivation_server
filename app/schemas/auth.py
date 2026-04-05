@@ -4,7 +4,7 @@ from uuid import UUID
 from app.schemas.base import BaseRequest, BaseResponse
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(BaseRequest):
     """注册请求"""
     username: str = Field(..., min_length=4, max_length=20, description="用户名")
     password: str = Field(..., min_length=6, max_length=20, description="密码")
@@ -36,8 +36,9 @@ class LoginResponse(BaseResponse):
     offline_seconds: int = 0
 
 
-class RefreshResponse(BaseResponse):
+class RefreshResponse(BaseModel):
     """Token续期响应"""
+    success: bool = True
     token: str
     expires_in: int
 

@@ -63,17 +63,22 @@
 
 #### 请求参数
 
-| 字段     | 类型   | 必选 | 说明           |
-| -------- | ------ | ---- | -------------- |
-| username | string | 是   | 用户名（20字符以内） |
-| password | string | 是   | 密码           |
+| 字段         | 类型   | 必选 | 说明                          |
+| ------------ | ------ | ---- | ----------------------------- |
+| username     | string | 是   | 用户名（4-20字符）           |
+| password     | string | 是   | 密码（6-20字符）             |
+| operation_id | string | 是   | 客户端生成的UUID              |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 
 #### 成功响应
 
 ```json
 {
   "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
   "account_id": "uuid",
+  "token": "jwt_token",
   "message": "注册成功"
 }
 ```
@@ -83,6 +88,7 @@
 ```json
 {
   "success": false,
+  "error_code": 400,
   "message": "用户名已存在"
 }
 ```
@@ -190,18 +196,13 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
+无（通过请求头传递token）
 
 #### 成功响应
 
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
   "token": "new_jwt_token",
   "expires_in": 604800
 }
@@ -225,18 +226,13 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
+无（通过请求头传递token）
 
 #### 成功响应
 
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
   "message": "登出成功"
 }
 ```
