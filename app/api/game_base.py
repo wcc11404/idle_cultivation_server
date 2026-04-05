@@ -267,7 +267,7 @@ async def get_rank(server_id: str = "default"):
         })
     
     rank_list.sort(key=lambda x: (
-        _get_realm_order(x["realm"], realm_order),
+        -_get_realm_order(x["realm"], realm_order),
         -x["level"],
         -x["spirit_energy"],
         x["created_at"]

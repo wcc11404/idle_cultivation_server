@@ -1001,6 +1001,37 @@
 
 ---
 
+### 4.5 获取背包列表
+
+- **接口地址**：`GET /api/game/inventory/list`
+- **功能**：获取背包数据
+- **认证**：需要认证
+
+#### 成功响应
+
+```json
+{
+  "success": true,
+  "inventory": {
+    "slots": {
+      "0": {"id": "health_pill", "count": 5},
+      "1": {"id": "spirit_pill", "count": 3}
+    },
+    "capacity": 50
+  }
+}
+```
+
+#### 失败响应
+
+```json
+{
+  "detail": "玩家数据不存在"
+}
+```
+
+---
+
 ## 5. 术法系统 API
 
 ### 5.1 装备术法

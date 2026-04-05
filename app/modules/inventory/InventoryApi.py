@@ -203,3 +203,34 @@ async def expand_inventory(request: ExpandInventoryRequest, credentials: HTTPAut
     )
     logger.info(f"[OUT] POST /game/inventory/expand - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
+
+
+@router.get("/inventory/list", response_model=dict)
+async def get_inventory_list(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """获取背包列表"""
+    start_time = time.time()
+    token = credentials.credentials
+    payload = decode_token(token)
+    account_id = payload.get("account_id")
+    token_version = payload.get("version")
+    current_user = await get_current_user(credentials)
+    logger.info(f"[IN] GET /game/inventory/list - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    
+    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
+    if not player_data:
+        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="玩家数据不存在"
+        )
+    
+    db_data = player_data.data
+    
+    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
+    
+    response_data = {
+        "success": True,
+        "inventory": inventory_system.to_dict()
+    }
+    logger.info(f"[OUT] GET /game/inventory/list - 耗时：{time.time() - start_time:.4f}s")
+    return response_data
