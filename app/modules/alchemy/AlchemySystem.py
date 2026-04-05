@@ -10,7 +10,7 @@ import random
 from .RecipeData import RecipeData
 
 if TYPE_CHECKING:
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
     from ..spell.SpellSystem import SpellSystem
     from ..inventory.InventorySystem import InventorySystem
 
@@ -32,6 +32,8 @@ class AlchemySystem:
         """
         self.learned_recipes: List[str] = []
         self.equipped_furnace_id: str = ""
+        self.is_alchemizing: bool = False
+        self.last_alchemy_report_time: float = 0.0
     
     def learn_recipe(self, recipe_id: str) -> Dict[str, Any]:
         """
@@ -139,17 +141,21 @@ class AlchemySystem:
         
         return bonus
     
-    def to_db_data(self) -> dict:
+    def to_dict(self) -> dict:
         """转换为数据库存储格式"""
         return {
             "learned_recipes": self.learned_recipes,
-            "equipped_furnace_id": self.equipped_furnace_id
+            "equipped_furnace_id": self.equipped_furnace_id,
+            "is_alchemizing": self.is_alchemizing,
+            "last_alchemy_report_time": self.last_alchemy_report_time
         }
     
     @classmethod
-    def from_db_data(cls, db_data: dict) -> 'AlchemySystem':
+    def from_dict(cls, db_data: dict) -> 'AlchemySystem':
         """从数据库数据创建"""
         instance = cls()
         instance.learned_recipes = db_data.get("learned_recipes", [])
         instance.equipped_furnace_id = db_data.get("equipped_furnace_id", "")
+        instance.is_alchemizing = db_data.get("is_alchemizing", False)
+        instance.last_alchemy_report_time = db_data.get("last_alchemy_report_time", 0.0)
         return instance

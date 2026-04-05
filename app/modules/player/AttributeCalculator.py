@@ -4,7 +4,7 @@
 负责计算玩家的各种属性
 
 属性分层：
-1. 基础属性：境界带来的基础属性（PlayerData 中已加载）
+1. 基础属性：境界带来的基础属性（PlayerSystem 中已加载）
 2. 静态最终属性：基础属性 + 术法等永久加成
 3. 动态最终属性：静态最终属性 + 战斗临时buff
 """
@@ -13,7 +13,7 @@ from typing import Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..spell.SpellSystem import SpellSystem
-    from .PlayerData import PlayerData
+    from .PlayerSystem import PlayerSystem
 
 
 class AttributeCalculator:
@@ -21,67 +21,67 @@ class AttributeCalculator:
     属性计算器 - 负责计算玩家的各种属性
     
     属性分层：
-    1. 基础属性：境界带来的基础属性（PlayerData 中已加载）
+    1. 基础属性：境界带来的基础属性（PlayerSystem 中已加载）
     2. 静态最终属性：基础属性 + 术法等永久加成
     3. 动态最终属性：静态最终属性 + 战斗临时buff
     """
     
     @staticmethod
-    def calculate_static_max_health(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_max_health(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终最大气血"""
         base = float(player.max_health)
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("health", 1.0)
             base = base * bonus
-        return base
+        return round(base, 2)
     
     @staticmethod
-    def calculate_static_attack(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_attack(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终攻击力"""
         base = player.attack
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("attack", 1.0)
-            return base * bonus
-        return base
+            return round(base * bonus, 2)
+        return round(base, 2)
     
     @staticmethod
-    def calculate_static_defense(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_defense(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终防御力"""
         base = player.defense
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("defense", 1.0)
-            return base * bonus
-        return base
+            return round(base * bonus, 2)
+        return round(base, 2)
     
     @staticmethod
-    def calculate_static_speed(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_speed(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终速度"""
         base = player.speed
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("speed", 0.0)
-            return base + bonus
-        return base
+            return round(base + bonus, 2)
+        return round(base, 2)
     
     @staticmethod
-    def calculate_static_max_spirit_energy(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_max_spirit_energy(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终最大灵气"""
         base = float(player.max_spirit_energy)
         if spell_system:
             bonus = spell_system.get_attribute_bonuses().get("max_spirit", 1.0)
             base = base * bonus
-        return base
+        return round(base, 2)
     
     @staticmethod
-    def calculate_static_spirit_gain_speed(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_static_spirit_gain_speed(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """计算静态最终每秒灵气获取速度"""
         base_speed = player.spirit_gain_speed
         if spell_system:
             spell_bonus = spell_system.get_attribute_bonuses().get("spirit_gain", 1.0)
-            return base_speed * spell_bonus
-        return base_speed
+            return round(base_speed * spell_bonus, 2)
+        return round(base_speed, 2)
     
     @staticmethod
-    def calculate_static_attributes(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> dict:
+    def calculate_static_attributes(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> dict:
         """
         计算静态最终属性（汇总）
         
@@ -154,7 +154,7 @@ class AttributeCalculator:
         """
         base_damage = attack - defense
         final_damage = base_damage * damage_percent
-        return max(1.0, final_damage)
+        return round(max(1.0, final_damage), 2)
     
     @staticmethod
     def format_default(value: float) -> str:

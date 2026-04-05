@@ -15,7 +15,7 @@ from .RealmData import RealmData
 from ..spell.SpellData import SpellData
 
 if TYPE_CHECKING:
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
     from ..spell.SpellSystem import SpellSystem
     from ..inventory.InventorySystem import InventorySystem
 
@@ -28,7 +28,7 @@ class CultivationSystem:
     """
     
     @staticmethod
-    def calculate_health_regen_per_second(player: 'PlayerData', spell_system: 'SpellSystem' = None) -> float:
+    def calculate_health_regen_per_second(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
         """
         计算每秒气血恢复速度，玩家静态气血恢复速度 + 已装备的吐纳术法加成
         
@@ -51,7 +51,7 @@ class CultivationSystem:
         return base_regen
     
     @staticmethod
-    def process_cultivation_tick(player: 'PlayerData', delta_seconds: float, 
+    def process_cultivation_tick(player: 'PlayerSystem', delta_seconds: float, 
                                   spell_system: 'SpellSystem' = None) -> Dict[str, Any]:
         """
         处理修炼tick（每次修炼循环调用）
@@ -73,9 +73,11 @@ class CultivationSystem:
         
         actual_spirit = player.add_spirit_energy(spirit_gained)
         actual_health = player.add_health(int(health_gained))
+        
+        used_count_gained = 0
         # 已装备的第一个吐纳术法，熟练度增加
-        if len(spell_system.equip_spells[SpellData.SLOT_BREATHING]) > 0:
-            spell_id = spell_system.equip_spells[SpellData.SLOT_BREATHING][0]
+        if len(spell_system.equipped_spells[SpellData.SPELL_TYPE_BREATHING]) > 0:
+            spell_id = spell_system.equipped_spells[SpellData.SPELL_TYPE_BREATHING][0]
             used_count_gained = spell_system.add_spell_use_count(spell_id, round(delta_seconds, 0))
         
         return {
@@ -85,7 +87,7 @@ class CultivationSystem:
         }
     
     @staticmethod
-    def process_offline_cultivation(player: 'PlayerData', offline_seconds: int,
+    def process_offline_cultivation(player: 'PlayerSystem', offline_seconds: int,
                                      inventory_system: 'InventorySystem',
                                      spell_system: 'SpellSystem' = None) -> Dict[str, Any]:
         """
@@ -118,7 +120,7 @@ class CultivationSystem:
         }
     
     @staticmethod
-    def can_breakthrough(player: 'PlayerData', inventory_system: 'InventorySystem') -> Dict[str, Any]:
+    def _can_breakthrough(player: 'PlayerSystem', inventory_system: 'InventorySystem') -> Dict[str, Any]:
         """
         检查是否可以突破
         
@@ -174,7 +176,7 @@ class CultivationSystem:
         }
     
     @staticmethod
-    def execute_breakthrough(player: 'PlayerData', inventory_system: 'InventorySystem') -> Dict[str, Any]:
+    def execute_breakthrough(player: 'PlayerSystem', inventory_system: 'InventorySystem') -> Dict[str, Any]:
         """
         执行突破
         
@@ -191,7 +193,7 @@ class CultivationSystem:
                 "costs": dict
             }
         """
-        check_result = CultivationSystem.can_breakthrough(player, inventory_system)
+        check_result = CultivationSystem._can_breakthrough(player, inventory_system)
         
         if not check_result["can"]:
             return {
@@ -222,6 +224,9 @@ class CultivationSystem:
         player.realm = breakthrough_info["next_realm"]
         player.realm_level = breakthrough_info["next_level"]
         player.reload_attributes()
+        
+        # 突破后生命恢复满值
+        player.health = player.static_max_health
         
         return {
             "success": True,

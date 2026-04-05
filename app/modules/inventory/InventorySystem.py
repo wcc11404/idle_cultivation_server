@@ -9,7 +9,7 @@ from typing import Dict, Any, List, TYPE_CHECKING
 from .ItemData import ItemData
 
 if TYPE_CHECKING:
-    from .player_data import PlayerData
+    from .player_data import PlayerSystem
     from .spell_system import SpellSystem
     from .alchemy_system import AlchemySystem
 
@@ -252,7 +252,7 @@ class InventorySystem:
                 "discarded_count": 0
             }
     
-    def use_item(self, item_id: str, player_data: 'PlayerData', 
+    def use_item(self, item_id: str, player_data: 'PlayerSystem', 
                  spell_system: 'SpellSystem' = None,
                  alchemy_system: 'AlchemySystem' = None) -> Dict[str, Any]:
         """
@@ -302,7 +302,7 @@ class InventorySystem:
         else:
             return {"success": False, "reason": "该物品无法使用", "effect": {}}
     
-    def _use_consumable(self, item_id: str, player_data: 'PlayerData') -> Dict[str, Any]:
+    def _use_consumable(self, item_id: str, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """使用消耗品"""
         effect = ItemData.get_item_effect(item_id)
         actual_effect = {}
@@ -452,7 +452,7 @@ class InventorySystem:
                 return False
         return True
     
-    def to_db_data(self) -> dict:
+    def to_dict(self) -> dict:
         """转换为数据库存储格式（稀疏格式，只存储非空槽位）"""
         sparse_slots = {}
         for i in range(self.capacity):
@@ -468,7 +468,7 @@ class InventorySystem:
         }
     
     @classmethod
-    def from_db_data(cls, db_data: dict) -> 'InventorySystem':
+    def from_dict(cls, db_data: dict) -> 'InventorySystem':
         """从数据库数据创建（支持稀疏格式和数组格式）"""
         instance = cls()
         instance.capacity = db_data.get("capacity", cls.DEFAULT_SIZE)

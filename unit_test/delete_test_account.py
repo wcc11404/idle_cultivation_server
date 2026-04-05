@@ -12,8 +12,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tortoise import Tortoise
-from app.core.config import settings
-from app.db.models import Account, PlayerData
+from app.core.ServerConfig import settings
+from app.db.Models import Account, PlayerData
 
 async def delete_test_account():
     """删除测试账号"""
@@ -21,7 +21,7 @@ async def delete_test_account():
         # 初始化数据库连接
         await Tortoise.init(
             db_url=settings.DATABASE_URL,
-            modules={"models": ["app.db.models"]}
+            modules={"models": ["app.db.Models"]}
         )
         
         # 查找测试账号

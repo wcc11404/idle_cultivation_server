@@ -8,8 +8,8 @@ from datetime import datetime, timezone, timedelta
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tortoise import Tortoise
-from app.db.models import Account, PlayerData
-from app.core.config import settings
+from app.db.Models import Account, PlayerData
+from app.core.ServerConfig import settings
 
 # 东八区时区
 CST = timezone(timedelta(hours=8))
@@ -18,7 +18,7 @@ async def get_user_info(username):
     # 初始化数据库连接
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
-        modules={"models": ["app.db.models"]}
+        modules={"models": ["app.db.Models"]}
     )
     await Tortoise.generate_schemas()
     

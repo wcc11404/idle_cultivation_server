@@ -14,7 +14,7 @@ def register_test_account():
     url = f"{BASE_URL}/auth/register"
     payload = {
         "username": "wcc_test",
-        "password": "wcc_test"
+        "password": "wcc_test123456"
     }
     
     try:

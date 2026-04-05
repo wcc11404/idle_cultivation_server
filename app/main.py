@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
-from app.core.config import settings
-from app.db.database import init_db, close_db
+from app.core.ServerConfig import settings
+from app.db.Database import init_db, close_db
 from contextlib import asynccontextmanager
 
 

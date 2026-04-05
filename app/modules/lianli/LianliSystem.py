@@ -22,7 +22,7 @@ from .AreasData import AreasData
 from .EnemiesData import EnemiesData
 
 if TYPE_CHECKING:
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
     from ..spell.SpellSystem import SpellSystem
     from ..inventory.InventorySystem import InventorySystem
 
@@ -53,7 +53,10 @@ class LianliSystem:
         self.tower_highest_floor: int = 0
         self.daily_dungeon_data: Dict[str, Dict] = {}
         
-        # 初始化所有每日区域的次数限制
+        self.is_battling: bool = False
+        self.battle_start_time: Optional[float] = None
+        self.current_battle_data: Optional[Dict[str, Any]] = None
+        
         daily_area_ids = AreasData.get_daily_area_ids()
         for area_id in daily_area_ids:
             area_config = AreasData.get_area_info(area_id)
@@ -183,7 +186,7 @@ class LianliSystem:
         
         return loot
     
-    def can_start_battle(self, area_id: str, player_data: 'PlayerData') -> Dict[str, Any]:
+    def can_start_battle(self, area_id: str, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """
         判断是否可以开始战斗
         
@@ -224,67 +227,194 @@ class LianliSystem:
             "reason": ""
         }
     
-    def start_lianli_battle(self, area_id: str,
-                            player_data: 'PlayerData',
-                            spell_system: Optional['SpellSystem'] = None,
-                            inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
+    def start_battle_simulation(self, area_id: str,
+                                 player_data: 'PlayerSystem',
+                                 spell_system: Optional['SpellSystem'] = None,
+                                 inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
         """
-        历练全流程函数
+        开始战斗模拟（不更新数据库）
         
         Args:
             area_id: 区域 ID
             player_data: 玩家数据
             spell_system: 术法系统
-            inventory_system: 背包系统
+            inventory_system: 背包系统（未使用，保留参数兼容性）
         
         Returns:
-            完整的战斗结果
+            完整的战斗模拟结果
         """
-        # 检查是否可以开始战斗
         check_result = self.can_start_battle(area_id, player_data)
         if not check_result["can_start"]:
             return {
-                "victory": False,
+                "success": False,
                 "reason": check_result["reason"],
                 "battle_timeline": [],
                 "total_time": 0.0,
                 "loot": [],
+                "player_health_before": player_data.health,
                 "player_health_after": player_data.health,
                 "enemy_health_after": 0
             }
         
-        # 生成敌人
         enemy_data = self.generate_enemy(area_id)
         
-        # 执行战斗
         battle_result = self.execute_battle(
             player_data, enemy_data, spell_system
         )
         
-        # 更新玩家战斗后的气血
-        player_data.health = min(player_data.static_max_health, battle_result["player_health_after"])
-        
-        # 战斗胜利后的结算处理
+        loot = []
         if battle_result["victory"]:
-            # 每日区域的剩余次数更新
+            loot = self.calculate_loot(enemy_data, area_id)
+        
+        import time
+        current_time = time.time()
+        
+        self.is_battling = True
+        self.battle_start_time = current_time
+        self.current_battle_data = {
+            "area_id": area_id,
+            "enemy_data": enemy_data,
+            "battle_timeline": battle_result["battle_timeline"],
+            "total_time": battle_result["total_time"],
+            "player_health_before": player_data.health,
+            "player_health_after": battle_result["player_health_after"],
+            "enemy_health_after": battle_result["enemy_health_after"],
+            "victory": battle_result["victory"],
+            "loot": loot
+        }
+        
+        return {
+            "success": True,
+            "battle_timeline": battle_result["battle_timeline"],
+            "total_time": battle_result["total_time"],
+            "player_health_before": player_data.health,
+            "player_health_after": battle_result["player_health_after"],
+            "enemy_health_after": battle_result["enemy_health_after"],
+            "enemy_data": enemy_data,
+            "victory": battle_result["victory"],
+            "loot": loot,
+            "reason": ""
+        }
+    
+    def settle_battle(self, speed: float, index: Optional[int], 
+                      player_data: 'PlayerSystem',
+                      spell_system: Optional['SpellSystem'] = None,
+                      inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
+        """
+        结算战斗（更新数据库）
+        
+        Args:
+            speed: 播放倍速
+            index: 战斗进度索引（None表示完整结算）
+            player_data: 玩家数据
+            spell_system: 术法系统
+            inventory_system: 背包系统
+        
+        Returns:
+            结算结果
+        """
+        if not self.is_battling or not self.current_battle_data:
+            return {
+                "success": False,
+                "reason": "当前未在战斗状态",
+                "settled_index": 0,
+                "total_index": 0,
+                "player_health_after": player_data.health,
+                "loot_gained": [],
+                "exp_gained": 0
+            }
+        
+        import time
+        current_time = time.time()
+        
+        battle_data = self.current_battle_data
+        battle_timeline = battle_data["battle_timeline"]
+        total_index = len(battle_timeline)
+        
+        if index is None or index >= total_index:
+            index = total_index - 1
+        
+        if index < 0:
+            index = 0
+        
+        battle_time_at_index = battle_timeline[index]["time"] if index < total_index else battle_data["total_time"]
+        expected_time = battle_time_at_index / speed
+        actual_time = current_time - self.battle_start_time
+        
+        if actual_time < expected_time * 0.9:
+            return {
+                "success": False,
+                "reason": f"战斗结算异常：时间验证失败，实际用时{actual_time:.1f}秒，最小需要{expected_time * 0.9:.1f}秒",
+                "settled_index": 0,
+                "total_index": total_index,
+                "player_health_after": player_data.health,
+                "loot_gained": [],
+                "exp_gained": 0
+            }
+        
+        player_health_after = battle_data["player_health_before"]
+        spells_used = []
+        
+        for i in range(min(index + 1, total_index)):
+            action = battle_timeline[i]
+            if action["type"] == "player_action":
+                info = action.get("info", {})
+                spell_id = info.get("spell_id", "")
+                if spell_id and spell_id != "norm_attack":
+                    spells_used.append(spell_id)
+                
+                if info.get("effect_type") == "instant_damage":
+                    pass
+                elif info.get("effect_type") == "heal":
+                    heal_amount = info.get("heal", 0)
+                    player_health_after = round(min(player_data.static_max_health, player_health_after + heal_amount), 2)
+        
+        for i in range(min(index + 1, total_index)):
+            action = battle_timeline[i]
+            if action["type"] == "enemy_action":
+                info = action.get("info", {})
+                damage = info.get("damage", 0)
+                player_health_after = round(max(0, player_health_after - damage), 2)
+        
+        player_data.health = round(player_health_after, 2)
+        
+        if spell_system:
+            for spell_id in spells_used:
+                spell_system.add_spell_use_count(spell_id)
+        
+        loot_gained = []
+        is_full_settlement = (index >= total_index - 1)
+        
+        if is_full_settlement and battle_data["victory"]:
+            loot_gained = battle_data["loot"]
+            if inventory_system:
+                for loot_item in loot_gained:
+                    inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
+            
+            area_id = battle_data["area_id"]
             if AreasData.is_daily_area(area_id):
                 self.use_daily_dungeon_count(area_id)
             
-            # 奖励物品更新
-            loot = self.calculate_loot(enemy_data, area_id)
-            if inventory_system:
-                for loot_item in loot:
-                    inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
-            battle_result["loot"] = loot
-
-            # 无尽塔的最高层数更新
             if AreasData.is_tower_area(area_id):
                 current_floor = self.tower_highest_floor + 1
-                self.finish_tower_battle(current_floor, battle_result["victory"])
+                self.finish_tower_battle(current_floor, battle_data["victory"])
         
-        return battle_result
+        self.is_battling = False
+        self.battle_start_time = None
+        self.current_battle_data = None
+        
+        return {
+            "success": True,
+            "reason": "",
+            "settled_index": index + 1,
+            "total_index": total_index,
+            "player_health_after": player_health_after,
+            "loot_gained": loot_gained,
+            "exp_gained": 0,
+            "message": "战斗结算成功" if is_full_settlement else "战斗部分结算成功"
+        }
     
-    def execute_battle(self, player_data: 'PlayerData', enemy_data: dict, 
+    def execute_battle(self, player_data: 'PlayerSystem', enemy_data: dict, 
                       spell_system: Optional['SpellSystem']) -> Dict[str, Any]:
         """
         执行战斗（只处理战斗部分）
@@ -321,6 +451,7 @@ class LianliSystem:
             "attack": enemy_data.get("attack", 10),
             "defense": enemy_data.get("defense", 5)
         }
+        enemy_name = enemy_data.get("name", "敌人")
      
         battle_timeline = []
         current_time = 0.0
@@ -356,11 +487,11 @@ class LianliSystem:
                         break
                     
                     enemy_atb, battle_timeline = self._enemy_action(
-                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline, enemy_name
                     )
                 else:
                     enemy_atb, battle_timeline = self._enemy_action(
-                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                        current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline, enemy_name
                     )
                     if player_attributes["health"] <= 0:
                         break
@@ -376,7 +507,7 @@ class LianliSystem:
                 )
             elif enemy_ready:
                 enemy_atb, battle_timeline = self._enemy_action(
-                    current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline
+                    current_time, enemy_atb, player_attributes, enemy_attributes, battle_timeline, enemy_name
                 )
             
             # 检查战斗是否结束
@@ -424,7 +555,7 @@ class LianliSystem:
             battle_timeline.append({
                 "time": 0.0,
                 "type": "player_action",
-                "log": spell_use_result["log"]
+                "info": spell_use_result["log"]
             })
         
         return battle_timeline
@@ -444,13 +575,11 @@ class LianliSystem:
                 # 使用术法
                 spell_use_result = spell_system.use_spell(spell_id, player_attributes, enemy_attributes)
                 if spell_use_result.get("used", False):
-                    # 根据术法效果类型处理
-                    battle_action = {
+                    battle_timeline.append({
                         "time": round(current_time, 2),
                         "type": "player_action",
-                    }
-                    battle_action.update(spell_use_result["log"])
-                    battle_timeline.append(battle_action)
+                        "info": spell_use_result["log"]
+                    })
                 else:
                     # 术法使用失败，使用普通攻击
                     spell_id = ""
@@ -460,11 +589,11 @@ class LianliSystem:
             damage = AttributeCalculator.calculate_damage(
                 player_attributes["attack"], enemy_attributes["defense"]
             )
-            enemy_attributes["health"] = max(0.0, enemy_attributes["health"] - damage)
+            enemy_attributes["health"] = round(max(0.0, enemy_attributes["health"] - damage), 2)
             battle_timeline.append({
                 "time": round(current_time, 2),
                 "type": "player_action",
-                "log": {
+                "info": {
                     "spell_id": "norm_attack",
                     "effect_type": "instant_damage",
                     "damage": round(damage, 2),
@@ -476,20 +605,23 @@ class LianliSystem:
     
     def _enemy_action(self, current_time: float, enemy_atb: float,
                       player_attributes: dict, enemy_attributes: dict, 
-                      battle_timeline: list) -> tuple:
+                      battle_timeline: list, enemy_name: str = "敌人") -> tuple:
         """敌人攻击行动"""
         attack = enemy_attributes["attack"]
         defense = player_attributes["defense"]
         
         damage = AttributeCalculator.calculate_damage(attack, defense)
-        player_attributes["health"] = max(0.0, player_attributes["health"] - damage)
+        player_attributes["health"] = round(max(0.0, player_attributes["health"] - damage), 2)
         
         battle_timeline.append({
             "time": round(current_time, 2),
             "type": "enemy_action",
-            "spell_id": "norm_attack",
-            "damage": round(damage, 2),
-            "target_health_after": round(player_attributes["health"], 2)
+            "info": {
+                "enemy_name": enemy_name,
+                "spell_id": "norm_attack",
+                "damage": round(damage, 2),
+                "target_health_after": round(player_attributes["health"], 2)
+            }
         })
         
         return enemy_atb - self.ATB_MAX, battle_timeline
@@ -499,25 +631,31 @@ class LianliSystem:
         if victory and floor > self.tower_highest_floor:
             self.tower_highest_floor = floor
     
-    def to_db_data(self) -> dict:
+    def to_dict(self) -> dict:
         """转换为数据库存储格式"""
         return {
             "tower_highest_floor": self.tower_highest_floor,
-            "daily_dungeon_data": self.daily_dungeon_data
+            "daily_dungeon_data": self.daily_dungeon_data,
+            "is_battling": self.is_battling,
+            "battle_start_time": self.battle_start_time,
+            "current_battle_data": self.current_battle_data
         }
     
     @classmethod
-    def from_db_data(cls, db_data: dict) -> 'LianliSystem':
+    def from_dict(cls, db_data: dict) -> 'LianliSystem':
         """从数据库数据创建"""
         instance = cls()
         instance.tower_highest_floor = db_data.get("tower_highest_floor", 0)
         instance.daily_dungeon_data = db_data.get("daily_dungeon_data", {})
+        instance.is_battling = db_data.get("is_battling", False)
+        instance.battle_start_time = db_data.get("battle_start_time", None)
+        instance.current_battle_data = db_data.get("current_battle_data", None)
         return instance
 
 
 if __name__ == "__main__":
     from ..spell.SpellSystem import SpellSystem
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
     
     print("=" * 60)
     print("历练系统测试")
@@ -538,7 +676,7 @@ if __name__ == "__main__":
     print(f"装备的主动术法: {spell_system.equipped_spells.get('active', [])}")
     print(f"装备的开场术法: {spell_system.equipped_spells.get('opening', [])}")
     
-    player_data = PlayerData(
+    player_data = PlayerSystem(
         health=76.0,
         spirit_energy=20.0,
         realm="炼气期",
@@ -557,7 +695,7 @@ if __name__ == "__main__":
     print(f"\n开始挑战区域: qi_refining_outer")
     print("-" * 60)
     
-    result = lianli_system.start_lianli_battle(
+    result = lianli_system.start_battle_simulation(
         area_id="qi_refining_outer",
         player_data=player_data,
         spell_system=spell_system,

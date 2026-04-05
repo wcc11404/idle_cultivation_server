@@ -11,7 +11,7 @@ from app.modules.player.AttributeCalculator import AttributeCalculator
 from .SpellData import SpellData
 
 if TYPE_CHECKING:
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
 
 
 class SpellSystem:
@@ -253,7 +253,7 @@ class SpellSystem:
             "new_level": spell_info["level"]
         }
     
-    def charge_spell_spirit(self, spell_id: str, amount: int, player_data: 'PlayerData') -> Dict[str, Any]:
+    def charge_spell_spirit(self, spell_id: str, amount: int, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """
         给术法充灵气
         
@@ -545,7 +545,7 @@ class SpellSystem:
             "log": log
         }
     
-    def to_db_data(self) -> dict:
+    def to_dict(self) -> dict:
         """转换为数据库存储格式"""
         return {
             "player_spells": self.player_spells,
@@ -554,7 +554,7 @@ class SpellSystem:
         }
     
     @classmethod
-    def from_db_data(cls, db_data: dict) -> 'SpellSystem':
+    def from_dict(cls, db_data: dict) -> 'SpellSystem':
         """从数据库数据创建"""
         instance = cls()
         instance.player_spells = db_data.get("player_spells", {})

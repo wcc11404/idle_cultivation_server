@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.db.models import Account, PlayerData
-from app.core.security import decode_token, verify_password, get_password_hash, create_access_token
-from app.core.config import settings
-from app.core.logger import logger
+from fastapi.security import HTTPAuthorizationCredentials
+from app.db.Models import Account, PlayerData
+from app.core.Security import decode_token, verify_password, get_password_hash, create_access_token, security
+from app.core.ServerConfig import settings
+from app.core.Logger import logger
 from datetime import timedelta
 from typing import List
 import time
 
 router = APIRouter()
-security = HTTPBearer()
 
 
 # 简化的管理员认证

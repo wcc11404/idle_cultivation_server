@@ -1,14 +1,15 @@
 from fastapi import APIRouter
-from app.api import auth, game_base, admin
+from app.api import game_base, admin
 from app.modules.spell import SpellApi
 from app.modules.inventory import InventoryApi
 from app.modules.alchemy import AlchemyApi
 from app.modules.lianli import LianliApi
 from app.modules.cultivation import CultivationApi
+from app.modules.account.AccountApi import router as account_router
 
 api_router = APIRouter()
 
-api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(account_router, prefix="/auth", tags=["auth"])
 api_router.include_router(game_base.router, prefix="/game", tags=["game_base"])
 api_router.include_router(CultivationApi.router, prefix="/game", tags=["cultivation"])
 api_router.include_router(SpellApi.router, prefix="/game", tags=["spell"])

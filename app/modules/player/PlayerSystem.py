@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from ..spell.SpellSystem import SpellSystem
 
 
-class PlayerData:
+class PlayerSystem:
     """
     玩家数据类 - 负责管理玩家的核心属性
     
@@ -30,6 +30,10 @@ class PlayerData:
         self.realm = realm
         self.realm_level = realm_level
         self.spell_system = spell_system
+        
+        # 修炼状态，会存入数据库
+        self.is_cultivating: bool = False
+        self.last_cultivation_report_time: float = 0.0
         
         # 基础属性，只随境界变化而变化，不存数据库，每次境界变化都会重新计算
         self._load_attributes_from_realm()
@@ -70,54 +74,61 @@ class PlayerData:
         
     def reload_attributes(self):
         """重新加载属性（境界变化后或者附属系统增益有变化后调用）"""
+        # 基础属性，只随境界变化而变化，不存数据库，每次境界变化都会重新计算
         self._load_attributes_from_realm()
+        # 静态最终属性，根据基础属性和术法等附属系统计算得到，不存数据库，每次境界变化和附属系统变化都会重新计算
         self._load_static_attributes()
     
     def add_health(self, amount: float) -> float:
         """添加气血"""
         old_health = self.health
-        self.health = min(self.health + amount, self.static_max_health)
-        return self.health - old_health
+        self.health = round(min(self.health + amount, self.static_max_health), 2)
+        return round(self.health - old_health, 2)
     
     def reduce_health(self, amount: float) -> float:
         """减少气血"""
         old_health = self.health
-        self.health = max(0.0, self.health - amount)
-        return old_health - self.health
+        self.health = round(max(0.0, self.health - amount), 2)
+        return round(old_health - self.health, 2)
     
     def add_spirit_energy(self, amount: float) -> float:
         """添加灵气（不可突破最大灵气上限）"""
         if self.spirit_energy >= self.static_max_spirit_energy:
             return 0.0
         old_spirit = self.spirit_energy
-        self.spirit_energy = min(self.spirit_energy + amount, self.static_max_spirit_energy)
-        return self.spirit_energy - old_spirit
+        self.spirit_energy = round(min(self.spirit_energy + amount, self.static_max_spirit_energy), 2)
+        return round(self.spirit_energy - old_spirit, 2)
     
     def add_spirit_energy_breakthrough(self, amount: float) -> float:
         """添加灵气（可突破最大灵气上限）"""
         old_spirit = self.spirit_energy
-        self.spirit_energy = self.spirit_energy + amount
-        return self.spirit_energy - old_spirit
+        self.spirit_energy = round(self.spirit_energy + amount, 2)
+        return round(self.spirit_energy - old_spirit, 2)
     
     def reduce_spirit_energy(self, amount: float) -> float:
         """减少灵气"""
         old_spirit = self.spirit_energy
-        self.spirit_energy = max(0.0, self.spirit_energy - amount)
-        return old_spirit - self.spirit_energy
+        self.spirit_energy = round(max(0.0, self.spirit_energy - amount), 2)
+        return round(old_spirit - self.spirit_energy, 2)
     
     def to_dict(self) -> dict:
         return {
             "health": self.health,
             "spirit_energy": self.spirit_energy,
             "realm": self.realm,
-            "realm_level": self.realm_level
+            "realm_level": self.realm_level,
+            "is_cultivating": self.is_cultivating,
+            "last_cultivation_report_time": self.last_cultivation_report_time
         }
     
     @classmethod
-    def from_dict(cls, data: dict) -> 'PlayerData':
-        return cls(
+    def from_dict(cls, data: dict) -> 'PlayerSystem':
+        instance = cls(
             health=float(data.get("health", 100.0)),
             spirit_energy=float(data.get("spirit_energy", 0.0)),
             realm=data.get("realm", "炼气期"),
             realm_level=data.get("realm_level", 1)
         )
+        instance.is_cultivating = data.get("is_cultivating", False)
+        instance.last_cultivation_report_time = data.get("last_cultivation_report_time", 0.0)
+        return instance

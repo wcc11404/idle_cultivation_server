@@ -5,51 +5,17 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.schemas.game import UseItemRequest, UseItemResponse
-from app.db.models import Account, PlayerData as DBPlayerData
-from app.core.security import decode_token
-from app.core.logger import logger
-from app.modules import PlayerData, InventorySystem, SpellSystem, AlchemySystem
+from fastapi.security import HTTPAuthorizationCredentials
+from app.schemas.game import UseItemRequest, UseItemResponse, OrganizeInventoryRequest, DiscardItemRequest
+from app.db.Models import PlayerData as DBPlayerData
+from app.core.Security import get_current_user, decode_token, security
+from app.core.Logger import logger
+from app.modules import PlayerSystem, InventorySystem, SpellSystem, AlchemySystem
 from datetime import datetime, timezone
 import time
 import json
 
 router = APIRouter()
-security = HTTPBearer()
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Account:
-    """获取当前用户"""
-    token = credentials.credentials
-    payload = decode_token(token)
-    
-    if not payload:
-        logger.warning("[AUTH] INVALID_TOKEN")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="INVALID_TOKEN"
-        )
-    
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    
-    account = await Account.get_or_none(id=account_id)
-    if not account:
-        logger.warning(f"[AUTH] ACCOUNT_NOT_FOUND - account_id: {account_id}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="ACCOUNT_NOT_FOUND"
-        )
-    
-    if account.token_version != token_version:
-        logger.warning(f"[AUTH] KICKED_OUT - account_id: {account_id}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="KICKED_OUT"
-        )
-    
-    return account
 
 
 @router.post("/inventory/use", response_model=UseItemResponse)
@@ -73,10 +39,10 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
     
     db_data = player_data.data
     
-    player = PlayerData.from_dict(db_data.get("player", {}))
-    inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
-    spell_system = SpellSystem.from_db_data(db_data.get("spell_system", {}))
-    alchemy_system = AlchemySystem.from_db_data(
+    player = PlayerSystem.from_dict(db_data.get("player", {}))
+    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
+    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
+    alchemy_system = AlchemySystem.from_dict(
         db_data.get("alchemy_system", {})
     )
     
@@ -84,9 +50,9 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
     
     if result["success"]:
         db_data["player"] = player.to_dict()
-        db_data["inventory"] = inventory_system.to_db_data()
-        db_data["spell_system"] = spell_system.to_db_data()
-        db_data["alchemy_system"] = alchemy_system.to_db_data()
+        db_data["inventory"] = inventory_system.to_dict()
+        db_data["spell_system"] = spell_system.to_dict()
+        db_data["alchemy_system"] = alchemy_system.to_dict()
         
         player_data.data = db_data
         player_data.last_online_at = datetime.now(timezone.utc)
@@ -96,6 +62,8 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
     
     response_data = UseItemResponse(
         success=result["success"],
+        operation_id=request.operation_id,
+        timestamp=request.timestamp,
         effect=result.get("effect", {}),
         contents=None
     )
@@ -104,7 +72,7 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
 
 
 @router.post("/inventory/organize", response_model=dict)
-async def organize_inventory(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def organize_inventory(request: OrganizeInventoryRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """整理背包"""
     start_time = time.time()
     token = credentials.credentials
@@ -112,7 +80,7 @@ async def organize_inventory(credentials: HTTPAuthorizationCredentials = Depends
     account_id = payload.get("account_id")
     token_version = payload.get("version")
     current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/inventory/organize - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/inventory/organize - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
     
     player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
@@ -124,12 +92,12 @@ async def organize_inventory(credentials: HTTPAuthorizationCredentials = Depends
     
     db_data = player_data.data
     
-    inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
+    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
     
     result = inventory_system.organize_inventory()
     
     if result["success"]:
-        db_data["inventory"] = inventory_system.to_db_data()
+        db_data["inventory"] = inventory_system.to_dict()
         
         player_data.data = db_data
         player_data.last_online_at = datetime.now(timezone.utc)
@@ -139,6 +107,8 @@ async def organize_inventory(credentials: HTTPAuthorizationCredentials = Depends
     
     response_data = {
         "success": result["success"],
+        "operation_id": request.operation_id,
+        "timestamp": request.timestamp,
         "reason": result.get("reason", "")
     }
     logger.info(f"[OUT] POST /game/inventory/organize - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -146,7 +116,7 @@ async def organize_inventory(credentials: HTTPAuthorizationCredentials = Depends
 
 
 @router.post("/inventory/discard", response_model=dict)
-async def discard_item(request: UseItemRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def discard_item(request: DiscardItemRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """丢弃物品"""
     start_time = time.time()
     token = credentials.credentials
@@ -166,12 +136,12 @@ async def discard_item(request: UseItemRequest, credentials: HTTPAuthorizationCr
     
     db_data = player_data.data
     
-    inventory_system = InventorySystem.from_db_data(db_data.get("inventory", {}))
+    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
     
-    result = inventory_system.discard_item(request.item_id, 1)
+    result = inventory_system.discard_item(request.item_id, request.count)
     
     if result["success"]:
-        db_data["inventory"] = inventory_system.to_db_data()
+        db_data["inventory"] = inventory_system.to_dict()
         
         player_data.data = db_data
         player_data.last_online_at = datetime.now(timezone.utc)
@@ -181,6 +151,8 @@ async def discard_item(request: UseItemRequest, credentials: HTTPAuthorizationCr
     
     response_data = {
         "success": result["success"],
+        "operation_id": request.operation_id,
+        "timestamp": request.timestamp,
         "item_id": request.item_id,
         "discarded_count": result.get("discarded_count", 0)
     }

@@ -10,7 +10,7 @@ import random
 from .RecipeData import RecipeData
 
 if TYPE_CHECKING:
-    from ..player.PlayerData import PlayerData
+    from ..player.PlayerSystem import PlayerSystem
     from ..spell.SpellSystem import SpellSystem
     from ..inventory.InventorySystem import InventorySystem
     from .AlchemySystem import AlchemySystem
@@ -113,7 +113,7 @@ class AlchemyWorkshop:
         return result
     
     @staticmethod
-    def check_spirit_energy(recipe_id: str, count: int, player_data: 'PlayerData') -> Dict[str, Any]:
+    def check_spirit_energy(recipe_id: str, count: int, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """
         检查灵气是否足够
         
@@ -147,7 +147,7 @@ class AlchemyWorkshop:
         return result
     
     @staticmethod
-    def craft_pills(alchemy_system: 'AlchemySystem', recipe_id: str, count: int, player_data: 'PlayerData', 
+    def craft_pills(alchemy_system: 'AlchemySystem', recipe_id: str, count: int, player_data: 'PlayerSystem', 
                    spell_system: 'SpellSystem' = None, inventory_system: 'InventorySystem' = None) -> Dict[str, Any]:
         """
         炼制丹药（批量，服务端直接完成）
@@ -166,7 +166,8 @@ class AlchemyWorkshop:
                 "reason": str,
                 "success_count": int,
                 "fail_count": int,
-                "products": dict
+                "products": dict,
+                "materials_consumed": dict
             }
         """
         if not alchemy_system.has_learned_recipe(recipe_id):
@@ -175,7 +176,8 @@ class AlchemyWorkshop:
                 "reason": "未学会该丹方",
                 "success_count": 0,
                 "fail_count": 0,
-                "products": {}
+                "products": {},
+                "materials_consumed": {}
             }
         
         if not inventory_system:
@@ -184,7 +186,8 @@ class AlchemyWorkshop:
                 "reason": "背包系统未初始化",
                 "success_count": 0,
                 "fail_count": 0,
-                "products": {}
+                "products": {},
+                "materials_consumed": {}
             }
         
         material_check = AlchemyWorkshop.check_materials(recipe_id, count, inventory_system)
@@ -194,7 +197,8 @@ class AlchemyWorkshop:
                 "reason": "材料不足",
                 "success_count": 0,
                 "fail_count": 0,
-                "products": {}
+                "products": {},
+                "materials_consumed": {}
             }
         
         spirit_check = AlchemyWorkshop.check_spirit_energy(recipe_id, count, player_data)
@@ -204,7 +208,8 @@ class AlchemyWorkshop:
                 "reason": "灵气不足",
                 "success_count": 0,
                 "fail_count": 0,
-                "products": {}
+                "products": {},
+                "materials_consumed": {}
             }
         
         materials = RecipeData.get_recipe_materials(recipe_id)
@@ -212,15 +217,16 @@ class AlchemyWorkshop:
         product_id = RecipeData.get_recipe_product(recipe_id)
         product_count_per_pill = RecipeData.get_recipe_product_count(recipe_id)
         
-        for material_id, material_count in materials.items():
-            inventory_system.remove_item(material_id, material_count * count)
-        
         player_data.reduce_spirit_energy(float(spirit_per_pill * count))
         
         success_rate = AlchemyWorkshop.calculate_success_rate(alchemy_system, recipe_id, spell_system)
         success_count = 0
         fail_count = 0
         products = {}
+        materials_consumed = {}
+        
+        if spirit_per_pill > 0:
+            materials_consumed["spirit_energy"] = spirit_per_pill * count
         
         for i in range(count):
             roll = random.random() * 100.0
@@ -230,6 +236,9 @@ class AlchemyWorkshop:
             
             if roll <= success_rate:
                 success_count += 1
+                for material_id, material_count in materials.items():
+                    inventory_system.remove_item(material_id, material_count)
+                    materials_consumed[material_id] = materials_consumed.get(material_id, 0) + material_count
                 if product_id:
                     if product_id in products:
                         products[product_id] += product_count_per_pill
@@ -237,7 +246,10 @@ class AlchemyWorkshop:
                         products[product_id] = product_count_per_pill
             else:
                 fail_count += 1
-                AlchemyWorkshop._return_half_materials(materials, 1, inventory_system)
+                for material_id, material_count in materials.items():
+                    fail_mat_count = (material_count + 1) // 2
+                    inventory_system.remove_item(material_id, fail_mat_count)
+                    materials_consumed[material_id] = materials_consumed.get(material_id, 0) + fail_mat_count
         
         for prod_id, prod_count in products.items():
             inventory_system.add_item(prod_id, prod_count)
@@ -247,7 +259,8 @@ class AlchemyWorkshop:
             "reason": "炼制完成",
             "success_count": success_count,
             "fail_count": fail_count,
-            "products": products
+            "products": products,
+            "materials_consumed": materials_consumed
         }
     
     @staticmethod

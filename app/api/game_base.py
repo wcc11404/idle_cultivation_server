@@ -5,51 +5,18 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.schemas.game import SaveGameRequest, SaveGameResponse, LoadGameResponse
-from app.db.models import Account, PlayerData
-from app.core.security import decode_token
-from app.core.init_player_info import get_initial_player_data
-from app.core.logger import logger
+from fastapi.security import HTTPAuthorizationCredentials
+from app.schemas.game import SaveGameRequest, SaveGameResponse, LoadGameResponse, ClaimOfflineRewardRequest, GetRankRequest, RankResponse, RankItem
+from app.db.Models import PlayerData, Account
+from app.core.Security import get_current_user, decode_token, security
+from app.core.InitPlayerInfo import get_initial_player_data
+from app.core.Logger import logger
 from datetime import datetime, timezone
 import time
 import json
+import os
 
 router = APIRouter()
-security = HTTPBearer()
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Account:
-    """获取当前用户"""
-    token = credentials.credentials
-    payload = decode_token(token)
-    
-    if not payload:
-        logger.warning("[AUTH] INVALID_TOKEN")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="INVALID_TOKEN"
-        )
-    
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    
-    account = await Account.get_or_none(id=account_id)
-    if not account:
-        logger.warning(f"[AUTH] ACCOUNT_NOT_FOUND - account_id: {account_id}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="ACCOUNT_NOT_FOUND"
-        )
-    
-    if account.token_version != token_version:
-        logger.warning(f"[AUTH] KICKED_OUT - account_id: {account_id} - token_version_from_token: {token_version} - token_version_in_db: {account.token_version}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="KICKED_OUT"
-        )
-    
-    return account
 
 
 @router.get("/data", response_model=LoadGameResponse)
@@ -128,6 +95,8 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
     
     response_data = SaveGameResponse(
         success=True,
+        operation_id=request.operation_id,
+        timestamp=request.timestamp,
         last_online_at=int(player_data.last_online_at.timestamp())
     )
     logger.info(f"[OUT] POST /game/save - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -135,7 +104,7 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
 
 
 @router.post("/claim_offline_reward", response_model=dict)
-async def claim_offline_reward(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def claim_offline_reward(request: ClaimOfflineRewardRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """领取离线奖励"""
     start_time = time.time()
     token = credentials.credentials
@@ -143,7 +112,7 @@ async def claim_offline_reward(credentials: HTTPAuthorizationCredentials = Depen
     account_id = payload.get("account_id")
     token_version = payload.get("version")
     current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/claim_offline_reward - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/claim_offline_reward - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
     
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
@@ -223,6 +192,8 @@ async def claim_offline_reward(credentials: HTTPAuthorizationCredentials = Depen
     if offline_seconds <= 60:
         response_data = {
             "success": True,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
             "offline_reward": None,
             "offline_seconds": offline_seconds,
             "last_online_at": int(player_data.last_online_at.timestamp()),
@@ -231,10 +202,93 @@ async def claim_offline_reward(credentials: HTTPAuthorizationCredentials = Depen
     else:
         response_data = {
             "success": True,
+            "operation_id": request.operation_id,
+            "timestamp": request.timestamp,
             "offline_reward": offline_reward,
             "offline_seconds": offline_seconds,
             "last_online_at": int(player_data.last_online_at.timestamp()),
             "message": "领取成功"
         }
     logger.info(f"[OUT] POST /game/claim_offline_reward - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+    return response_data
+
+
+def _load_realm_config():
+    """加载境界配置"""
+    config_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "modules/cultivation/realms.json"
+    )
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _get_realm_order(realm_name: str, realm_order: list) -> int:
+    """获取境界排序值"""
+    try:
+        return realm_order.index(realm_name)
+    except ValueError:
+        return len(realm_order)
+
+
+@router.get("/rank", response_model=RankResponse)
+async def get_rank(server_id: str = "default"):
+    """获取排行榜"""
+    start_time = time.time()
+    logger.info(f"[IN] GET /game/rank - server_id: {server_id}")
+    
+    realm_config = _load_realm_config()
+    realm_order = realm_config.get("realm_order", [])
+    
+    all_players = await PlayerData.filter(server_id=server_id).all()
+    
+    rank_list = []
+    for player_data in all_players:
+        account = await Account.get_or_none(id=player_data.account_id)
+        if not account or account.is_banned:
+            continue
+        
+        player_info = player_data.data.get("player", {})
+        account_info = player_data.data.get("account_info", {})
+        
+        realm = player_info.get("realm", "炼气期")
+        level = player_info.get("realm_level", 1)
+        spirit_energy = player_info.get("spirit_energy", 0)
+        nickname = account_info.get("nickname", f"修仙者{str(player_data.account_id)[:6]}")
+        title_id = account_info.get("title_id", "")
+        
+        rank_list.append({
+            "realm": realm,
+            "level": level,
+            "spirit_energy": spirit_energy,
+            "nickname": nickname,
+            "title_id": title_id,
+            "created_at": account.created_at
+        })
+    
+    rank_list.sort(key=lambda x: (
+        _get_realm_order(x["realm"], realm_order),
+        -x["level"],
+        -x["spirit_energy"],
+        x["created_at"]
+    ))
+    
+    rank_items = []
+    for index, item in enumerate(rank_list[:100], start=1):
+        rank_items.append(RankItem(
+            rank=index,
+            nickname=item["nickname"],
+            realm=item["realm"],
+            level=item["level"],
+            spirit_energy=item["spirit_energy"],
+            title_id=item["title_id"]
+        ))
+    
+    response_data = RankResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        ranks=rank_items
+    )
+    logger.info(f"[OUT] GET /game/rank - 返回{len(rank_items)}条排行榜数据 - 耗时：{time.time() - start_time:.4f}s")
     return response_data

@@ -1,12 +1,12 @@
 from tortoise import Tortoise
-from app.core.config import settings
+from app.core.ServerConfig import settings
 
 
 async def init_db():
     """初始化数据库连接"""
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
-        modules={"models": ["app.db.models"]},
+        modules={"models": ["app.db.Models"]},
         use_tz=True,
         timezone="Asia/Shanghai"
     )
