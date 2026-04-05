@@ -1,0 +1,91 @@
+"""
+API依赖注入
+
+提供统一的依赖注入函数，减少API中的重复代码
+"""
+
+from typing import Optional, Dict, Any
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials
+from app.core.Security import get_current_user, decode_token, security
+from app.db.Models import PlayerData, Account
+from app.modules import PlayerSystem, SpellSystem, InventorySystem, AlchemySystem, LianliSystem, AccountSystem
+from app.core.Logger import logger
+from dataclasses import dataclass
+
+
+@dataclass
+class GameContext:
+    """游戏上下文，包含所有游戏系统"""
+    account: Account
+    player_data: PlayerData
+    db_data: Dict[str, Any]
+    player: PlayerSystem
+    spell_system: SpellSystem
+    inventory_system: InventorySystem
+    alchemy_system: AlchemySystem
+    lianli_system: LianliSystem
+    account_system: AccountSystem
+    
+    def save(self):
+        """保存所有系统数据到db_data"""
+        self.db_data["player"] = self.player.to_dict()
+        self.db_data["spell_system"] = self.spell_system.to_dict()
+        self.db_data["inventory"] = self.inventory_system.to_dict()
+        self.db_data["alchemy_system"] = self.alchemy_system.to_dict()
+        self.db_data["lianli_system"] = self.lianli_system.to_dict()
+        self.db_data["account_info"] = self.account_system.to_dict()
+
+
+async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(security)) -> GameContext:
+    """
+    获取游戏上下文（依赖注入）
+    
+    自动处理：
+    1. Token验证
+    2. 玩家数据加载
+    3. 各系统初始化
+    
+    Returns:
+        GameContext: 包含所有游戏系统的上下文对象
+    """
+    current_user = await get_current_user(credentials)
+    
+    player_data = await PlayerData.get_or_none(account_id=current_user.id)
+    if not player_data:
+        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="玩家数据不存在"
+        )
+    
+    db_data = player_data.data
+    
+    return GameContext(
+        account=current_user,
+        player_data=player_data,
+        db_data=db_data,
+        player=PlayerSystem.from_dict(db_data.get("player", {})),
+        spell_system=SpellSystem.from_dict(db_data.get("spell_system", {})),
+        inventory_system=InventorySystem.from_dict(db_data.get("inventory", {})),
+        alchemy_system=AlchemySystem.from_dict(db_data.get("alchemy_system", {})),
+        lianli_system=LianliSystem.from_dict(db_data.get("lianli_system", {})),
+        account_system=AccountSystem.from_dict(db_data.get("account_info", {}))
+    )
+
+
+async def get_token_info(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+    """
+    获取token信息（依赖注入）
+    
+    Returns:
+        dict: 包含token, account_id, token_version的字典
+    """
+    token = credentials.credentials
+    payload = decode_token(token)
+    return {
+        "token": token,
+        "account_id": payload.get("account_id"),
+        "token_version": payload.get("version")
+    }
