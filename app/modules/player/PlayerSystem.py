@@ -111,6 +111,10 @@ class PlayerSystem:
         self.spirit_energy = round(max(0.0, self.spirit_energy - amount), 2)
         return round(old_spirit - self.spirit_energy, 2)
     
+    def set_health(self, health: float):
+        """设置气血（不超过静态生命最大上限）"""
+        self.health = round(min(health, self.static_max_health), 2)
+    
     def reset_cultivation_state(self):
         """重置修炼状态"""
         self.is_cultivating = False

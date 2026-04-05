@@ -46,7 +46,6 @@ async def simulate_battle(request: LianliBattleRequest, credentials: HTTPAuthori
     
     player = PlayerSystem.from_dict(db_data.get("player", {}))
     spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
     lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
     alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
     

@@ -186,6 +186,125 @@ class LianliSystem:
                     loot.append({"item_id": item_id, "amount": amount})
         
         return loot
+
+    def finish_battle(self, speed: float, index: Optional[int], 
+                      player_data: 'PlayerSystem',
+                      spell_system: Optional['SpellSystem'] = None,
+                      inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
+        """
+        结算战斗（更新数据库）
+        
+        Args:
+            speed: 播放倍速
+            index: 战斗进度索引（None表示完整结算）
+            player_data: 玩家数据
+            spell_system: 术法系统
+            inventory_system: 背包系统
+        
+        Returns:
+            结算结果
+        """
+        if not self.is_battling or not self.current_battle_data:
+            return {
+                "success": False,
+                "reason": "当前未在战斗状态",
+                "settled_index": 0,
+                "total_index": 0,
+                "player_health_after": player_data.health,
+                "loot_gained": [],
+                "exp_gained": 0
+            }
+        
+        current_time = time.time()
+        
+        battle_data = self.current_battle_data
+        battle_timeline = battle_data["battle_timeline"]
+        total_index = len(battle_timeline)
+        
+        if index is None or index >= total_index:
+            index = total_index - 1
+        
+        if index < 0:
+            index = 0
+        
+        battle_time_at_index = battle_timeline[index]["time"] if index < total_index else battle_data["total_time"]
+        expected_time = battle_time_at_index / speed
+        actual_time = current_time - self.battle_start_time
+        
+        if actual_time < expected_time * 0.9:
+            return {
+                "success": False,
+                "reason": f"战斗结算异常：时间验证失败，实际用时{actual_time:.1f}秒，最小需要{expected_time * 0.9:.1f}秒",
+                "settled_index": 0,
+                "total_index": total_index,
+                "player_health_after": player_data.health,
+                "loot_gained": [],
+                "exp_gained": 0
+            }
+        
+        player_health_after = battle_data["player_health_before"]
+        spells_used = []
+        
+        for i in range(min(index + 1, total_index)):
+            action = battle_timeline[i]
+            if action["type"] == "player_action":
+                info = action.get("info", {})
+                spell_id = info.get("spell_id", "")
+                if spell_id and spell_id != "norm_attack":
+                    spells_used.append(spell_id)
+                
+                if info.get("effect_type") == "instant_damage":
+                    pass
+                elif info.get("effect_type") == "heal":
+                    # TODO: 实现治疗逻辑
+                    # heal_amount = info.get("heal", 0)
+                    # player_health_after = round(min(player_data.static_max_health, player_health_after + heal_amount), 2)
+                    pass
+        
+        for i in range(min(index + 1, total_index)):
+            action = battle_timeline[i]
+            if action["type"] == "enemy_action":
+                info = action.get("info", {})
+                damage = info.get("damage", 0)
+                player_health_after = round(max(0, player_health_after - damage), 2)
+        
+        player_data.set_health(player_health_after)
+        
+        if spell_system:
+            for spell_id in spells_used:
+                spell_system.add_spell_use_count(spell_id)
+        
+        loot_gained = []
+        is_full_settlement = (index >= total_index - 1)
+        
+        if is_full_settlement and battle_data["victory"]:
+            loot_gained = battle_data["loot"]
+            if inventory_system:
+                for loot_item in loot_gained:
+                    inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
+            
+            area_id = battle_data["area_id"]
+            if AreasData.is_daily_area(area_id):
+                self.use_daily_dungeon_count(area_id)
+            
+            if AreasData.is_tower_area(area_id):
+                current_floor = self.tower_highest_floor + 1
+                self.finish_tower_battle(current_floor, battle_data["victory"])
+        
+        self.is_battling = False
+        self.battle_start_time = None
+        self.current_battle_data = None
+        
+        return {
+            "success": True,
+            "reason": "",
+            "settled_index": index + 1,
+            "total_index": total_index,
+            "player_health_after": player_health_after,
+            "loot_gained": loot_gained,
+            "exp_gained": 0,
+            "message": "战斗结算成功" if is_full_settlement else "战斗部分结算成功"
+        }
     
     def can_start_battle(self, area_id: str, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """
@@ -292,123 +411,6 @@ class LianliSystem:
             "victory": battle_result["victory"],
             "loot": loot,
             "reason": ""
-        }
-    
-    def finish_battle(self, speed: float, index: Optional[int], 
-                      player_data: 'PlayerSystem',
-                      spell_system: Optional['SpellSystem'] = None,
-                      inventory_system: Optional['InventorySystem'] = None) -> Dict[str, Any]:
-        """
-        结算战斗（更新数据库）
-        
-        Args:
-            speed: 播放倍速
-            index: 战斗进度索引（None表示完整结算）
-            player_data: 玩家数据
-            spell_system: 术法系统
-            inventory_system: 背包系统
-        
-        Returns:
-            结算结果
-        """
-        if not self.is_battling or not self.current_battle_data:
-            return {
-                "success": False,
-                "reason": "当前未在战斗状态",
-                "settled_index": 0,
-                "total_index": 0,
-                "player_health_after": player_data.health,
-                "loot_gained": [],
-                "exp_gained": 0
-            }
-        
-        current_time = time.time()
-        
-        battle_data = self.current_battle_data
-        battle_timeline = battle_data["battle_timeline"]
-        total_index = len(battle_timeline)
-        
-        if index is None or index >= total_index:
-            index = total_index - 1
-        
-        if index < 0:
-            index = 0
-        
-        battle_time_at_index = battle_timeline[index]["time"] if index < total_index else battle_data["total_time"]
-        expected_time = battle_time_at_index / speed
-        actual_time = current_time - self.battle_start_time
-        
-        if actual_time < expected_time * 0.9:
-            return {
-                "success": False,
-                "reason": f"战斗结算异常：时间验证失败，实际用时{actual_time:.1f}秒，最小需要{expected_time * 0.9:.1f}秒",
-                "settled_index": 0,
-                "total_index": total_index,
-                "player_health_after": player_data.health,
-                "loot_gained": [],
-                "exp_gained": 0
-            }
-        
-        player_health_after = battle_data["player_health_before"]
-        spells_used = []
-        
-        for i in range(min(index + 1, total_index)):
-            action = battle_timeline[i]
-            if action["type"] == "player_action":
-                info = action.get("info", {})
-                spell_id = info.get("spell_id", "")
-                if spell_id and spell_id != "norm_attack":
-                    spells_used.append(spell_id)
-                
-                if info.get("effect_type") == "instant_damage":
-                    pass
-                elif info.get("effect_type") == "heal":
-                    heal_amount = info.get("heal", 0)
-                    player_health_after = round(min(player_data.static_max_health, player_health_after + heal_amount), 2)
-        
-        for i in range(min(index + 1, total_index)):
-            action = battle_timeline[i]
-            if action["type"] == "enemy_action":
-                info = action.get("info", {})
-                damage = info.get("damage", 0)
-                player_health_after = round(max(0, player_health_after - damage), 2)
-        
-        player_data.health = round(player_health_after, 2)
-        
-        if spell_system:
-            for spell_id in spells_used:
-                spell_system.add_spell_use_count(spell_id)
-        
-        loot_gained = []
-        is_full_settlement = (index >= total_index - 1)
-        
-        if is_full_settlement and battle_data["victory"]:
-            loot_gained = battle_data["loot"]
-            if inventory_system:
-                for loot_item in loot_gained:
-                    inventory_system.add_item(loot_item["item_id"], loot_item["amount"])
-            
-            area_id = battle_data["area_id"]
-            if AreasData.is_daily_area(area_id):
-                self.use_daily_dungeon_count(area_id)
-            
-            if AreasData.is_tower_area(area_id):
-                current_floor = self.tower_highest_floor + 1
-                self.finish_tower_battle(current_floor, battle_data["victory"])
-        
-        self.is_battling = False
-        self.battle_start_time = None
-        self.current_battle_data = None
-        
-        return {
-            "success": True,
-            "reason": "",
-            "settled_index": index + 1,
-            "total_index": total_index,
-            "player_health_after": player_health_after,
-            "loot_gained": loot_gained,
-            "exp_gained": 0,
-            "message": "战斗结算成功" if is_full_settlement else "战斗部分结算成功"
         }
     
     def execute_battle(self, player_data: 'PlayerSystem', enemy_data: dict, 
