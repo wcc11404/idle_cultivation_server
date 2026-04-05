@@ -147,6 +147,17 @@ class DiscardItemRequest(BaseRequest):
     count: int = 1
 
 
+class ExpandInventoryRequest(BaseRequest):
+    """扩容背包请求"""
+    pass
+
+
+class ExpandInventoryResponse(BaseResponse):
+    """扩容背包响应"""
+    new_capacity: int
+    message: str
+
+
 class EquipSpellRequest(BaseRequest):
     """装备术法请求"""
     spell_id: str

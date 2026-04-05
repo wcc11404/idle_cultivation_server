@@ -53,68 +53,6 @@
 
 ---
 
-### 9.7 battle_timeline 结构
-
-战斗时间线是一个数组，每个元素代表一个战斗行动：
-
-#### 玩家行动（player_action）
-
-```json
-{
-  "time": 2.0,
-  "type": "player_action",
-  "info": {
-    "spell_id": "basic_boxing_techniques",
-    "effect_type": "instant_damage",
-    "damage": 6.6,
-    "heal": 0,
-    "target_health_after": 23.4
-  }
-}
-```
-
-**info 字段说明**：
-
-| 字段               | 类型   | 说明                           |
-| ------------------ | ------ | ------------------------------ |
-| spell_id           | string | 术法ID（norm_attack为普通攻击）|
-| effect_type        | string | 效果类型                       |
-| damage             | number | 伤害值（保留两位小数）         |
-| heal               | number | 治疗值（保留两位小数）         |
-| target_health_after| number | 目标剩余生命值                 |
-
-**effect_type 类型**：
-
-- `instant_damage`：即时伤害
-- `heal`：治疗
-- `undispellable_buff`：不可驱散的增益效果
-
-#### 敌人行动（enemy_action）
-
-```json
-{
-  "time": 2.3,
-  "type": "enemy_action",
-  "info": {
-    "enemy_name": "野猪",
-    "spell_id": "norm_attack",
-    "damage": 1.0,
-    "target_health_after": 75.0
-  }
-}
-```
-
-**info 字段说明**：
-
-| 字段               | 类型   | 说明                   |
-| ------------------ | ------ | ---------------------- |
-| enemy_name         | string | 敌人名称               |
-| spell_id           | string | 术法ID（通常为norm_attack）|
-| damage             | number | 伤害值（保留两位小数） |
-| target_health_after| number | 目标剩余生命值         |
-
----
-
 ## 1. 认证系统 API
 
 ### 1.1 注册账号
@@ -1016,6 +954,50 @@
   "discarded_count": 0
 }
 ```
+
+---
+
+### 4.4 扩容背包
+
+- **接口地址**：`POST /api/game/inventory/expand`
+- **功能**：扩容背包容量
+- **认证**：需要认证
+
+#### 请求参数
+
+| 字段         | 类型   | 必选 | 说明                          |
+| ------------ | ------ | ---- | ----------------------------- |
+| operation_id | string | 是   | 客户端生成的UUID              |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
+
+#### 成功响应
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "new_capacity": 60,
+  "message": "扩容成功"
+}
+```
+
+#### 失败响应
+
+```json
+{
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "new_capacity": 200,
+  "message": "已达到最大容量"
+}
+```
+
+**说明**：
+- 每次扩容增加10格容量
+- 最大容量为200格
+- 达到最大容量时返回失败
 
 ---
 
@@ -1936,6 +1918,66 @@
   "loot": [...]
 }
 ```
+
+### 9.7 battle_timeline 结构
+
+战斗时间线是一个数组，每个元素代表一个战斗行动：
+
+#### 玩家行动（player_action）
+
+```json
+{
+  "time": 2.0,
+  "type": "player_action",
+  "info": {
+    "spell_id": "basic_boxing_techniques",
+    "effect_type": "instant_damage",
+    "damage": 6.6,
+    "heal": 0,
+    "target_health_after": 23.4
+  }
+}
+```
+
+**info 字段说明**：
+
+| 字段               | 类型   | 说明                           |
+| ------------------ | ------ | ------------------------------ |
+| spell_id           | string | 术法ID（norm_attack为普通攻击）|
+| effect_type        | string | 效果类型                       |
+| damage             | number | 伤害值（保留两位小数）         |
+| heal               | number | 治疗值（保留两位小数）         |
+| target_health_after| number | 目标剩余生命值                 |
+
+**effect_type 类型**：
+
+- `instant_damage`：即时伤害
+- `heal`：治疗
+- `undispellable_buff`：不可驱散的增益效果
+
+#### 敌人行动（enemy_action）
+
+```json
+{
+  "time": 2.3,
+  "type": "enemy_action",
+  "info": {
+    "enemy_name": "野猪",
+    "spell_id": "norm_attack",
+    "damage": 1.0,
+    "target_health_after": 75.0
+  }
+}
+```
+
+**info 字段说明**：
+
+| 字段               | 类型   | 说明                   |
+| ------------------ | ------ | ---------------------- |
+| enemy_name         | string | 敌人名称               |
+| spell_id           | string | 术法ID（通常为norm_attack）|
+| damage             | number | 伤害值（保留两位小数） |
+| target_health_after| number | 目标剩余生命值         |
 
 ---
 
