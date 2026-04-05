@@ -631,6 +631,12 @@ class LianliSystem:
         if victory and floor > self.tower_highest_floor:
             self.tower_highest_floor = floor
     
+    def reset_battle_state(self):
+        """重置战斗状态"""
+        self.is_battling = False
+        self.battle_start_time = None
+        self.current_battle_data = None
+    
     def to_dict(self) -> dict:
         """转换为数据库存储格式"""
         return {

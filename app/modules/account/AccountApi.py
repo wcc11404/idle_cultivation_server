@@ -8,6 +8,9 @@ from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.core.Validator import Validator
 from app.modules import PlayerSystem as GamePlayerData, AccountSystem
+from app.modules.player.PlayerSystem import PlayerSystem
+from app.modules.alchemy.AlchemySystem import AlchemySystem
+from app.modules.lianli.LianliSystem import LianliSystem
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
@@ -271,10 +274,25 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if player_data:
         db_data = player_data.data
         
-        if db_data.get("player", {}).get("is_cultivating", False):
-            db_data["player"]["is_cultivating"] = False
-            logger.info(f"[GAME] 登出时停止修炼 - account_id: {current_user.id}")
+        # 重置修炼状态
+        player = PlayerSystem.from_dict(db_data.get("player", {}))
+        player.reset_cultivation_state()
+        db_data["player"] = player.to_dict()
+        logger.info(f"[GAME] 登出时重置修炼状态 - account_id: {current_user.id}")
         
+        # 重置炼丹状态
+        alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
+        alchemy_system.reset_alchemy_state()
+        db_data["alchemy_system"] = alchemy_system.to_dict()
+        logger.info(f"[GAME] 登出时重置炼丹状态 - account_id: {current_user.id}")
+        
+        # 重置战斗状态
+        lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
+        lianli_system.reset_battle_state()
+        db_data["lianli_system"] = lianli_system.to_dict()
+        logger.info(f"[GAME] 登出时重置战斗状态 - account_id: {current_user.id}")
+        
+        # 重置可疑操作计数
         account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
         await AntiCheatSystem.reset_suspicious_operations(
             account_id=str(current_user.id),

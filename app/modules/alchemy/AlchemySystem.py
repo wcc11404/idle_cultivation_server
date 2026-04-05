@@ -141,6 +141,11 @@ class AlchemySystem:
         
         return bonus
     
+    def reset_alchemy_state(self):
+        """重置炼丹状态"""
+        self.is_alchemizing = False
+        self.last_alchemy_report_time = 0.0
+    
     def to_dict(self) -> dict:
         """转换为数据库存储格式"""
         return {

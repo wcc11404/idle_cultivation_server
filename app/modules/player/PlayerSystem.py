@@ -111,6 +111,11 @@ class PlayerSystem:
         self.spirit_energy = round(max(0.0, self.spirit_energy - amount), 2)
         return round(old_spirit - self.spirit_energy, 2)
     
+    def reset_cultivation_state(self):
+        """重置修炼状态"""
+        self.is_cultivating = False
+        self.last_cultivation_report_time = 0.0
+    
     def to_dict(self) -> dict:
         return {
             "health": self.health,
