@@ -75,30 +75,34 @@ async def simulate_battle(
 
 **问题：** 构建API响应时存在大量重复字段赋值
 
-**解决方案：** 创建响应构建辅助函数
-
-**新增文件：** `app/core/ResponseBuilder.py`
+**解决方案：** 在对应的API文件中创建响应构建辅助函数（使用下划线前缀表示内部函数）
 
 **示例：**
 ```python
-# 优化前
-response_data = LianliBattleResponse(
-    success=False,
-    operation_id=request.operation_id,
-    timestamp=request.timestamp,
-    battle_timeline=[],
-    total_time=0.0,
-    player_health_before=0.0,
-    player_health_after=0.0,
-    enemy_health_after=0.0,
-    enemy_data={},
-    victory=False,
-    loot=[],
-    message="正在修炼中，无法开始战斗"
-)
+# 在 LianliApi.py 中定义
+def _build_lianli_battle_failure_response(
+    operation_id: str,
+    timestamp: float,
+    message: str
+) -> LianliBattleResponse:
+    """构建历练战斗失败响应"""
+    return LianliBattleResponse(
+        success=False,
+        operation_id=operation_id,
+        timestamp=timestamp,
+        battle_timeline=[],
+        total_time=0.0,
+        player_health_before=0.0,
+        player_health_after=0.0,
+        enemy_health_after=0.0,
+        enemy_data={},
+        victory=False,
+        loot=[],
+        message=message
+    )
 
-# 优化后
-response_data = build_lianli_battle_failure_response(
+# 使用
+response_data = _build_lianli_battle_failure_response(
     request.operation_id, request.timestamp, "正在修炼中，无法开始战斗"
 )
 ```
@@ -106,6 +110,7 @@ response_data = build_lianli_battle_failure_response(
 **优势：**
 - 减少响应构建代码量
 - 统一响应格式
+- 代码内聚性更好（相关代码在同一文件）
 - 更容易维护和修改
 
 ### 3. 数据保存优化
@@ -205,6 +210,39 @@ async def simulate_battle(
     
     # ... 业务逻辑更清晰
 ```
+
+## 设计决策说明
+
+### 为什么响应构建函数写在对应的API文件里？
+
+**考虑过的方案：**
+1. 创建独立的 `ResponseBuilder.py` 文件集中管理所有响应构建函数
+2. 在每个API文件中定义自己的响应构建函数（当前方案）
+
+**选择方案2的原因：**
+
+1. **代码内聚性更好**
+   - 响应构建函数和使用它的API在同一个文件
+   - 修改时不需要在多个文件间跳转
+   - 更容易理解代码的完整逻辑
+
+2. **减少文件数量**
+   - 不需要额外的文件
+   - 项目结构更简洁
+
+3. **符合Python模块化原则**
+   - 每个模块自包含
+   - 使用下划线前缀（`_build_*`）表示内部函数
+
+4. **实际情况分析**
+   - 每个响应构建函数都只在一个API文件中使用
+   - `build_lianli_battle_*` → 只在 LianliApi 中使用
+   - `build_cultivation_*` → 只在 CultivationApi 中使用
+   - `build_alchemy_*` → 只在 AlchemyApi 中使用
+
+**如果将来需要跨API共享响应构建逻辑：**
+- 可以提取公共部分到 `app/core/ResponseBuilder.py`
+- 但目前没有这个需求，所以保持简单
 
 ## 其他优化建议
 
