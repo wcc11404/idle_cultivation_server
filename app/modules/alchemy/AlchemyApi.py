@@ -78,31 +78,16 @@ async def get_recipes(
 
 
 @router.post("/alchemy/start", response_model=AlchemyStartResponse)
-async def start_alchemy(request: AlchemyStartRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def start_alchemy(
+    request: AlchemyStartRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """开始炼丹"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/alchemy/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/alchemy/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-    lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
-    
-    if alchemy_system.is_alchemizing:
+    if ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -113,7 +98,7 @@ async def start_alchemy(request: AlchemyStartRequest, credentials: HTTPAuthoriza
         logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    if player.is_cultivating:
+    if ctx.player.is_cultivating:
         response_data = AlchemyStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -124,7 +109,7 @@ async def start_alchemy(request: AlchemyStartRequest, credentials: HTTPAuthoriza
         logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    if lianli_system.is_battling:
+    if ctx.lianli_system.is_battling:
         response_data = AlchemyStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -136,14 +121,14 @@ async def start_alchemy(request: AlchemyStartRequest, credentials: HTTPAuthoriza
         return response_data
     
     current_time = time.time()
-    alchemy_system.is_alchemizing = True
-    alchemy_system.last_alchemy_report_time = current_time
+    ctx.alchemy_system.is_alchemizing = True
+    ctx.alchemy_system.last_alchemy_report_time = current_time
     
-    db_data["alchemy_system"] = alchemy_system.to_dict()
+    ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
     
-    player_data.data = db_data
-    player_data.last_online_at = datetime.now(timezone.utc)
-    await player_data.save()
+    ctx.player_data.data = ctx.db_data
+    ctx.player_data.last_online_at = datetime.now(timezone.utc)
+    await ctx.player_data.save()
     
     response_data = AlchemyStartResponse(
         success=True,
@@ -157,32 +142,16 @@ async def start_alchemy(request: AlchemyStartRequest, credentials: HTTPAuthoriza
 
 
 @router.post("/alchemy/report", response_model=AlchemyReportResponse)
-async def report_alchemy(request: AlchemyReportRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def report_alchemy(
+    request: AlchemyReportRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """炼丹上报"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/alchemy/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/alchemy/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-    
-    if not alchemy_system.is_alchemizing:
+    if not ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyReportResponse(
             success=False,
             operation_id=request.operation_id,
@@ -214,7 +183,7 @@ async def report_alchemy(request: AlchemyReportRequest, credentials: HTTPAuthori
     current_time = time.time()
     craft_time = recipe_config.get("base_time", 10.0)
     
-    actual_interval = current_time - alchemy_system.last_alchemy_report_time
+    actual_interval = current_time - ctx.alchemy_system.last_alchemy_report_time
     expected_interval = request.count * craft_time
     min_allowed_interval = expected_interval * 0.9
     
@@ -233,19 +202,19 @@ async def report_alchemy(request: AlchemyReportRequest, credentials: HTTPAuthori
         return response_data
     
     result = AlchemyWorkshop.craft_pills(
-        alchemy_system, request.recipe_id, request.count, player, spell_system, inventory_system
+        ctx.alchemy_system, request.recipe_id, request.count, ctx.player, ctx.spell_system, ctx.inventory_system
     )
     
     if result["success"]:
-        alchemy_system.last_alchemy_report_time = current_time
+        ctx.alchemy_system.last_alchemy_report_time = current_time
         
-        db_data["player"] = player.to_dict()
-        db_data["inventory"] = inventory_system.to_dict()
-        db_data["alchemy_system"] = alchemy_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
+        ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
     
     response_data = AlchemyReportResponse(
         success=result["success"],
@@ -262,29 +231,16 @@ async def report_alchemy(request: AlchemyReportRequest, credentials: HTTPAuthori
 
 
 @router.post("/alchemy/stop", response_model=AlchemyStopResponse)
-async def stop_alchemy(request: AlchemyStopRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def stop_alchemy(
+    request: AlchemyStopRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """停止炼丹"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/alchemy/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/alchemy/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-    
-    if not alchemy_system.is_alchemizing:
+    if not ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyStopResponse(
             success=False,
             operation_id=request.operation_id,
@@ -295,14 +251,14 @@ async def stop_alchemy(request: AlchemyStopRequest, credentials: HTTPAuthorizati
         logger.info(f"[OUT] POST /game/alchemy/stop - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    alchemy_system.is_alchemizing = False
-    alchemy_system.last_alchemy_report_time = 0.0
+    ctx.alchemy_system.is_alchemizing = False
+    ctx.alchemy_system.last_alchemy_report_time = 0.0
     
-    db_data["alchemy_system"] = alchemy_system.to_dict()
+    ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
     
-    player_data.data = db_data
-    player_data.last_online_at = datetime.now(timezone.utc)
-    await player_data.save()
+    ctx.player_data.data = ctx.db_data
+    ctx.player_data.last_online_at = datetime.now(timezone.utc)
+    await ctx.player_data.save()
     
     response_data = AlchemyStopResponse(
         success=True,
