@@ -141,31 +141,16 @@ async def start_cultivation(
 
 
 @router.post("/player/cultivation/report", response_model=CultivationReportResponse)
-async def report_cultivation(request: CultivationReportRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def report_cultivation(
+    request: CultivationReportRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """上报修炼进度"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/player/cultivation/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/player/cultivation/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
-    
-    if not player.is_cultivating:
+    if not ctx.player.is_cultivating:
         response_data = CultivationReportResponse(
             success=False,
             operation_id=request.operation_id,
@@ -182,18 +167,18 @@ async def report_cultivation(request: CultivationReportRequest, credentials: HTT
     
     is_valid, reason = AntiCheatSystem.validate_cultivation_report(
         current_time=current_time,
-        last_report_time=player.last_cultivation_report_time,
+        last_report_time=ctx.player.last_cultivation_report_time,
         reported_count=request.count,
         tolerance=0.1
     )
     
     if not is_valid:
         await AntiCheatSystem.record_suspicious_operation(
-            account_id=str(current_user.id),
+            account_id=str(ctx.account.id),
             operation_type="cultivation_report",
             detail=reason,
-            account_system=account_system,
-            db_player_data=player_data
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data
         )
         
         response_data = CultivationReportResponse(
@@ -207,20 +192,20 @@ async def report_cultivation(request: CultivationReportRequest, credentials: HTT
         )
     else:
         result = CultivationSystem.process_cultivation_tick(
-            player=player,
+            player=ctx.player,
             delta_seconds=float(request.count),
-            spell_system=spell_system
+            spell_system=ctx.spell_system
         )
         
-        player.last_cultivation_report_time = current_time
+        ctx.player.last_cultivation_report_time = current_time
         
-        db_data["player"] = player.to_dict()
-        db_data["spell_system"] = spell_system.to_dict()
-        db_data["account_info"] = account_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+        ctx.db_data["account_info"] = ctx.account_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
         response_data = CultivationReportResponse(
             success=True,
@@ -236,29 +221,16 @@ async def report_cultivation(request: CultivationReportRequest, credentials: HTT
 
 
 @router.post("/player/cultivation/stop", response_model=CultivationStopResponse)
-async def stop_cultivation(request: CultivationStopRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def stop_cultivation(
+    request: CultivationStopRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """停止修炼"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/player/cultivation/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/player/cultivation/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    
-    if not player.is_cultivating:
+    if not ctx.player.is_cultivating:
         response_data = CultivationStopResponse(
             success=False,
             operation_id=request.operation_id,
@@ -268,13 +240,13 @@ async def stop_cultivation(request: CultivationStopRequest, credentials: HTTPAut
         logger.info(f"[OUT] POST /game/player/cultivation/stop - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    player.is_cultivating = False
+    ctx.player.is_cultivating = False
     
-    db_data["player"] = player.to_dict()
+    ctx.db_data["player"] = ctx.player.to_dict()
     
-    player_data.data = db_data
-    player_data.last_online_at = datetime.now(timezone.utc)
-    await player_data.save()
+    ctx.player_data.data = ctx.db_data
+    ctx.player_data.last_online_at = datetime.now(timezone.utc)
+    await ctx.player_data.save()
     
     response_data = CultivationStopResponse(
         success=True,
