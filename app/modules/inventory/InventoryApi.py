@@ -9,6 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.game import UseItemRequest, UseItemResponse, OrganizeInventoryRequest, DiscardItemRequest, ExpandInventoryRequest, ExpandInventoryResponse
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.modules import PlayerSystem, InventorySystem, SpellSystem, AlchemySystem
 from datetime import datetime, timezone
@@ -19,46 +20,28 @@ router = APIRouter()
 
 
 @router.post("/inventory/use", response_model=UseItemResponse)
-async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def use_item(
+    request: UseItemRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """使用物品"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/inventory/use - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/inventory/use - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    alchemy_system = AlchemySystem.from_dict(
-        db_data.get("alchemy_system", {})
-    )
-    
-    result = inventory_system.use_item(request.item_id, player, spell_system, alchemy_system)
+    result = ctx.inventory_system.use_item(request.item_id, ctx.player, ctx.spell_system, ctx.alchemy_system)
     
     if result["success"]:
-        db_data["player"] = player.to_dict()
-        db_data["inventory"] = inventory_system.to_dict()
-        db_data["spell_system"] = spell_system.to_dict()
-        db_data["alchemy_system"] = alchemy_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+        ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 使用物品成功 - account_id: {current_user.id} - item_id: {request.item_id}")
+        logger.info(f"[GAME] 使用物品成功 - account_id: {ctx.account.id} - item_id: {request.item_id}")
     
     response_data = UseItemResponse(
         success=result["success"],
@@ -72,38 +55,25 @@ async def use_item(request: UseItemRequest, credentials: HTTPAuthorizationCreden
 
 
 @router.post("/inventory/organize", response_model=dict)
-async def organize_inventory(request: OrganizeInventoryRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def organize_inventory(
+    request: OrganizeInventoryRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """整理背包"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/inventory/organize - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/inventory/organize - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    
-    result = inventory_system.organize_inventory()
+    result = ctx.inventory_system.organize_inventory()
     
     if result["success"]:
-        db_data["inventory"] = inventory_system.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 整理背包成功 - account_id: {current_user.id}")
+        logger.info(f"[GAME] 整理背包成功 - account_id: {ctx.account.id}")
     
     response_data = {
         "success": result["success"],
@@ -116,38 +86,25 @@ async def organize_inventory(request: OrganizeInventoryRequest, credentials: HTT
 
 
 @router.post("/inventory/discard", response_model=dict)
-async def discard_item(request: DiscardItemRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def discard_item(
+    request: DiscardItemRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """丢弃物品"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/inventory/discard - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/inventory/discard - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    
-    result = inventory_system.discard_item(request.item_id, request.count)
+    result = ctx.inventory_system.discard_item(request.item_id, request.count)
     
     if result["success"]:
-        db_data["inventory"] = inventory_system.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 丢弃物品成功 - account_id: {current_user.id} - item_id: {request.item_id}")
+        logger.info(f"[GAME] 丢弃物品成功 - account_id: {ctx.account.id} - item_id: {request.item_id}")
     
     response_data = {
         "success": result["success"],
@@ -161,38 +118,25 @@ async def discard_item(request: DiscardItemRequest, credentials: HTTPAuthorizati
 
 
 @router.post("/inventory/expand", response_model=ExpandInventoryResponse)
-async def expand_inventory(request: ExpandInventoryRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def expand_inventory(
+    request: ExpandInventoryRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """扩容背包"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/inventory/expand - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/inventory/expand - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    
-    result = inventory_system.expand_capacity()
+    result = ctx.inventory_system.expand_capacity()
     
     if result["success"]:
-        db_data["inventory"] = inventory_system.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 扩容背包成功 - account_id: {current_user.id} - new_capacity: {result.get('new_capacity', 0)}")
+        logger.info(f"[GAME] 扩容背包成功 - account_id: {ctx.account.id} - new_capacity: {result.get('new_capacity', 0)}")
     
     response_data = ExpandInventoryResponse(
         success=result["success"],
@@ -206,31 +150,17 @@ async def expand_inventory(request: ExpandInventoryRequest, credentials: HTTPAut
 
 
 @router.get("/inventory/list", response_model=dict)
-async def get_inventory_list(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_inventory_list(
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """获取背包列表"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/inventory/list - token: {token} - account_id: {account_id} - token_version: {token_version}")
-    
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
+    logger.info(f"[IN] GET /game/inventory/list - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
     response_data = {
         "success": True,
-        "inventory": inventory_system.to_dict()
+        "inventory": ctx.inventory_system.to_dict()
     }
     logger.info(f"[OUT] GET /game/inventory/list - 耗时：{time.time() - start_time:.4f}s")
     return response_data
