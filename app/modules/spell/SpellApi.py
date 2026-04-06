@@ -9,6 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.game import EquipSpellRequest, UnequipSpellRequest, UpgradeSpellRequest, ChargeSpellRequest
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.modules import PlayerSystem, SpellSystem, SpellData
 from datetime import datetime, timezone
@@ -19,38 +20,25 @@ router = APIRouter()
 
 
 @router.post("/spell/equip", response_model=dict)
-async def equip_spell(request: EquipSpellRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def equip_spell(
+    request: EquipSpellRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """装备术法"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/spell/equip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/spell/equip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    
-    result = spell_system.equip_spell(request.spell_id)
+    result = ctx.spell_system.equip_spell(request.spell_id)
     
     if result["success"]:
-        db_data["spell_system"] = spell_system.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 装备术法成功 - account_id: {current_user.id} - spell_id: {request.spell_id}")
+        logger.info(f"[GAME] 装备术法成功 - account_id: {ctx.account.id} - spell_id: {request.spell_id}")
     
     response_data = {
         "success": result["success"],
@@ -65,38 +53,25 @@ async def equip_spell(request: EquipSpellRequest, credentials: HTTPAuthorization
 
 
 @router.post("/spell/unequip", response_model=dict)
-async def unequip_spell(request: UnequipSpellRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def unequip_spell(
+    request: UnequipSpellRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """卸下术法"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/spell/unequip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/spell/unequip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    
-    result = spell_system.unequip_spell(request.spell_id)
+    result = ctx.spell_system.unequip_spell(request.spell_id)
     
     if result["success"]:
-        db_data["spell_system"] = spell_system.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 卸下术法成功 - account_id: {current_user.id} - spell_id: {request.spell_id}")
+        logger.info(f"[GAME] 卸下术法成功 - account_id: {ctx.account.id} - spell_id: {request.spell_id}")
     
     response_data = {
         "success": result["success"],
@@ -111,40 +86,26 @@ async def unequip_spell(request: UnequipSpellRequest, credentials: HTTPAuthoriza
 
 
 @router.post("/spell/upgrade", response_model=dict)
-async def upgrade_spell(request: UpgradeSpellRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def upgrade_spell(
+    request: UpgradeSpellRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """升级术法"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/spell/upgrade - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/spell/upgrade - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    
-    result = spell_system.upgrade_spell(request.spell_id, player)
+    result = ctx.spell_system.upgrade_spell(request.spell_id, ctx.player)
     
     if result["success"]:
-        db_data["player"] = player.to_dict()
-        db_data["spell_system"] = spell_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 升级术法成功 - account_id: {current_user.id} - spell_id: {request.spell_id} - new_level: {result.get('new_level', 0)}")
+        logger.info(f"[GAME] 升级术法成功 - account_id: {ctx.account.id} - spell_id: {request.spell_id} - new_level: {result.get('new_level', 0)}")
     
     response_data = {
         "success": result["success"],
@@ -159,40 +120,26 @@ async def upgrade_spell(request: UpgradeSpellRequest, credentials: HTTPAuthoriza
 
 
 @router.post("/spell/charge", response_model=dict)
-async def charge_spell(request: ChargeSpellRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def charge_spell(
+    request: ChargeSpellRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """给术法充灵气"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/spell/charge - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/spell/charge - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    
-    result = spell_system.charge_spell_spirit(request.spell_id, request.amount, player)
+    result = ctx.spell_system.charge_spell_spirit(request.spell_id, request.amount, ctx.player)
     
     if result["success"]:
-        db_data["player"] = player.to_dict()
-        db_data["spell_system"] = spell_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 充灵气成功 - account_id: {current_user.id} - spell_id: {request.spell_id} - amount: {request.amount}")
+        logger.info(f"[GAME] 充灵气成功 - account_id: {ctx.account.id} - spell_id: {request.spell_id} - amount: {request.amount}")
     
     response_data = {
         "success": result["success"],
@@ -207,32 +154,18 @@ async def charge_spell(request: ChargeSpellRequest, credentials: HTTPAuthorizati
 
 
 @router.get("/spell/list", response_model=dict)
-async def get_spell_list(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_spell_list(
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """获取术法列表"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/spell/list - token: {token} - account_id: {account_id} - token_version: {token_version}")
-    
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
+    logger.info(f"[IN] GET /game/spell/list - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
     response_data = {
         "success": True,
-        "spells": spell_system.player_spells,
-        "equipped_spells": spell_system.equipped_spells,
+        "spells": ctx.spell_system.player_spells,
+        "equipped_spells": ctx.spell_system.equipped_spells,
         "spells_config": SpellData.get_spells_config()
     }
     logger.info(f"[OUT] GET /game/spell/list - 耗时：{time.time() - start_time:.4f}s")
