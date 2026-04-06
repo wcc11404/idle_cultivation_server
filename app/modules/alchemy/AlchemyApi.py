@@ -14,6 +14,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.modules import PlayerSystem, AlchemySystem, RecipeData, SpellSystem, InventorySystem, LianliSystem
 from .AlchemyWorkshop import AlchemyWorkshop
@@ -25,42 +26,25 @@ router = APIRouter()
 
 
 @router.post("/alchemy/learn_recipe", response_model=dict)
-async def learn_recipe(request: LearnRecipeRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def learn_recipe(
+    request: LearnRecipeRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """学习丹方"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/alchemy/learn_recipe - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/alchemy/learn_recipe - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    alchemy_system = AlchemySystem.from_dict(
-        db_data.get("alchemy_system", {}),
-        SpellSystem.from_dict(db_data.get("spell_system", {})),
-        InventorySystem.from_dict(db_data.get("inventory", {}))
-    )
-    
-    result = alchemy_system.learn_recipe(request.recipe_id)
+    result = ctx.alchemy_system.learn_recipe(request.recipe_id)
     
     if result["success"]:
-        db_data["alchemy_system"] = alchemy_system.to_dict()
+        ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
         
-        logger.info(f"[GAME] 学习丹方成功 - account_id: {current_user.id} - recipe_id: {request.recipe_id}")
+        logger.info(f"[GAME] 学习丹方成功 - account_id: {ctx.account.id} - recipe_id: {request.recipe_id}")
     
     response_data = {
         "success": result["success"],
@@ -74,33 +58,15 @@ async def learn_recipe(request: LearnRecipeRequest, credentials: HTTPAuthorizati
 
 
 @router.get("/alchemy/recipes", response_model=dict)
-async def get_recipes(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_recipes(
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """获取丹方列表"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/alchemy/recipes - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] GET /game/alchemy/recipes - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    alchemy_system = AlchemySystem.from_dict(
-        db_data.get("alchemy_system", {}),
-        SpellSystem.from_dict(db_data.get("spell_system", {})),
-        InventorySystem.from_dict(db_data.get("inventory", {}))
-    )
-    
-    learned_recipes = alchemy_system.get_learned_recipes()
+    learned_recipes = ctx.alchemy_system.get_learned_recipes()
     
     response_data = {
         "success": True,
