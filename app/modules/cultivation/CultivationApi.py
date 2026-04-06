@@ -14,6 +14,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import PlayerSystem, CultivationSystem, InventorySystem, SpellSystem, AccountSystem, AlchemySystem, LianliSystem
@@ -25,82 +26,51 @@ router = APIRouter()
 
 
 @router.post("/player/breakthrough", response_model=BreakthroughResponse)
-async def breakthrough(request: BreakthroughRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def breakthrough(
+    request: BreakthroughRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """突破境界"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/player/breakthrough - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/player/breakthrough - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    
-    result = CultivationSystem.execute_breakthrough(player, inventory_system)
+    result = CultivationSystem.execute_breakthrough(ctx.player, ctx.inventory_system)
     
     if result["success"]:
-        db_data["player"] = player.to_dict()
-        db_data["inventory"] = inventory_system.to_dict()
+        ctx.db_data["player"] = ctx.player.to_dict()
+        ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         
-        player_data.data = db_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+        ctx.player_data.data = ctx.db_data
+        ctx.player_data.last_online_at = datetime.now(timezone.utc)
+        await ctx.player_data.save()
     
     response_data = BreakthroughResponse(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        new_realm=result.get("new_realm", player.realm),
-        new_level=result.get("new_level", player.realm_level),
-        remaining_spirit_energy=player.spirit_energy,
+        new_realm=result.get("new_realm", ctx.player.realm),
+        new_level=result.get("new_level", ctx.player.realm_level),
+        remaining_spirit_energy=ctx.player.spirit_energy,
         materials_used=result.get("costs", {}),
-        health=player.health,
-        inventory=inventory_system.to_dict()
+        health=ctx.player.health,
+        inventory=ctx.inventory_system.to_dict()
     )
     logger.info(f"[OUT] POST /game/player/breakthrough - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
 @router.post("/player/cultivation/start", response_model=CultivationStartResponse)
-async def start_cultivation(request: CultivationStartRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def start_cultivation(
+    request: CultivationStartRequest,
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """开始修炼"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
-    logger.info(f"[IN] POST /game/player/cultivation/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /game/player/cultivation/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
-        )
-    
-    db_data = player_data.data
-    
-    player = PlayerSystem.from_dict(db_data.get("player", {}))
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
-    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-    lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
-    
-    if player.is_cultivating:
+    if ctx.player.is_cultivating:
         response_data = CultivationStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -113,7 +83,7 @@ async def start_cultivation(request: CultivationStartRequest, credentials: HTTPA
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    if lianli_system.is_battling:
+    if ctx.lianli_system.is_battling:
         response_data = CultivationStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -126,7 +96,7 @@ async def start_cultivation(request: CultivationStartRequest, credentials: HTTPA
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
     
-    if alchemy_system.is_alchemizing:
+    if ctx.alchemy_system.is_alchemizing:
         response_data = CultivationStartResponse(
             success=False,
             operation_id=request.operation_id,
@@ -140,22 +110,22 @@ async def start_cultivation(request: CultivationStartRequest, credentials: HTTPA
         return response_data
     
     current_time = time.time()
-    player.is_cultivating = True
-    player.last_cultivation_report_time = current_time
+    ctx.player.is_cultivating = True
+    ctx.player.last_cultivation_report_time = current_time
     
     result = CultivationSystem.process_cultivation_tick(
-        player=player,
+        player=ctx.player,
         delta_seconds=1.0,
-        spell_system=spell_system
+        spell_system=ctx.spell_system
     )
     
-    db_data["player"] = player.to_dict()
-    db_data["spell_system"] = spell_system.to_dict()
-    db_data["account_info"] = account_system.to_dict()
+    ctx.db_data["player"] = ctx.player.to_dict()
+    ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+    ctx.db_data["account_info"] = ctx.account_system.to_dict()
     
-    player_data.data = db_data
-    player_data.last_online_at = datetime.now(timezone.utc)
-    await player_data.save()
+    ctx.player_data.data = ctx.db_data
+    ctx.player_data.last_online_at = datetime.now(timezone.utc)
+    await ctx.player_data.save()
     
     response_data = CultivationStartResponse(
         success=True,
