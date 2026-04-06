@@ -7,6 +7,7 @@ from app.core.InitPlayerInfo import get_initial_player_data
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.core.Validator import Validator
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.modules import PlayerSystem as GamePlayerData, AccountSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
@@ -259,50 +260,39 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
 
 
 @router.post("/logout", response_model=dict)
-async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def logout(
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
     """登出"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id") if payload else ""
-    token_version = payload.get("version") if payload else ""
-    logger.info(f"[IN] POST /auth/logout - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /auth/logout - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    current_user = await get_current_user(credentials)
+    # 重置修炼状态
+    ctx.player.reset_cultivation_state()
+    ctx.db_data["player"] = ctx.player.to_dict()
+    logger.info(f"[GAME] 登出时重置修炼状态 - account_id: {ctx.account.id}")
     
-    player_data = await PlayerData.get_or_none(account_id=current_user.id)
-    if player_data:
-        db_data = player_data.data
-        
-        # 重置修炼状态
-        player = PlayerSystem.from_dict(db_data.get("player", {}))
-        player.reset_cultivation_state()
-        db_data["player"] = player.to_dict()
-        logger.info(f"[GAME] 登出时重置修炼状态 - account_id: {current_user.id}")
-        
-        # 重置炼丹状态
-        alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-        alchemy_system.reset_alchemy_state()
-        db_data["alchemy_system"] = alchemy_system.to_dict()
-        logger.info(f"[GAME] 登出时重置炼丹状态 - account_id: {current_user.id}")
-        
-        # 重置战斗状态
-        lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
-        lianli_system.reset_battle_state()
-        db_data["lianli_system"] = lianli_system.to_dict()
-        logger.info(f"[GAME] 登出时重置战斗状态 - account_id: {current_user.id}")
-        
-        # 重置可疑操作计数
-        account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
-        await AntiCheatSystem.reset_suspicious_operations(
-            account_id=str(current_user.id),
-            account_system=account_system,
-            db_player_data=player_data
-        )
-        
-        db_data["account_info"] = account_system.to_dict()
-        player_data.data = db_data
-        await player_data.save()
+    # 重置炼丹状态
+    ctx.alchemy_system.reset_alchemy_state()
+    ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
+    logger.info(f"[GAME] 登出时重置炼丹状态 - account_id: {ctx.account.id}")
+    
+    # 重置战斗状态
+    ctx.lianli_system.reset_battle_state()
+    ctx.db_data["lianli_system"] = ctx.lianli_system.to_dict()
+    logger.info(f"[GAME] 登出时重置战斗状态 - account_id: {ctx.account.id}")
+    
+    # 重置可疑操作计数
+    await AntiCheatSystem.reset_suspicious_operations(
+        account_id=str(ctx.account.id),
+        account_system=ctx.account_system,
+        db_player_data=ctx.player_data
+    )
+    
+    ctx.db_data["account_info"] = ctx.account_system.to_dict()
+    ctx.player_data.data = ctx.db_data
+    await ctx.player_data.save()
     
     response_data = {"success": True, "message": "登出成功"}
     logger.info(f"[OUT] POST /auth/logout - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
