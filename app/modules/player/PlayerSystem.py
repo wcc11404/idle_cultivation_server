@@ -18,13 +18,15 @@ class PlayerSystem:
     玩家数据类 - 负责管理玩家的核心属性
     
     存储：
-    - 动态数据（存入数据库）：health, spirit_energy, realm, realm_level
-    - 计算属性（从境界配置加载，不存数据库）：max_health, max_spirit_energy, speed, 
+    - 实时数据（存入数据库）：health, spirit_energy, realm, realm_level
+    - 基础属性（从境界配置加载，不存数据库）：max_health, max_spirit_energy, speed, 
       health_regen_per_second, spirit_gain_speed, attack, defense
+    - 静态最终属性（根据基础属性和术法等附属系统计算得到，不存数据库）：static_max_health, 
+      static_max_spirit_energy, static_speed, static_attack, static_defense
     """
     
     def __init__(self, health: float, spirit_energy: float, realm: str, realm_level: int, spell_system: 'SpellSystem' = None):
-        # 动态数据，会存入数据库
+        # 实时数据，会存入数据库
         self.health = health
         self.spirit_energy = spirit_energy
         self.realm = realm

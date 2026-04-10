@@ -51,6 +51,7 @@ class ErrorResponse(BaseResponse):
 
 class ChangePasswordRequest(BaseRequest):
     """修改密码请求"""
+    username: str = Field(..., description="用户名")
     old_password: str = Field(..., min_length=6, max_length=20, description="旧密码")
     new_password: str = Field(..., min_length=6, max_length=20, description="新密码")
 

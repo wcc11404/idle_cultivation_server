@@ -19,7 +19,7 @@ if [ "$(uname)" = "Darwin" ]; then
         echo "PostgreSQL 服务已运行"
     else
         echo "PostgreSQL 服务未运行，正在启动..."
-        brew services start postgresql@14
+        brew services start postgresql@16
         if [ $? -eq 0 ]; then
             echo "PostgreSQL 服务启动成功"
         else

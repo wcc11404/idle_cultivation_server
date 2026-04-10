@@ -39,6 +39,27 @@ CREATE INDEX idx_player_data_last_online ON player_data(last_online_at);
 CREATE INDEX idx_player_data_server ON player_data(server_id);
 CREATE INDEX idx_player_data_version ON player_data(game_version);
 
+-- 添加自动更新updated_at字段的函数
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 为accounts表添加触发器
+CREATE TRIGGER update_accounts_updated_at
+BEFORE UPDATE ON accounts
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- 为player_data表添加触发器
+CREATE TRIGGER update_player_data_updated_at
+BEFORE UPDATE ON player_data
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
 -- 初始化默认数据
 INSERT INTO accounts (username, password_hash) VALUES 
 ('test', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'); -- 密码: test123

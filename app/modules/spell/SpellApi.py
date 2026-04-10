@@ -95,7 +95,7 @@ async def upgrade_spell(
     start_time = time.time()
     logger.info(f"[IN] POST /game/spell/upgrade - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    result = ctx.spell_system.upgrade_spell(request.spell_id, ctx.player)
+    result = ctx.spell_system.upgrade_spell(request.spell_id)
     
     if result["success"]:
         ctx.db_data["player"] = ctx.player.to_dict()

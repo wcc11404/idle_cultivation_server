@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
 import json
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter()
 
@@ -79,7 +80,6 @@ async def register(request: RegisterRequest):
     initial_data = get_initial_player_data(str(account.id))
     
     # 为新注册用户设置一个特殊的 last_online_at 值（使用 epoch 时间0）
-    from datetime import datetime, timezone
     epoch_time = datetime.fromtimestamp(0, timezone.utc)
     
     await PlayerData.create(
@@ -154,12 +154,18 @@ async def login(request: LoginRequest):
     
     # 检查是否需要每日重置
     def check_daily_reset(player_data):
-        from datetime import datetime, timezone, timedelta
+        
         current_time = datetime.now(timezone.utc)
         last_login = player_data.last_online_at
         
         # 计算上次登录日期和当前日期（基于重置时间）
         def get_reset_date(t):
+            # 确保时间是 UTC 时区
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            else:
+                # 转换为 UTC 时区
+                t = t.astimezone(timezone.utc)
             reset_time = t.replace(hour=settings.DAILY_RESET_HOUR, minute=0, second=0, microsecond=0)
             if t < reset_time:
                 return reset_time - timedelta(days=1)
@@ -168,28 +174,27 @@ async def login(request: LoginRequest):
         last_reset_date = get_reset_date(last_login)
         current_reset_date = get_reset_date(current_time)
         
+
+        
         # 如果日期不同，执行重置
         if last_reset_date != current_reset_date:
             logger.info(f"[GAME] 执行每日重置 - account_id: {account.id}")
-            # 重置破镜草洞穴次数
-            if "lianli_system" in player_data.data and "daily_dungeon_data" in player_data.data["lianli_system"]:
-                daily_dungeon_data = player_data.data["lianli_system"]["daily_dungeon_data"]
-                if "foundation_herb_cave" in daily_dungeon_data:
-                    max_count = daily_dungeon_data["foundation_herb_cave"].get("max_count", 3)
-                    daily_dungeon_data["foundation_herb_cave"]["remaining_count"] = max_count
+            # 使用 LianliSystem 的重置方法
+            lianli_system_data = player_data.data.get("lianli_system", {})
+            lianli_system = LianliSystem.from_dict(lianli_system_data)
+            lianli_system.reset_daily_dungeons()
+            player_data.data["lianli_system"] = lianli_system.to_dict()
             return True
         return False
     
     # 执行每日重置检查
-    if check_daily_reset(player_data):
-        await player_data.save()
+    check_daily_reset(player_data)
     
-    # 首次登录时，将 last_online_at 从 epoch 0 更新为当前时间
-    from datetime import datetime, timezone
-    epoch_time = datetime.fromtimestamp(0, timezone.utc)
-    if player_data.last_online_at == epoch_time:
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
+    # 更新上次登录时间
+    player_data.last_online_at = datetime.now(timezone.utc)
+    
+    # 保存数据
+    await player_data.save()
     
     response_data = {
         "success": True,
@@ -292,6 +297,8 @@ async def logout(
     
     ctx.db_data["account_info"] = ctx.account_system.to_dict()
     ctx.player_data.data = ctx.db_data
+    # 更新上次登录时间
+    ctx.player_data.last_online_at = datetime.now(timezone.utc)
     await ctx.player_data.save()
     
     response_data = {"success": True, "message": "登出成功"}
@@ -300,41 +307,35 @@ async def logout(
 
 
 @router.post("/change_password", response_model=ChangePasswordResponse)
-async def change_password(request: ChangePasswordRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def change_password(request: ChangePasswordRequest):
     """修改密码"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id") if payload else ""
-    token_version = payload.get("version") if payload else ""
-    logger.info(f"[IN] POST /auth/change_password - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /auth/change_password - username: {request.username}")
     
-    current_user = await get_current_user(credentials)
-    
-    account = await Account.get_or_none(id=current_user.id)
+    account = await Account.get_or_none(username=request.username)
     if not account:
-        logger.warning(f"[OUT] POST /auth/change_password - 账号不存在 - account_id: {current_user.id}")
+        logger.warning(f"[OUT] POST /auth/change_password - 账号不存在 - username: {request.username}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="账号不存在"
         )
     
     if not verify_password(request.old_password, account.password_hash):
-        logger.warning(f"[OUT] POST /auth/change_password - 旧密码错误 - account_id: {current_user.id}")
+        logger.warning(f"[OUT] POST /auth/change_password - 旧密码错误 - username: {request.username}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="旧密码错误"
         )
     
     if request.old_password == request.new_password:
-        logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与旧密码相同 - account_id: {current_user.id}")
+        logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与旧密码相同 - username: {request.username}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="新密码不能与旧密码相同"
         )
     
     if account.username == request.new_password:
-        logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与用户名相同 - account_id: {current_user.id}")
+        logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与用户名相同 - username: {request.username}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="新密码不能与用户名相同"
@@ -343,6 +344,12 @@ async def change_password(request: ChangePasswordRequest, credentials: HTTPAutho
     account.password_hash = get_password_hash(request.new_password)
     account.token_version += 1
     await account.save()
+    
+    # 更新上次登录时间
+    player_data = await PlayerData.get_or_none(account_id=account.id)
+    if player_data:
+        player_data.last_online_at = datetime.now(timezone.utc)
+        await player_data.save()
     
     access_token_expires = timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
     new_token = create_access_token(
@@ -397,6 +404,8 @@ async def change_nickname(request: ChangeNicknameRequest, credentials: HTTPAutho
     
     db_data["account_info"]["nickname"] = request.nickname
     player_data.data = db_data
+    # 更新上次登录时间
+    player_data.last_online_at = datetime.now(timezone.utc)
     await player_data.save()
     
     response_data = ChangeNicknameResponse(
@@ -436,6 +445,8 @@ async def change_avatar(request: ChangeAvatarRequest, credentials: HTTPAuthoriza
     
     db_data["account_info"]["avatar_id"] = request.avatar_id
     player_data.data = db_data
+    # 更新上次登录时间
+    player_data.last_online_at = datetime.now(timezone.utc)
     await player_data.save()
     
     response_data = ChangeAvatarResponse(

@@ -6,6 +6,8 @@
 
 import requests
 import json
+import time
+import uuid
 
 BASE_URL = "http://localhost:8444/api"
 
@@ -14,7 +16,9 @@ def register_test_account():
     url = f"{BASE_URL}/auth/register"
     payload = {
         "username": "wcc_test",
-        "password": "wcc_test123456"
+        "password": "wcc_test123456",
+        "operation_id": str(uuid.uuid4()),
+        "timestamp": time.time()
     }
     
     try:

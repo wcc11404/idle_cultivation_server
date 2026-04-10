@@ -181,7 +181,7 @@ async def report_alchemy(
         return response_data
     
     current_time = time.time()
-    craft_time = recipe_config.get("base_time", 10.0)
+    craft_time = AlchemyWorkshop.calculate_craft_time(ctx.alchemy_system, request.recipe_id, ctx.spell_system)
     
     actual_interval = current_time - ctx.alchemy_system.last_alchemy_report_time
     expected_interval = request.count * craft_time

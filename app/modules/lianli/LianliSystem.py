@@ -128,8 +128,8 @@ class LianliSystem:
             
             enemy = enemies[0]
             template_id = enemy.get("template", "")
-            min_level = enemy.get("min_level", 1)
-            max_level = enemy.get("max_level", 1)
+            min_level = int(enemy.get("min_level", 1))
+            max_level = int(enemy.get("max_level", 1))
             enemy_level = random.randint(min_level, max_level)
             drops = enemy_config.get("drops", {})
         
@@ -497,8 +497,8 @@ class LianliSystem:
             "time": round(current_time, 2),
             "type": "enemy_action",
             "info": {
-                "enemy_name": enemy_name,
                 "spell_id": "norm_attack",
+                "effect_type": "instant_damage",
                 "damage": round(damage, 2),
                 "target_health_after": round(player_attributes["health"], 2)
             }
@@ -659,7 +659,13 @@ class LianliSystem:
         """从数据库数据创建"""
         instance = cls()
         instance.tower_highest_floor = db_data.get("tower_highest_floor", 0)
-        instance.daily_dungeon_data = db_data.get("daily_dungeon_data", {})
+        
+        # 如果数据库中有 daily_dungeon_data 且不为空，则使用数据库中的数据
+        # 否则使用 __init__ 中初始化的默认值
+        daily_dungeon_data = db_data.get("daily_dungeon_data", {})
+        if daily_dungeon_data:
+            instance.daily_dungeon_data = daily_dungeon_data
+        
         instance.is_battling = db_data.get("is_battling", False)
         instance.battle_start_time = db_data.get("battle_start_time", None)
         instance.current_battle_data = db_data.get("current_battle_data", None)

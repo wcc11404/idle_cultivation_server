@@ -403,18 +403,22 @@ class TestClient:
         if index is not None:
             payload["index"] = index
         
-        response = requests.post(url, json=payload, headers=self.get_headers())
-        result = response.json()
-        
-        if result.get("success"):
-            print(f"战斗结算成功！")
-            print(f"结算进度: {result.get('settled_index')}/{result.get('total_index')}")
-            print(f"玩家血量: {result.get('player_health_after')}")
-            print(f"获得掉落: {result.get('loot_gained', [])}")
-            print(f"获得经验: {result.get('exp_gained')}")
-            return True
-        else:
-            print(f"战斗结算失败: {result}")
+        try:
+            response = requests.post(url, json=payload, headers=self.get_headers())
+            result = response.json()
+            
+            if result.get("success"):
+                print(f"战斗结算成功！")
+                print(f"结算进度: {result.get('settled_index')}/{result.get('total_index')}")
+                print(f"玩家血量: {result.get('player_health_after')}")
+                print(f"获得掉落: {result.get('loot_gained', [])}")
+                print(f"获得经验: {result.get('exp_gained')}")
+                return True
+            else:
+                print(f"战斗结算失败: {result}")
+                return False
+        except Exception as e:
+            print(f"战斗结算失败: {str(e)}")
             return False
     
     def get_rank(self, server_id="default"):
