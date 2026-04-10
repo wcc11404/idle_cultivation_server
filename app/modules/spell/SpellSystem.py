@@ -335,7 +335,7 @@ class SpellSystem:
             level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
             effect = level_data.get("effect", {})
             
-            if effect.get("type") == "breathing_heal":
+            if effect.get("effect_type", "") == "passive_heal":
                 heal_percent = effect.get("heal_percent", 0.0)
                 total_heal += heal_percent
         

@@ -651,12 +651,14 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spirit_gained": 1.0,
-  "health_gained": 0.5,
-  "used_count_gained": 1,
   "message": "开始修炼"
 }
 ```
+
+#### 说明
+
+- `start` 只切换为修炼状态并记录开始时间，不立即结算修炼收益
+- 真正的修炼收益只会在客户端后续调用 `report` 时结算
 
 #### 失败响应
 
@@ -665,9 +667,6 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spirit_gained": 0.0,
-  "health_gained": 0.0,
-  "used_count_gained": 0,
   "message": "已在修炼状态"
 }
 ```
@@ -796,6 +795,7 @@
     "foundation_pill": 1
   },
   "health": 55.0,
+  "message": "突破成功",
   "inventory": {
     "slots": {},
     "capacity": 50
@@ -815,6 +815,7 @@
   "remaining_spirit_energy": 0.0,
   "materials_used": {},
   "health": 50.0,
+  "message": "灵气不足",
   "inventory": {
     "slots": {},
     "capacity": 50
@@ -1179,7 +1180,7 @@
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 | spell_id     | string | 是   | 术法ID                        |
-| amount       | number | 是   | 充灵气数量                    |
+| amount       | integer | 是   | 充灵气数量                    |
 
 #### 成功响应
 

@@ -32,6 +32,7 @@ class BreakthroughResponse(BaseResponse):
     materials_used: dict
     health: float
     inventory: dict
+    message: str
 
 
 class UseItemRequest(BaseRequest):
@@ -104,9 +105,6 @@ class CultivationStartRequest(BaseRequest):
 
 class CultivationStartResponse(BaseResponse):
     """开始修炼响应"""
-    spirit_gained: float = 0.0
-    health_gained: float = 0.0
-    used_count_gained: int = 0
     message: str
 
 
@@ -173,7 +171,7 @@ class UpgradeSpellRequest(BaseRequest):
 class ChargeSpellRequest(BaseRequest):
     """充灵气请求"""
     spell_id: str
-    amount: float
+    amount: int
 
 
 class CraftPillsRequest(BaseRequest):

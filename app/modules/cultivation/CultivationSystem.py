@@ -10,6 +10,7 @@
 
 from typing import Dict, Any, TYPE_CHECKING
 
+from ..inventory.ItemData import ItemData
 from ..player.AttributeCalculator import AttributeCalculator
 from .RealmData import RealmData
 from ..spell.SpellData import SpellData
@@ -118,6 +119,21 @@ class CultivationSystem:
             "spirit_actual": actual_spirit,
             "spirit_stones_gained": spirit_stones
         }
+
+    @staticmethod
+    def _build_breakthrough_missing_reason(missing: Dict[str, Any]) -> str:
+        """按旧客户端优先级构造突破失败原因。"""
+        material_ids = [item_id for item_id in missing.keys() if item_id not in ("spirit_energy", "spirit_stone")]
+        if material_ids:
+            return f"{ItemData.get_item_name(str(material_ids[0]))}不足"
+
+        if "spirit_energy" in missing:
+            return "灵气不足"
+
+        if "spirit_stone" in missing:
+            return "灵石不足"
+
+        return "资源不足"
     
     @staticmethod
     def _can_breakthrough(player: 'PlayerSystem', inventory_system: 'InventorySystem') -> Dict[str, Any]:
@@ -163,7 +179,7 @@ class CultivationSystem:
         if missing:
             return {
                 "can": False,
-                "reason": "资源不足",
+                "reason": CultivationSystem._build_breakthrough_missing_reason(missing),
                 "breakthrough_info": breakthrough_info,
                 "missing": missing
             }

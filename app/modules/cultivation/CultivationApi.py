@@ -54,7 +54,8 @@ async def breakthrough(
         remaining_spirit_energy=ctx.player.spirit_energy,
         materials_used=result.get("costs", {}),
         health=ctx.player.health,
-        inventory=ctx.inventory_system.to_dict()
+        inventory=ctx.inventory_system.to_dict(),
+        message=result.get("reason", "突破成功" if result["success"] else "突破失败")
     )
     logger.info(f"[OUT] POST /game/player/breakthrough - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -75,9 +76,6 @@ async def start_cultivation(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            spirit_gained=0.0,
-            health_gained=0.0,
-            used_count_gained=0,
             message="已在修炼状态"
         )
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -88,9 +86,6 @@ async def start_cultivation(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            spirit_gained=0.0,
-            health_gained=0.0,
-            used_count_gained=0,
             message="正在战斗中，无法开始修炼"
         )
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -101,9 +96,6 @@ async def start_cultivation(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            spirit_gained=0.0,
-            health_gained=0.0,
-            used_count_gained=0,
             message="正在炼丹中，无法开始修炼"
         )
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -112,16 +104,8 @@ async def start_cultivation(
     current_time = time.time()
     ctx.player.is_cultivating = True
     ctx.player.last_cultivation_report_time = current_time
-    
-    result = CultivationSystem.process_cultivation_tick(
-        player=ctx.player,
-        delta_seconds=1.0,
-        spell_system=ctx.spell_system
-    )
-    
+
     ctx.db_data["player"] = ctx.player.to_dict()
-    ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
-    ctx.db_data["account_info"] = ctx.account_system.to_dict()
     
     ctx.player_data.data = ctx.db_data
     ctx.player_data.last_online_at = datetime.now(timezone.utc)
@@ -131,9 +115,6 @@ async def start_cultivation(
         success=True,
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        spirit_gained=result.get("spirit_gained", 0.0),
-        health_gained=result.get("health_gained", 0.0),
-        used_count_gained=result.get("used_count_gained", 0),
         message="开始修炼"
     )
     logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
