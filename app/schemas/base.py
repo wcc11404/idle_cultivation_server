@@ -13,3 +13,5 @@ class BaseResponse(BaseModel):
     success: bool
     operation_id: Optional[str] = None
     timestamp: Optional[float] = None
+    reason_code: Optional[str] = None
+    reason_data: dict = Field(default_factory=dict)

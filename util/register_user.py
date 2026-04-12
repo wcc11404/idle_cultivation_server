@@ -66,7 +66,8 @@ if __name__ == "__main__":
     print(json.dumps(result, indent=2, ensure_ascii=False))
     
     if result.get("success"):
-        print(f"\n注册成功！账号ID: {result.get('account_id')}")
+        reason_data = result.get("reason_data", {})
+        print(f"\n注册成功！用户名: {reason_data.get('username', username)}")
         print(f"Token: {result.get('token')}")
     else:
-        print(f"\n注册失败: {result.get('message')}")
+        print(f"\n注册失败: {result.get('reason_code')}")

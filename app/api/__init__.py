@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api import game_base, admin
+from app.api import game_base, admin, test
 from app.modules.spell import SpellApi
 from app.modules.inventory import InventoryApi
 from app.modules.alchemy import AlchemyApi
@@ -17,3 +17,4 @@ api_router.include_router(InventoryApi.router, prefix="/game", tags=["inventory"
 api_router.include_router(AlchemyApi.router, prefix="/game", tags=["alchemy"])
 api_router.include_router(LianliApi.router, prefix="/game", tags=["lianli"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(test.router, prefix="/test", tags=["test"])

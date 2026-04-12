@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.game import (
     LianliBattleRequest, LianliBattleResponse,
-    LianliSettleRequest, LianliSettleResponse
+    LianliSettleRequest, LianliSettleResponse,
+    DungeonInfoQueryResponse, TowerHighestFloorResponse
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
@@ -39,6 +40,8 @@ async def simulate_battle(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
+            reason_code="LIANLI_SIMULATE_BLOCKED_BY_CULTIVATION",
+            reason_data={},
             battle_timeline=[],
             total_time=0.0,
             player_health_before=0.0,
@@ -46,8 +49,7 @@ async def simulate_battle(
             enemy_health_after=0.0,
             enemy_data={},
             victory=False,
-            loot=[],
-            message="正在修炼中，无法开始战斗"
+            loot=[]
         )
         logger.info(f"[OUT] POST /game/lianli/battle - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -57,6 +59,8 @@ async def simulate_battle(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
+            reason_code="LIANLI_SIMULATE_BLOCKED_BY_ALCHEMY",
+            reason_data={},
             battle_timeline=[],
             total_time=0.0,
             player_health_before=0.0,
@@ -64,8 +68,7 @@ async def simulate_battle(
             enemy_health_after=0.0,
             enemy_data={},
             victory=False,
-            loot=[],
-            message="正在炼丹中，无法开始战斗"
+            loot=[]
         )
         logger.info(f"[OUT] POST /game/lianli/battle - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -86,6 +89,8 @@ async def simulate_battle(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {}),
         battle_timeline=result.get("battle_timeline", []),
         total_time=result.get("total_time", 0.0),
         player_health_before=result.get("player_health_before", 0.0),
@@ -93,8 +98,7 @@ async def simulate_battle(
         enemy_health_after=result.get("enemy_health_after", 0.0),
         enemy_data=result.get("enemy_data", {}),
         victory=result.get("victory", False),
-        loot=result.get("loot", []),
-        message=result.get("reason", "战斗模拟完成")
+        loot=result.get("loot", [])
     )
     logger.info(f"[OUT] POST /game/lianli/battle - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -126,18 +130,19 @@ async def finish_battle(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {}),
         settled_index=result.get("settled_index", 0),
         total_index=result.get("total_index", 0),
         player_health_after=result.get("player_health_after", 0.0),
         loot_gained=result.get("loot_gained", []),
-        exp_gained=result.get("exp_gained", 0),
-        message=result.get("reason", result.get("message", ""))
+        exp_gained=result.get("exp_gained", 0)
     )
     logger.info(f"[OUT] POST /game/lianli/finish - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.get("/dungeon/foundation_herb_cave", response_model=dict)
+@router.get("/dungeon/foundation_herb_cave", response_model=DungeonInfoQueryResponse)
 async def get_foundation_herb_cave_info(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """获取破镜草洞穴信息"""
     start_time = time.time()
@@ -151,10 +156,17 @@ async def get_foundation_herb_cave_info(credentials: HTTPAuthorizationCredential
     player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
         logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
+        response_data = DungeonInfoQueryResponse(
+            success=False,
+            operation_id="",
+            timestamp=time.time(),
+            reason_code="LIANLI_DUNGEON_INFO_PLAYER_NOT_FOUND",
+            reason_data={"dungeon_id": "foundation_herb_cave"},
+            remaining_count=0,
+            max_count=0
         )
+        logger.info(f"[OUT] GET /game/dungeon/foundation_herb_cave - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
     
     db_data = player_data.data
     
@@ -162,16 +174,20 @@ async def get_foundation_herb_cave_info(credentials: HTTPAuthorizationCredential
     
     dungeon_data = lianli_system.daily_dungeon_data.get("foundation_herb_cave", {})
     
-    response_data = {
-        "success": True,
-        "remaining_count": dungeon_data.get("remaining_count", 3),
-        "max_count": dungeon_data.get("max_count", 3)
-    }
-    logger.info(f"[OUT] GET /game/dungeon/foundation_herb_cave - 耗时：{time.time() - start_time:.4f}s")
+    response_data = DungeonInfoQueryResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        reason_code="LIANLI_DUNGEON_INFO_SUCCEEDED",
+        reason_data={"dungeon_id": "foundation_herb_cave"},
+        remaining_count=dungeon_data.get("remaining_count", 3),
+        max_count=dungeon_data.get("max_count", 3)
+    )
+    logger.info(f"[OUT] GET /game/dungeon/foundation_herb_cave - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.get("/tower/highest_floor", response_model=dict)
+@router.get("/tower/highest_floor", response_model=TowerHighestFloorResponse)
 async def get_tower_highest_floor(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """获取无尽塔最高层数"""
     start_time = time.time()
@@ -185,18 +201,28 @@ async def get_tower_highest_floor(credentials: HTTPAuthorizationCredentials = De
     player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
         logger.warning(f"[GAME] 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
+        response_data = TowerHighestFloorResponse(
+            success=False,
+            operation_id="",
+            timestamp=time.time(),
+            reason_code="LIANLI_TOWER_INFO_PLAYER_NOT_FOUND",
+            reason_data={},
+            highest_floor=0
         )
+        logger.info(f"[OUT] GET /game/tower/highest_floor - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
     
     db_data = player_data.data
     
     lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
     
-    response_data = {
-        "success": True,
-        "highest_floor": lianli_system.tower_highest_floor
-    }
-    logger.info(f"[OUT] GET /game/tower/highest_floor - 耗时：{time.time() - start_time:.4f}s")
+    response_data = TowerHighestFloorResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        reason_code="LIANLI_TOWER_INFO_SUCCEEDED",
+        reason_data={},
+        highest_floor=lianli_system.tower_highest_floor
+    )
+    logger.info(f"[OUT] GET /game/tower/highest_floor - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data

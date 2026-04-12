@@ -6,7 +6,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import UseItemRequest, UseItemResponse, OrganizeInventoryRequest, DiscardItemRequest, ExpandInventoryRequest, ExpandInventoryResponse
+from app.schemas.game import (
+    UseItemRequest, UseItemResponse,
+    OrganizeInventoryRequest, OrganizeInventoryResponse,
+    DiscardItemRequest,
+    ExpandInventoryRequest, ExpandInventoryResponse,
+    InventoryListResponse
+)
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
 from app.core.Dependencies import get_game_context, get_token_info, GameContext
@@ -47,14 +53,14 @@ async def use_item(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        effect=result.get("effect", {}),
-        contents=None
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {})
     )
     logger.info(f"[OUT] POST /game/inventory/use - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.post("/inventory/organize", response_model=dict)
+@router.post("/inventory/organize", response_model=OrganizeInventoryResponse)
 async def organize_inventory(
     request: OrganizeInventoryRequest,
     ctx: GameContext = Depends(get_game_context),
@@ -75,13 +81,14 @@ async def organize_inventory(
         
         logger.info(f"[GAME] 整理背包成功 - account_id: {ctx.account.id}")
     
-    response_data = {
-        "success": result["success"],
-        "operation_id": request.operation_id,
-        "timestamp": request.timestamp,
-        "reason": result.get("reason", "")
-    }
-    logger.info(f"[OUT] POST /game/inventory/organize - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+    response_data = OrganizeInventoryResponse(
+        success=result["success"],
+        operation_id=request.operation_id,
+        timestamp=request.timestamp,
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {})
+    )
+    logger.info(f"[OUT] POST /game/inventory/organize - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
@@ -110,8 +117,8 @@ async def discard_item(
         "success": result["success"],
         "operation_id": request.operation_id,
         "timestamp": request.timestamp,
-        "item_id": request.item_id,
-        "discarded_count": result.get("discarded_count", 0)
+        "reason_code": result.get("reason_code", ""),
+        "reason_data": result.get("reason_data", {})
     }
     logger.info(f"[OUT] POST /game/inventory/discard - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -136,20 +143,23 @@ async def expand_inventory(
         ctx.player_data.last_online_at = datetime.now(timezone.utc)
         await ctx.player_data.save()
         
-        logger.info(f"[GAME] 扩容背包成功 - account_id: {ctx.account.id} - new_capacity: {result.get('new_capacity', 0)}")
+        logger.info(
+            f"[GAME] 扩容背包成功 - account_id: {ctx.account.id} - "
+            f"new_capacity: {result.get('reason_data', {}).get('new_capacity', 0)}"
+        )
     
     response_data = ExpandInventoryResponse(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        new_capacity=result.get("new_capacity", 0),
-        message=result.get("reason", "")
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {})
     )
     logger.info(f"[OUT] POST /game/inventory/expand - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.get("/inventory/list", response_model=dict)
+@router.get("/inventory/list", response_model=InventoryListResponse)
 async def get_inventory_list(
     ctx: GameContext = Depends(get_game_context),
     token_info: dict = Depends(get_token_info)
@@ -158,9 +168,13 @@ async def get_inventory_list(
     start_time = time.time()
     logger.info(f"[IN] GET /game/inventory/list - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    response_data = {
-        "success": True,
-        "inventory": ctx.inventory_system.to_dict()
-    }
-    logger.info(f"[OUT] GET /game/inventory/list - 耗时：{time.time() - start_time:.4f}s")
+    response_data = InventoryListResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        reason_code="INVENTORY_LIST_SUCCEEDED",
+        reason_data={},
+        inventory=ctx.inventory_system.to_dict()
+    )
+    logger.info(f"[OUT] GET /game/inventory/list - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data

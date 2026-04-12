@@ -26,7 +26,7 @@ CREATE TABLE player_data (
     server_id VARCHAR(20) DEFAULT 'default',  -- 冗余存储，便于分区查询
     game_version VARCHAR(20) DEFAULT 'v1.0.0', -- 游戏版本号，记录玩家上次保存的版本
     data JSONB NOT NULL,                      -- 所有游戏数据
-    last_online_at TIMESTAMPTZ DEFAULT NOW(), -- 玩家最后在线时间，用于计算离线奖励
+    last_online_at TIMESTAMPTZ NOT NULL,      -- 玩家最后在线时间，仅在主动赋值后保存时更新
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -60,6 +60,9 @@ BEFORE UPDATE ON player_data
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
--- 初始化默认数据
-INSERT INTO accounts (username, password_hash) VALUES 
-('test', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'); -- 密码: test123
+-- 初始化默认测试账号
+INSERT INTO accounts (username, password_hash, is_banned) VALUES
+('test', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', FALSE)
+ON CONFLICT (username) DO UPDATE
+SET password_hash = EXCLUDED.password_hash,
+    is_banned = FALSE;

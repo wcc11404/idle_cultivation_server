@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from uuid import UUID
 from app.schemas.base import BaseRequest, BaseResponse
 
 
@@ -26,13 +25,7 @@ class BreakthroughRequest(BaseRequest):
 
 class BreakthroughResponse(BaseResponse):
     """突破境界响应"""
-    new_realm: str
-    new_level: int
-    remaining_spirit_energy: float
-    materials_used: dict
-    health: float
-    inventory: dict
-    message: str
+    pass
 
 
 class UseItemRequest(BaseRequest):
@@ -43,44 +36,12 @@ class UseItemRequest(BaseRequest):
 
 class UseItemResponse(BaseResponse):
     """使用物品响应"""
-    effect: dict
-    contents: Optional[dict] = None
+    pass
 
 
-class BattleVictoryRequest(BaseRequest):
-    """战斗胜利请求"""
-    area_id: str
-    enemy_id: str
-    enemy_level: int
-    is_tower: bool = False
-    tower_floor: int = 0
-
-
-class BattleVictoryResponse(BaseResponse):
-    """战斗胜利响应"""
-    loot: list
-    new_highest_floor: Optional[int] = None
-
-
-class DungeonInfoResponse(BaseResponse):
-    """副本信息响应"""
-    dungeon_data: dict
-
-
-class EnterDungeonRequest(BaseRequest):
-    """进入副本请求"""
-    dungeon_id: str
-
-
-class EnterDungeonResponse(BaseResponse):
-    """进入副本响应"""
-    remaining_count: int
-    message: str
-
-
-class GetRankRequest(BaseRequest):
-    """获取排行榜请求"""
-    server_id: Optional[str] = Field(default="default", description="区服ID")
+class OrganizeInventoryResponse(BaseResponse):
+    """整理背包响应"""
+    pass
 
 
 class RankItem(BaseModel):
@@ -98,6 +59,23 @@ class RankResponse(BaseResponse):
     ranks: list[RankItem]
 
 
+class AlchemyRecipesResponse(BaseResponse):
+    """丹方列表响应"""
+    learned_recipes: list[str]
+    recipes_config: dict
+
+
+class DungeonInfoQueryResponse(BaseResponse):
+    """副本信息查询响应"""
+    remaining_count: int
+    max_count: int
+
+
+class TowerHighestFloorResponse(BaseResponse):
+    """无尽塔信息响应"""
+    highest_floor: int
+
+
 class CultivationStartRequest(BaseRequest):
     """开始修炼请求"""
     pass
@@ -105,7 +83,7 @@ class CultivationStartRequest(BaseRequest):
 
 class CultivationStartResponse(BaseResponse):
     """开始修炼响应"""
-    message: str
+    pass
 
 
 class CultivationReportRequest(BaseRequest):
@@ -118,7 +96,6 @@ class CultivationReportResponse(BaseResponse):
     spirit_gained: float
     health_gained: float
     used_count_gained: int = 0
-    message: str
 
 
 class CultivationStopRequest(BaseRequest):
@@ -128,7 +105,7 @@ class CultivationStopRequest(BaseRequest):
 
 class CultivationStopResponse(BaseResponse):
     """停止修炼响应"""
-    message: str
+    pass
 
 
 class OrganizeInventoryRequest(BaseRequest):
@@ -149,8 +126,12 @@ class ExpandInventoryRequest(BaseRequest):
 
 class ExpandInventoryResponse(BaseResponse):
     """扩容背包响应"""
-    new_capacity: int
-    message: str
+    pass
+
+
+class InventoryListResponse(BaseResponse):
+    """背包列表响应"""
+    inventory: dict
 
 
 class EquipSpellRequest(BaseRequest):
@@ -187,8 +168,7 @@ class AlchemyStartRequest(BaseRequest):
 
 class AlchemyStartResponse(BaseResponse):
     """开始炼丹响应"""
-    is_alchemizing: bool
-    message: str
+    pass
 
 
 class AlchemyReportRequest(BaseRequest):
@@ -202,8 +182,7 @@ class AlchemyReportResponse(BaseResponse):
     success_count: int
     fail_count: int
     products: dict
-    materials_consumed: dict
-    message: str
+    returned_materials: dict = Field(default_factory=dict)
 
 
 class AlchemyStopRequest(BaseRequest):
@@ -213,20 +192,7 @@ class AlchemyStopRequest(BaseRequest):
 
 class AlchemyStopResponse(BaseResponse):
     """停止炼丹响应"""
-    is_alchemizing: bool
-    message: str
-
-
-class LearnRecipeRequest(BaseRequest):
-    """学习丹方请求"""
-    recipe_id: str
-
-
-class ExecuteBattleRequest(BaseRequest):
-    """执行战斗请求"""
-    area_id: str
-    floor: int = 1
-    is_tower: bool = False
+    pass
 
 
 class LianliBattleRequest(BaseRequest):
@@ -244,7 +210,6 @@ class LianliBattleResponse(BaseResponse):
     enemy_data: dict
     victory: bool
     loot: list
-    message: str
 
 
 class LianliSettleRequest(BaseRequest):
@@ -260,15 +225,22 @@ class LianliSettleResponse(BaseResponse):
     player_health_after: float
     loot_gained: list
     exp_gained: int
-    message: str
-
-
-class FinishDungeonRequest(BaseRequest):
-    """完成副本请求"""
-    dungeon_id: str
-    victory: bool = True
 
 
 class ClaimOfflineRewardRequest(BaseRequest):
     """领取离线奖励请求"""
     pass
+
+
+class ClaimOfflineRewardResponse(BaseResponse):
+    """领取离线奖励响应"""
+    offline_reward: Optional[dict] = None
+    offline_seconds: int
+    last_online_at: int
+
+
+class SpellListResponse(BaseResponse):
+    """术法列表响应"""
+    player_spells: dict
+    equipped_spells: dict
+    spells_config: dict

@@ -4,7 +4,7 @@
 
 ### 通用请求参数
 
-**除注册接口外，所有接口都需要以下参数：**
+**所有 `POST` 业务接口都需要以下请求体参数：**
 
 #### 请求头参数
 
@@ -39,9 +39,17 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "错误信息"
+  "...": "其他数据"
 }
 ```
+
+#### 业务响应补充说明
+
+- 客户端使用的账号系统、游戏数据系统、修炼系统、背包系统、术法系统、炼丹系统、历练系统的业务接口统一返回 `reason_code` 与 `reason_data`
+- `reason_code` 只表达业务语义，不直接承担中文提示展示
+- `reason_data` 只携带客户端生成提示文案需要的动态字段
+- 客户端必须根据 `reason_code + reason_data` 生成最终中文提示，不再直接使用接口中的 `message/reason`
+- `auth/refresh` 这类纯鉴权接口的失败仍可能通过 `detail` 表达认证异常
 
 #### 异常响应
 
@@ -77,9 +85,11 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "account_id": "uuid",
   "token": "jwt_token",
-  "message": "注册成功"
+  "reason_code": "ACCOUNT_REGISTER_SUCCEEDED",
+  "reason_data": {
+    "username": "testuser"
+  }
 }
 ```
 
@@ -88,10 +98,26 @@
 ```json
 {
   "success": false,
-  "error_code": 400,
-  "message": "用户名已存在"
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "ACCOUNT_REGISTER_USERNAME_EXISTS",
+  "reason_data": {
+    "username": "testuser"
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ACCOUNT_REGISTER_SUCCEEDED`
+- `ACCOUNT_REGISTER_USERNAME_EMPTY`
+- `ACCOUNT_REGISTER_USERNAME_LENGTH_INVALID`
+- `ACCOUNT_REGISTER_USERNAME_INVALID_CHARACTER`
+- `ACCOUNT_REGISTER_PASSWORD_EMPTY`
+- `ACCOUNT_REGISTER_PASSWORD_LENGTH_INVALID`
+- `ACCOUNT_REGISTER_PASSWORD_INVALID_CHARACTER`
+- `ACCOUNT_REGISTER_USERNAME_PASSWORD_SAME`
+- `ACCOUNT_REGISTER_USERNAME_EXISTS`
 
 ---
 
@@ -117,6 +143,10 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "ACCOUNT_LOGIN_SUCCEEDED",
+  "reason_data": {
+    "username": "testuser"
+  },
   "token": "jwt_token",
   "expires_in": 604800,
   "account_info": {
@@ -182,9 +212,27 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "用户名或密码错误"
+  "reason_code": "ACCOUNT_LOGIN_PASSWORD_INCORRECT",
+  "reason_data": {
+    "username": "testuser"
+  },
+  "token": "",
+  "expires_in": 0,
+  "account_info": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "username": "",
+    "server_id": ""
+  },
+  "data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ACCOUNT_LOGIN_SUCCEEDED`
+- `ACCOUNT_LOGIN_USERNAME_NOT_FOUND`
+- `ACCOUNT_LOGIN_PASSWORD_INCORRECT`
+- `ACCOUNT_LOGIN_ACCOUNT_BANNED`
 
 ---
 
@@ -203,6 +251,8 @@
 ```json
 {
   "success": true,
+  "reason_code": "ACCOUNT_REFRESH_SUCCEEDED",
+  "reason_data": {},
   "token": "new_jwt_token",
   "expires_in": 604800
 }
@@ -233,7 +283,8 @@
 ```json
 {
   "success": true,
-  "message": "登出成功"
+  "reason_code": "ACCOUNT_LOGOUT_SUCCEEDED",
+  "reason_data": {}
 }
 ```
 
@@ -259,6 +310,7 @@
 | ------------ | ------ | ---- | ----------------------------- |
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
+| username     | string | 是   | 用户名                        |
 | old_password | string | 是   | 旧密码（6-20位）             |
 | new_password | string | 是   | 新密码（6-20位）             |
 
@@ -269,33 +321,34 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "密码修改成功"
+  "reason_code": "ACCOUNT_PASSWORD_CHANGE_SUCCEEDED",
+  "reason_data": {
+    "username": "testuser"
+  }
 }
 ```
 
-#### 失败响应（旧密码错误）
+#### 失败响应
 
 ```json
 {
-  "detail": "旧密码错误"
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "ACCOUNT_PASSWORD_CHANGE_OLD_PASSWORD_INCORRECT",
+  "reason_data": {
+    "username": "testuser"
+  }
 }
 ```
 
-#### 失败响应（新密码与旧密码相同）
+#### `reason_code` 枚举
 
-```json
-{
-  "detail": "新密码不能与旧密码相同"
-}
-```
-
-#### 失败响应（新密码与用户名相同）
-
-```json
-{
-  "detail": "新密码不能与用户名相同"
-}
-```
+- `ACCOUNT_PASSWORD_CHANGE_SUCCEEDED`
+- `ACCOUNT_PASSWORD_CHANGE_ACCOUNT_NOT_FOUND`
+- `ACCOUNT_PASSWORD_CHANGE_OLD_PASSWORD_INCORRECT`
+- `ACCOUNT_PASSWORD_CHANGE_SAME_AS_OLD`
+- `ACCOUNT_PASSWORD_CHANGE_SAME_AS_USERNAME`
 
 ---
 
@@ -321,7 +374,10 @@
   "operation_id": "uuid",
   "timestamp": 1234567890,
   "nickname": "新昵称",
-  "message": "昵称修改成功"
+  "reason_code": "ACCOUNT_NICKNAME_CHANGE_SUCCEEDED",
+  "reason_data": {
+    "nickname": "新昵称"
+  }
 }
 ```
 
@@ -329,9 +385,27 @@
 
 ```json
 {
-  "detail": "玩家数据不存在"
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "nickname": "新昵称",
+  "reason_code": "ACCOUNT_NICKNAME_LENGTH_INVALID",
+  "reason_data": {
+    "nickname": "新昵称"
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ACCOUNT_NICKNAME_CHANGE_SUCCEEDED`
+- `ACCOUNT_NICKNAME_EMPTY`
+- `ACCOUNT_NICKNAME_LENGTH_INVALID`
+- `ACCOUNT_NICKNAME_CONTAINS_SPACE`
+- `ACCOUNT_NICKNAME_INVALID_CHARACTER`
+- `ACCOUNT_NICKNAME_ALL_DIGITS`
+- `ACCOUNT_NICKNAME_SENSITIVE`
+- `ACCOUNT_NICKNAME_PLAYER_NOT_FOUND`
 
 ---
 
@@ -357,7 +431,10 @@
   "operation_id": "uuid",
   "timestamp": 1234567890,
   "avatar_id": "new_avatar",
-  "message": "头像修改成功"
+  "reason_code": "ACCOUNT_AVATAR_CHANGE_SUCCEEDED",
+  "reason_data": {
+    "avatar_id": "new_avatar"
+  }
 }
 ```
 
@@ -365,9 +442,21 @@
 
 ```json
 {
-  "detail": "玩家数据不存在"
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "avatar_id": "new_avatar",
+  "reason_code": "ACCOUNT_AVATAR_PLAYER_NOT_FOUND",
+  "reason_data": {
+    "avatar_id": "new_avatar"
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ACCOUNT_AVATAR_CHANGE_SUCCEEDED`
+- `ACCOUNT_AVATAR_PLAYER_NOT_FOUND`
 
 ---
 
@@ -388,6 +477,8 @@
 ```json
 {
   "success": true,
+  "reason_code": "GAME_LOAD_SUCCEEDED",
+  "reason_data": {},
   "data": {
     "account_info": {
       "nickname": "修仙者123456",
@@ -439,13 +530,9 @@
 }
 ```
 
-#### 失败响应
+#### `reason_code` 枚举
 
-```json
-{
-  "detail": "玩家数据不存在"
-}
-```
+- `GAME_LOAD_SUCCEEDED`
 
 ---
 
@@ -497,24 +584,22 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "GAME_SAVE_SUCCEEDED",
+  "reason_data": {},
   "last_online_at": 1678900000
 }
 ```
 
-#### 失败响应
+#### `reason_code` 枚举
 
-```json
-{
-  "detail": "无效的更新字段"
-}
-```
+- `GAME_SAVE_SUCCEEDED`
 
 ---
 
 ### 2.3 领取离线奖励
 
 - **接口地址**：`POST /api/game/claim_offline_reward`
-- **功能**：领取离线奖励（服务端自动计算离线时间）
+- **功能**：领取离线奖励（服务端自动计算离线时间，超过 4 小时按 4 小时封顶结算）
 - **认证**：需要认证
 
 #### 请求参数
@@ -524,6 +609,10 @@
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 
+- **说明**：
+  - 离线时间小于等于 60 秒时，不发放奖励
+  - 离线时间大于 4 小时时，按 14400 秒（4 小时）结算奖励
+
 #### 成功响应（有奖励）
 
 ```json
@@ -531,13 +620,14 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "GAME_OFFLINE_REWARD_GRANTED",
+  "reason_data": {},
   "offline_reward": {
     "spirit_energy": 47.0,
     "spirit_stones": 1
   },
   "offline_seconds": 474,
-  "last_online_at": 1774100000,
-  "message": "领取成功"
+  "last_online_at": 1774100000
 }
 ```
 
@@ -548,18 +638,34 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "GAME_OFFLINE_REWARD_SKIPPED_SHORT_OFFLINE",
+  "reason_data": {},
   "offline_reward": null,
   "offline_seconds": 30,
-  "last_online_at": 1774100000,
-  "message": "离线时间不足，无法领取奖励"
+  "last_online_at": 1774100000
 }
 ```
+
+#### `reason_code` 枚举
+
+- `GAME_OFFLINE_REWARD_GRANTED`
+- `GAME_OFFLINE_REWARD_SKIPPED_SHORT_OFFLINE`
+- `GAME_OFFLINE_REWARD_INVALID_TIME`
 
 #### 失败响应
 
 ```json
 {
-  "detail": "INVALID_OFFLINE_SECONDS"
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "GAME_OFFLINE_REWARD_INVALID_TIME",
+  "reason_data": {
+    "offline_seconds": -30
+  },
+  "offline_reward": null,
+  "offline_seconds": -30,
+  "last_online_at": 1774100000
 }
 ```
 
@@ -584,6 +690,8 @@
   "success": true,
   "operation_id": "",
   "timestamp": 1234567890,
+  "reason_code": "GAME_RANK_SUCCEEDED",
+  "reason_data": {},
   "ranks": [
     {
       "rank": 1,
@@ -612,6 +720,10 @@
   ]
 }
 ```
+
+#### `reason_code` 枚举
+
+- `GAME_RANK_SUCCEEDED`
 
 #### 排序规则
 
@@ -651,7 +763,8 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "开始修炼"
+  "reason_code": "CULTIVATION_START_SUCCEEDED",
+  "reason_data": {}
 }
 ```
 
@@ -667,9 +780,17 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "已在修炼状态"
+  "reason_code": "CULTIVATION_START_ALREADY_ACTIVE",
+  "reason_data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `CULTIVATION_START_SUCCEEDED`：开始修炼成功
+- `CULTIVATION_START_ALREADY_ACTIVE`：当前已在修炼状态
+- `CULTIVATION_START_BLOCKED_BY_BATTLE`：战斗中不可开始修炼
+- `CULTIVATION_START_BLOCKED_BY_ALCHEMY`：炼丹中不可开始修炼
 
 ---
 
@@ -694,10 +815,11 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "CULTIVATION_REPORT_SUCCEEDED",
+  "reason_data": {},
   "spirit_gained": 5.0,
   "health_gained": 2.5,
-  "used_count_gained": 5,
-  "message": "修炼成功"
+  "used_count_gained": 5
 }
 ```
 
@@ -708,10 +830,11 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "CULTIVATION_REPORT_NOT_ACTIVE",
+  "reason_data": {},
   "spirit_gained": 0.0,
   "health_gained": 0.0,
-  "used_count_gained": 0,
-  "message": "当前未在修炼状态"
+  "used_count_gained": 0
 }
 ```
 
@@ -722,12 +845,23 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "CULTIVATION_REPORT_TIME_INVALID",
+  "reason_data": {
+    "reported_count": 5,
+    "actual_interval": 0.2,
+    "max_acceptable_count": 0.22
+  },
   "spirit_gained": 0.0,
   "health_gained": 0.0,
-  "used_count_gained": 0,
-  "message": "修炼上报异常：上报次数异常：上报5次，实际间隔0.2秒，最大允许0.2次"
+  "used_count_gained": 0
 }
 ```
+
+#### `reason_code` 枚举
+
+- `CULTIVATION_REPORT_SUCCEEDED`：修炼上报成功
+- `CULTIVATION_REPORT_NOT_ACTIVE`：当前未在修炼状态
+- `CULTIVATION_REPORT_TIME_INVALID`：上报时间校验失败
 
 ---
 
@@ -751,9 +885,14 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "停止修炼"
+  "reason_code": "CULTIVATION_STOP_SUCCEEDED",
+  "reason_data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `INVENTORY_ORGANIZE_SUCCEEDED`
 
 #### 失败响应
 
@@ -762,9 +901,15 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "message": "当前未在修炼状态"
+  "reason_code": "CULTIVATION_STOP_NOT_ACTIVE",
+  "reason_data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `CULTIVATION_STOP_SUCCEEDED`：停止修炼成功
+- `CULTIVATION_STOP_NOT_ACTIVE`：当前未在修炼状态
 
 ---
 
@@ -788,17 +933,17 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "new_realm": "炼气期",
-  "new_level": 2,
-  "remaining_spirit_energy": 99999990.0,
-  "materials_used": {
-    "foundation_pill": 1
-  },
-  "health": 55.0,
-  "message": "突破成功",
-  "inventory": {
-    "slots": {},
-    "capacity": 50
+  "reason_code": "CULTIVATION_BREAKTHROUGH_SUCCEEDED",
+  "reason_data": {
+    "consumed_resources": {
+      "spirit_energy": 100.0,
+      "foundation_pill": 1
+    },
+    "missing_resources": {},
+    "new_realm": "炼气期",
+    "new_level": 2,
+    "current_realm": "",
+    "current_level": 0
   }
 }
 ```
@@ -810,18 +955,33 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "new_realm": "炼气期",
-  "new_level": 1,
-  "remaining_spirit_energy": 0.0,
-  "materials_used": {},
-  "health": 50.0,
-  "message": "灵气不足",
-  "inventory": {
-    "slots": {},
-    "capacity": 50
+  "reason_code": "CULTIVATION_BREAKTHROUGH_INSUFFICIENT_RESOURCES",
+  "reason_data": {
+    "consumed_resources": {},
+    "missing_resources": {
+      "spirit_energy": 100.0,
+      "spirit_stone": 2
+    },
+    "new_realm": "",
+    "new_level": 0,
+    "current_realm": "炼气期",
+    "current_level": 1
   }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `CULTIVATION_BREAKTHROUGH_SUCCEEDED`：突破成功
+- `CULTIVATION_BREAKTHROUGH_INSUFFICIENT_RESOURCES`：突破失败，资源不足
+- `CULTIVATION_BREAKTHROUGH_NOT_AVAILABLE`：当前境界不可继续突破
+
+#### `reason_data` 字段说明
+
+- `consumed_resources`：成功时实际消耗资源，结构为 `{resource_id: amount}`
+- `missing_resources`：失败时缺少资源，结构为 `{resource_id: amount}`
+- `new_realm` / `new_level`：成功后新境界，放在 `reason_data` 中
+- `current_realm` / `current_level`：失败时当前境界
 
 ---
 
@@ -848,13 +1008,15 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "effect": {
-    "health": 100,
-    "spirit_energy": 50
-  },
-  "contents": {
-    "spirit_stone": 100,
-    "health_pill": 5
+  "reason_code": "INVENTORY_USE_CONSUMABLE_SUCCEEDED",
+  "reason_data": {
+    "item_id": "health_pill",
+    "used_count": 1,
+    "effect": {
+      "type": "add_health",
+      "health_added": 100
+    },
+    "contents": {}
   }
 }
 ```
@@ -866,10 +1028,57 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "effect": {},
-  "contents": null
+  "reason_code": "INVENTORY_USE_ITEM_NOT_ENOUGH",
+  "reason_data": {
+    "item_id": "health_pill",
+    "used_count": 0,
+    "effect": {},
+    "contents": {}
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `INVENTORY_USE_CONSUMABLE_SUCCEEDED`
+- `INVENTORY_USE_GIFT_SUCCEEDED`
+- `INVENTORY_USE_UNLOCK_SPELL_SUCCEEDED`
+- `INVENTORY_USE_UNLOCK_RECIPE_SUCCEEDED`
+- `INVENTORY_USE_UNLOCK_FURNACE_SUCCEEDED`
+- `INVENTORY_USE_ITEM_NOT_FOUND`
+- `INVENTORY_USE_ITEM_NOT_ENOUGH`
+- `INVENTORY_USE_ITEM_NOT_USABLE`
+- `INVENTORY_USE_EFFECT_INVALID`
+- `INVENTORY_USE_GIFT_EMPTY`
+- `INVENTORY_USE_SPELL_SYSTEM_UNAVAILABLE`
+- `INVENTORY_USE_UNLOCK_SPELL_INVALID`
+- `INVENTORY_USE_SPELL_ALREADY_UNLOCKED`
+- `INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE`
+- `INVENTORY_USE_RECIPE_ALREADY_UNLOCKED`
+- `INVENTORY_USE_UNLOCK_RECIPE_INVALID`
+- `INVENTORY_USE_FURNACE_ALREADY_OWNED`
+
+#### `reason_data` 字段说明
+
+- `item_id`：本次操作的物品 ID
+- `used_count`：本次实际消耗数量
+- `effect`：结构化效果对象，客户端据此生成提示文案
+- `contents`：礼包/开包奖励内容，结构为 `{item_id: count}`
+
+#### `effect.type` 枚举
+
+- `add_spirit_energy`
+- `add_health`
+- `add_spirit_and_health`
+- `open_gift`
+- `unlock_spell`
+- `unlock_recipe`
+- `unlock_furnace`
+
+#### `effect` 数值说明
+
+- `spirit_energy_added` 与 `health_added` 表示物品的理论恢复值，供客户端展示提示文案
+- 实际结算时仍会受到玩家当前静态上限限制，服务端状态以最终裁切后的数值为准
 
 ---
 
@@ -893,23 +1102,14 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "inventory": {
-    "slots": {
-      "0": {"id": "health_pill", "count": 5},
-      "1": {"id": "spirit_pill", "count": 3}
-    },
-    "capacity": 50
-  }
+  "reason_code": "INVENTORY_ORGANIZE_SUCCEEDED",
+  "reason_data": {}
 }
 ```
 
 #### 失败响应
 
-```json
-{
-  "detail": "玩家数据不存在"
-}
-```
+该接口当前无独立业务失败响应，失败通常表现为鉴权或网络异常。
 
 ---
 
@@ -935,8 +1135,11 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "item_id": "health_pill",
-  "discarded_count": 1
+  "reason_code": "INVENTORY_DISCARD_SUCCEEDED",
+  "reason_data": {
+    "item_id": "health_pill",
+    "discarded_count": 1
+  }
 }
 ```
 
@@ -947,10 +1150,18 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "item_id": "health_pill",
-  "discarded_count": 0
+  "reason_code": "INVENTORY_DISCARD_ITEM_NOT_ENOUGH",
+  "reason_data": {
+    "item_id": "health_pill",
+    "discarded_count": 0
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `INVENTORY_DISCARD_SUCCEEDED`
+- `INVENTORY_DISCARD_ITEM_NOT_ENOUGH`
 
 ---
 
@@ -974,8 +1185,10 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "new_capacity": 60,
-  "message": "扩容成功"
+  "reason_code": "INVENTORY_EXPAND_SUCCEEDED",
+  "reason_data": {
+    "new_capacity": 60
+  }
 }
 ```
 
@@ -986,8 +1199,10 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "new_capacity": 200,
-  "message": "已达到最大容量"
+  "reason_code": "INVENTORY_EXPAND_CAPACITY_MAX",
+  "reason_data": {
+    "new_capacity": 200
+  }
 }
 ```
 
@@ -995,6 +1210,11 @@
 - 每次扩容增加10格容量
 - 最大容量为200格
 - 达到最大容量时返回失败
+
+#### `reason_code` 枚举
+
+- `INVENTORY_EXPAND_SUCCEEDED`
+- `INVENTORY_EXPAND_CAPACITY_MAX`
 
 ---
 
@@ -1009,6 +1229,10 @@
 ```json
 {
   "success": true,
+  "operation_id": "",
+  "timestamp": 1234567890,
+  "reason_code": "INVENTORY_LIST_SUCCEEDED",
+  "reason_data": {},
   "inventory": {
     "slots": {
       "0": {"id": "health_pill", "count": 5},
@@ -1019,13 +1243,13 @@
 }
 ```
 
+#### `reason_code` 枚举
+
+- `INVENTORY_LIST_SUCCEEDED`
+
 #### 失败响应
 
-```json
-{
-  "detail": "玩家数据不存在"
-}
-```
+该接口当前无独立业务失败响应，失败通常表现为鉴权或网络异常。
 
 ---
 
@@ -1044,7 +1268,6 @@
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 | spell_id     | string | 是   | 术法ID                        |
-| slot_type    | string | 是   | 槽位类型：active/opening/breathing |
 
 #### 成功响应
 
@@ -1053,12 +1276,12 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spell_id": "basic_boxing_techniques",
-  "slot_type": "active",
-  "equipped_spells": {
-    "active": ["basic_boxing_techniques"],
-    "opening": [],
-    "breathing": []
+  "reason_code": "SPELL_EQUIP_SUCCEEDED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "slot_type": "active",
+    "spell_type": "active",
+    "action": ""
   }
 }
 ```
@@ -1070,11 +1293,27 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "reason": "active槽位已达上限",
-  "spell_id": "thunder_strike",
-  "spell_type": "active"
+  "reason_code": "SPELL_SLOT_LIMIT_REACHED",
+  "reason_data": {
+    "spell_id": "thunder_strike",
+    "slot_type": "active",
+    "spell_type": "active",
+    "limit": 2,
+    "current_count": 2,
+    "action": ""
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `SPELL_EQUIP_SUCCEEDED`
+- `SPELL_EQUIP_NOT_FOUND`
+- `SPELL_EQUIP_NOT_OWNED`
+- `SPELL_EQUIP_ALREADY_EQUIPPED`
+- `SPELL_EQUIP_PRODUCTION_FORBIDDEN`
+- `SPELL_SLOT_LIMIT_REACHED`
+- `SPELL_ACTION_BATTLE_LOCKED`
 
 ---
 
@@ -1091,7 +1330,6 @@
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 | spell_id     | string | 是   | 术法ID                        |
-| slot_type    | string | 是   | 槽位类型：active/opening/breathing |
 
 #### 成功响应
 
@@ -1100,12 +1338,12 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spell_id": "basic_boxing_techniques",
-  "slot_type": "active",
-  "equipped_spells": {
-    "active": [],
-    "opening": [],
-    "breathing": []
+  "reason_code": "SPELL_UNEQUIP_SUCCEEDED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "slot_type": "active",
+    "spell_type": "active",
+    "action": ""
   }
 }
 ```
@@ -1117,11 +1355,22 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "reason": "术法未装备在该槽位",
-  "spell_id": "basic_boxing_techniques",
-  "slot_type": "active"
+  "reason_code": "SPELL_UNEQUIP_NOT_EQUIPPED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "slot_type": "",
+    "spell_type": "",
+    "action": ""
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `SPELL_UNEQUIP_SUCCEEDED`
+- `SPELL_UNEQUIP_NOT_FOUND`
+- `SPELL_UNEQUIP_NOT_EQUIPPED`
+- `SPELL_ACTION_BATTLE_LOCKED`
 
 ---
 
@@ -1146,10 +1395,12 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spell_id": "basic_boxing_techniques",
-  "old_level": 1,
-  "new_level": 2,
-  "cost": 100
+  "reason_code": "SPELL_UPGRADE_SUCCEEDED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "new_level": 2,
+    "action": ""
+  }
 }
 ```
 
@@ -1160,10 +1411,25 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "reason": "灵气不足",
-  "spell_id": "basic_boxing_techniques"
+  "reason_code": "SPELL_UPGRADE_CHARGED_SPIRIT_INSUFFICIENT",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "current_level": 1,
+    "current_charged_spirit": 20,
+    "required_charged_spirit": 100,
+    "action": ""
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `SPELL_UPGRADE_SUCCEEDED`
+- `SPELL_UPGRADE_NOT_OWNED`
+- `SPELL_UPGRADE_AT_MAX_LEVEL`
+- `SPELL_UPGRADE_USE_COUNT_INSUFFICIENT`
+- `SPELL_UPGRADE_CHARGED_SPIRIT_INSUFFICIENT`
+- `SPELL_ACTION_BATTLE_LOCKED`
 
 ---
 
@@ -1189,9 +1455,12 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "spell_id": "basic_boxing_techniques",
-  "charged_spirit": 100,
-  "remaining_spirit_energy": 900
+  "reason_code": "SPELL_CHARGE_SUCCEEDED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "charged_amount": 100,
+    "action": ""
+  }
 }
 ```
 
@@ -1202,10 +1471,23 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "reason": "灵气不足",
-  "spell_id": "basic_boxing_techniques"
+  "reason_code": "SPELL_CHARGE_PLAYER_SPIRIT_INSUFFICIENT",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "current_spirit": 0,
+    "action": ""
+  }
 }
 ```
+
+#### `reason_code` 枚举
+
+- `SPELL_CHARGE_SUCCEEDED`
+- `SPELL_CHARGE_NOT_OWNED`
+- `SPELL_CHARGE_AT_MAX_LEVEL`
+- `SPELL_CHARGE_ALREADY_FULL`
+- `SPELL_CHARGE_PLAYER_SPIRIT_INSUFFICIENT`
+- `SPELL_ACTION_BATTLE_LOCKED`
 
 ---
 
@@ -1224,9 +1506,11 @@
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
+  "operation_id": "",
   "timestamp": 1234567890,
-  "spells": {
+  "reason_code": "SPELL_LIST_SUCCEEDED",
+  "reason_data": {},
+  "player_spells": {
     "basic_boxing_techniques": {
       "level": 1,
       "obtained": true,
@@ -1248,13 +1532,13 @@
 }
 ```
 
+#### `reason_code` 枚举
+
+- `SPELL_LIST_SUCCEEDED`
+
 #### 失败响应
 
-```json
-{
-  "detail": "玩家数据不存在"
-}
-```
+该接口当前无独立业务失败响应，失败通常表现为鉴权或网络异常。
 
 ---
 
@@ -1280,8 +1564,8 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "is_alchemizing": true,
-  "message": "开始炼丹"
+  "reason_code": "ALCHEMY_START_SUCCEEDED",
+  "reason_data": {}
 }
 ```
 
@@ -1292,10 +1576,17 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "is_alchemizing": true,
-  "message": "已在炼丹状态"
+  "reason_code": "ALCHEMY_START_ALREADY_ACTIVE",
+  "reason_data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ALCHEMY_START_SUCCEEDED`
+- `ALCHEMY_START_ALREADY_ACTIVE`
+- `ALCHEMY_START_BLOCKED_BY_CULTIVATION`
+- `ALCHEMY_START_BLOCKED_BY_BATTLE`
 
 ---
 
@@ -1321,16 +1612,16 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "ALCHEMY_REPORT_SUCCEEDED",
+  "reason_data": {
+    "recipe_id": "health_pill"
+  },
   "success_count": 1,
   "fail_count": 0,
   "products": {
     "health_pill": 1
   },
-  "materials_consumed": {
-    "mat_herb": 2,
-    "spirit_energy": 1
-  },
-  "message": "炼丹完成：成功1颗，失败0颗"
+  "returned_materials": {}
 }
 ```
 
@@ -1341,11 +1632,12 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "ALCHEMY_REPORT_NOT_ACTIVE",
+  "reason_data": {},
   "success_count": 0,
   "fail_count": 0,
   "products": {},
-  "materials_consumed": {},
-  "message": "当前未在炼丹状态"
+  "returned_materials": {}
 }
 ```
 
@@ -1356,13 +1648,36 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "ALCHEMY_REPORT_TIME_INVALID",
+  "reason_data": {
+    "recipe_id": "health_pill",
+    "reported_count": 1,
+    "actual_interval": 2.0,
+    "min_allowed_interval": 2.7
+  },
   "success_count": 0,
   "fail_count": 0,
   "products": {},
-  "materials_consumed": {},
-  "message": "炼丹上报异常：上报1次，实际间隔2.0秒，最小允许2.7秒"
+  "returned_materials": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ALCHEMY_REPORT_SUCCEEDED`
+- `ALCHEMY_REPORT_NOT_ACTIVE`
+- `ALCHEMY_REPORT_RECIPE_NOT_FOUND`
+- `ALCHEMY_REPORT_RECIPE_NOT_LEARNED`
+- `ALCHEMY_REPORT_TIME_INVALID`
+- `ALCHEMY_REPORT_INVENTORY_UNAVAILABLE`
+- `ALCHEMY_REPORT_MATERIALS_INSUFFICIENT`
+- `ALCHEMY_REPORT_SPIRIT_INSUFFICIENT`
+
+#### `reason_data` 字段说明
+
+- `recipe_id`：丹方 ID
+- `missing_materials`：材料不足时缺少的材料，结构为 `{item_id: count}`
+- `required_spirit` / `current_spirit` / `missing_spirit`：灵气不足时的结构化字段
 
 ---
 
@@ -1386,8 +1701,8 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "is_alchemizing": false,
-  "message": "停止炼丹"
+  "reason_code": "ALCHEMY_STOP_SUCCEEDED",
+  "reason_data": {}
 }
 ```
 
@@ -1398,54 +1713,19 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
-  "is_alchemizing": false,
-  "message": "当前未在炼丹状态"
+  "reason_code": "ALCHEMY_STOP_NOT_ACTIVE",
+  "reason_data": {}
 }
 ```
+
+#### `reason_code` 枚举
+
+- `ALCHEMY_STOP_SUCCEEDED`
+- `ALCHEMY_STOP_NOT_ACTIVE`
 
 ---
 
-### 6.4 学习丹方
-
-- **接口地址**：`POST /api/game/alchemy/learn_recipe`
-- **功能**：学习新丹方
-- **认证**：需要认证
-
-#### 请求参数
-
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| recipe_id    | string | 是   | 丹方ID                        |
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "recipe_id": "health_pill",
-  "learned_recipes": ["health_pill", "spirit_pill"]
-}
-```
-
-#### 失败响应
-
-```json
-{
-  "success": false,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason": "丹方已学习",
-  "recipe_id": "health_pill"
-}
-```
-
----
-
-### 6.5 获取丹方列表
+### 6.4 获取丹方列表
 
 - **接口地址**：`GET /api/game/alchemy/recipes`
 - **功能**：获取已学习的丹方列表
@@ -1460,24 +1740,26 @@
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
+  "operation_id": "",
   "timestamp": 1234567890,
-  "recipes": [
+  "reason_code": "ALCHEMY_RECIPES_SUCCEEDED",
+  "reason_data": {},
+  "learned_recipes": [
     "health_pill",
     "spirit_pill",
     "foundation_pill"
   ],
-  "equipped_furnace_id": "alchemy_furnace"
+  "recipes_config": {
+    "health_pill": {
+      "name": "补血丹"
+    }
+  }
 }
 ```
 
-#### 失败响应
+#### `reason_code` 枚举
 
-```json
-{
-  "detail": "玩家数据不存在"
-}
-```
+- `ALCHEMY_RECIPES_SUCCEEDED`
 
 ---
 
@@ -1504,6 +1786,11 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_SIMULATE_SUCCEEDED",
+  "reason_data": {
+    "area_id": "qi_refining_outer",
+    "victory": true
+  },
   "battle_timeline": [
     {
       "time": 0.0,
@@ -1550,18 +1837,22 @@
   "victory": true,
   "loot": [
     {"item_id": "spirit_stone", "amount": 1}
-  ],
-  "message": "战斗模拟完成"
+  ]
 }
 ```
 
-#### 失败响应
+#### 失败响应（气血不足）
 
 ```json
 {
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_SIMULATE_HEALTH_INSUFFICIENT",
+  "reason_data": {
+    "area_id": "qi_refining_outer",
+    "current_health": 0.0
+  },
   "battle_timeline": [],
   "total_time": 0.0,
   "player_health_before": 0.0,
@@ -1569,10 +1860,18 @@
   "enemy_health_after": 0.0,
   "enemy_data": {},
   "victory": false,
-  "loot": [],
-  "message": "当前已在战斗状态"
+  "loot": []
 }
 ```
+
+#### `reason_code` 枚举
+
+- `LIANLI_SIMULATE_SUCCEEDED`
+- `LIANLI_SIMULATE_BLOCKED_BY_CULTIVATION`
+- `LIANLI_SIMULATE_BLOCKED_BY_ALCHEMY`
+- `LIANLI_SIMULATE_HEALTH_INSUFFICIENT`
+- `LIANLI_SIMULATE_TOWER_CLEARED`
+- `LIANLI_SIMULATE_DAILY_LIMIT_REACHED`
 
 ---
 
@@ -1598,14 +1897,19 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_FULLY_SETTLED",
+  "reason_data": {
+    "is_full_settlement": true,
+    "victory": true,
+    "area_id": "qi_refining_outer"
+  },
   "settled_index": 11,
   "total_index": 11,
   "player_health_after": 72.0,
   "loot_gained": [
     {"item_id": "spirit_stone", "amount": 1}
   ],
-  "exp_gained": 0,
-  "message": "战斗结算成功"
+  "exp_gained": 0
 }
 ```
 
@@ -1616,12 +1920,17 @@
   "success": true,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_PARTIALLY_SETTLED",
+  "reason_data": {
+    "is_full_settlement": false,
+    "victory": true,
+    "area_id": "qi_refining_outer"
+  },
   "settled_index": 5,
   "total_index": 11,
   "player_health_after": 75.0,
   "loot_gained": [],
-  "exp_gained": 0,
-  "message": "战斗部分结算成功"
+  "exp_gained": 0
 }
 ```
 
@@ -1632,14 +1941,27 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_TIME_INVALID",
+  "reason_data": {
+    "actual_time": 0.0,
+    "min_allowed_time": 9.0,
+    "battle_speed": 1.0,
+    "settle_index": 10
+  },
   "settled_index": 0,
   "total_index": 11,
   "player_health_after": 76.0,
   "loot_gained": [],
-  "exp_gained": 0,
-  "message": "战斗结算异常：时间验证失败，实际用时0.0秒，最小需要9.0秒"
+  "exp_gained": 0
 }
 ```
+
+#### `reason_code` 枚举
+
+- `LIANLI_FINISH_FULLY_SETTLED`
+- `LIANLI_FINISH_PARTIALLY_SETTLED`
+- `LIANLI_FINISH_NOT_ACTIVE`
+- `LIANLI_FINISH_TIME_INVALID`
 
 #### 失败响应（未在战斗状态）
 
@@ -1648,12 +1970,13 @@
   "success": false,
   "operation_id": "uuid",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_NOT_ACTIVE",
+  "reason_data": {},
   "settled_index": 0,
   "total_index": 0,
   "player_health_after": 76.0,
   "loot_gained": [],
-  "exp_gained": 0,
-  "message": "当前未在战斗状态"
+  "exp_gained": 0
 }
 ```
 
@@ -1661,7 +1984,7 @@
 
 ### 7.3 获取破镜草洞穴信息
 
-- **接口地址**：`GET /api/game/lianli/foundation_herb_cave`
+- **接口地址**：`GET /api/game/dungeon/foundation_herb_cave`
 - **功能**：获取破镜草洞穴剩余次数和总次数
 - **认证**：需要认证
 
@@ -1674,8 +1997,12 @@
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
+  "operation_id": "",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_DUNGEON_INFO_SUCCEEDED",
+  "reason_data": {
+    "dungeon_id": "foundation_herb_cave"
+  },
   "remaining_count": 2,
   "max_count": 3
 }
@@ -1685,15 +2012,28 @@
 
 ```json
 {
-  "detail": "玩家数据不存在"
+  "success": false,
+  "operation_id": "",
+  "timestamp": 1234567890,
+  "reason_code": "LIANLI_DUNGEON_INFO_PLAYER_NOT_FOUND",
+  "reason_data": {
+    "dungeon_id": "foundation_herb_cave"
+  },
+  "remaining_count": 0,
+  "max_count": 0
 }
 ```
+
+#### `reason_code` 枚举
+
+- `LIANLI_DUNGEON_INFO_SUCCEEDED`
+- `LIANLI_DUNGEON_INFO_PLAYER_NOT_FOUND`
 
 ---
 
 ### 7.4 获取无尽塔信息
 
-- **接口地址**：`GET /api/game/lianli/tower`
+- **接口地址**：`GET /api/game/tower/highest_floor`
 - **功能**：获取无尽塔最高层数
 - **认证**：需要认证
 
@@ -1706,8 +2046,10 @@
 ```json
 {
   "success": true,
-  "operation_id": "uuid",
+  "operation_id": "",
   "timestamp": 1234567890,
+  "reason_code": "LIANLI_TOWER_INFO_SUCCEEDED",
+  "reason_data": {},
   "highest_floor": 5
 }
 ```
@@ -1716,9 +2058,19 @@
 
 ```json
 {
-  "detail": "玩家数据不存在"
+  "success": false,
+  "operation_id": "",
+  "timestamp": 1234567890,
+  "reason_code": "LIANLI_TOWER_INFO_PLAYER_NOT_FOUND",
+  "reason_data": {},
+  "highest_floor": 0
 }
 ```
+
+#### `reason_code` 枚举
+
+- `LIANLI_TOWER_INFO_SUCCEEDED`
+- `LIANLI_TOWER_INFO_PLAYER_NOT_FOUND`
 
 ---
 
@@ -2009,14 +2361,84 @@
 
 ---
 
-## 10. 测试账号
+## 10. 测试支持 API
 
-- **测试账号**：wcc_test / wcc_test
+### 10.1 使用规则
+
+- **接口前缀**：`/api/test/*`
+- **认证方式**：使用普通玩家 token
+- **调用限制**：仅测试账号 `test / test123` 可以调用，非测试账号会直接返回 `403`
+- **用途**：为服务端伪流程测试和后续客户端自动化测试快速构造精确状态
+
+### 10.2 测试接口列表
+
+- `POST /api/test/reset_account`
+  - 重置测试账号到统一初始化状态，并补发 1 个测试礼包
+- `POST /api/test/set_player_state`
+  - 设置 `realm / realm_level / spirit_energy / health`
+- `POST /api/test/set_inventory_items`
+  - 以 `{item_id: count}` 精确设置背包
+- `POST /api/test/unlock_content`
+  - 解锁术法、丹方、丹炉
+- `POST /api/test/set_equipped_spells`
+  - 精确设置 `breathing / active / opening` 三类槽位
+- `POST /api/test/set_progress_state`
+  - 设置无尽塔层数和每日副本剩余次数
+- `POST /api/test/set_runtime_state`
+  - 设置修炼/炼丹/历练相关轻量运行态
+- `POST /api/test/apply_preset`
+  - 一键应用预设场景
+- `POST /api/test/grant_test_pack`
+  - 给测试账号补发测试礼包
+- `GET /api/test/state_summary`
+  - 获取当前测试账号状态摘要
+
+### 10.3 统一响应格式
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "TEST_RESET_ACCOUNT_SUCCEEDED",
+  "reason_data": {},
+  "state_summary": {
+    "player": {
+      "realm": "炼气期",
+      "realm_level": 1,
+      "health": 402.0,
+      "spirit_energy": 0.0
+    }
+  }
+}
+```
+
+### 10.4 `apply_preset` 支持的预设
+
+- `breakthrough_ready`
+- `alchemy_ready`
+- `spell_ready`
+- `lianli_ready`
+- `tower_ready`
+- `full_unlock`
+
+### 10.5 测试礼包规则
+
+- `test_pack` 只对测试账号发放
+- 普通账号初始化不再自动获得测试礼包
+- 测试账号首次初始化、`reset_account`、`grant_test_pack` 时会获得测试礼包
+- 测试礼包主要用于人工验收，不作为自动化测试的基础前置
+
+---
+
+## 11. 测试账号
+
+- **测试账号**：test / test123
 - **管理员账号**：admin / admin123
 
 ---
 
-## 11. 服务信息
+## 12. 服务信息
 
 - **服务地址**：http://127.0.0.1:8444
 - **API 文档**：http://127.0.0.1:8444/api/docs

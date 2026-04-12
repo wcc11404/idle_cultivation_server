@@ -67,6 +67,36 @@ class LianliSystem:
                 "max_count": max_count,
                 "remaining_count": max_count
             }
+
+    @staticmethod
+    def _build_simulation_result(
+        success: bool,
+        reason_code: str,
+        reason_data: Dict[str, Any] = None,
+        **payload: Any
+    ) -> Dict[str, Any]:
+        result = {
+            "success": success,
+            "reason_code": reason_code,
+            "reason_data": reason_data or {}
+        }
+        result.update(payload)
+        return result
+
+    @staticmethod
+    def _build_settlement_result(
+        success: bool,
+        reason_code: str,
+        reason_data: Dict[str, Any] = None,
+        **payload: Any
+    ) -> Dict[str, Any]:
+        result = {
+            "success": success,
+            "reason_code": reason_code,
+            "reason_data": reason_data or {}
+        }
+        result.update(payload)
+        return result
     
     def get_daily_dungeon_count(self, area_id: str) -> int:
         """获取每日副本次数"""
@@ -199,13 +229,18 @@ class LianliSystem:
         Returns:
             {
                 "can_start": bool,
-                "reason": str
+                "reason_code": str,
+                "reason_data": dict
             }
         """
         if player_data.health <= 0:
             return {
                 "can_start": False,
-                "reason": "气血不足，无法战斗"
+                "reason_code": "LIANLI_SIMULATE_HEALTH_INSUFFICIENT",
+                "reason_data": {
+                    "area_id": area_id,
+                    "current_health": round(float(player_data.health), 2)
+                }
             }
         
         if area_id == AreasData.get_tower_area_id():
@@ -213,7 +248,12 @@ class LianliSystem:
             if self.tower_highest_floor >= max_floor:
                 return {
                     "can_start": False,
-                    "reason": "已达无尽塔最高层"
+                    "reason_code": "LIANLI_SIMULATE_TOWER_CLEARED",
+                    "reason_data": {
+                        "area_id": area_id,
+                        "highest_floor": self.tower_highest_floor,
+                        "max_floor": max_floor
+                    }
                 }
         
         if AreasData.is_daily_area(area_id):
@@ -221,12 +261,19 @@ class LianliSystem:
             if count <= 0:
                 return {
                     "can_start": False,
-                    "reason": "今日副本次数已用完"
+                    "reason_code": "LIANLI_SIMULATE_DAILY_LIMIT_REACHED",
+                    "reason_data": {
+                        "area_id": area_id,
+                        "remaining_count": count
+                    }
                 }
         
         return {
             "can_start": True,
-            "reason": ""
+            "reason_code": "LIANLI_SIMULATE_AVAILABLE",
+            "reason_data": {
+                "area_id": area_id
+            }
         }
     
     def start_battle_simulation(self, area_id: str,
@@ -246,16 +293,19 @@ class LianliSystem:
         # 检查是否可以开始战斗
         check_result = self.can_start_battle(area_id, player_data)
         if not check_result["can_start"]:
-            return {
-                "success": False,
-                "reason": check_result["reason"],
-                "battle_timeline": [],
-                "total_time": 0.0,
-                "loot": [],
-                "player_health_before": player_data.health,
-                "player_health_after": player_data.health,
-                "enemy_health_after": 0
-            }
+            return self._build_simulation_result(
+                False,
+                check_result["reason_code"],
+                check_result.get("reason_data", {}),
+                battle_timeline=[],
+                total_time=0.0,
+                loot=[],
+                player_health_before=player_data.health,
+                player_health_after=player_data.health,
+                enemy_health_after=0,
+                enemy_data={},
+                victory=False
+            )
         
         # 生成敌人
         enemy_data = self.generate_enemy(area_id)
@@ -285,18 +335,22 @@ class LianliSystem:
             "loot": loot
         }
         
-        return {
-            "success": True,
-            "battle_timeline": battle_result["battle_timeline"],
-            "total_time": battle_result["total_time"],
-            "player_health_before": player_data.health,
-            "player_health_after": battle_result["player_health_after"],
-            "enemy_health_after": battle_result["enemy_health_after"],
-            "enemy_data": enemy_data,
-            "victory": battle_result["victory"],
-            "loot": loot,
-            "reason": ""
-        }
+        return self._build_simulation_result(
+            True,
+            "LIANLI_SIMULATE_SUCCEEDED",
+            {
+                "area_id": area_id,
+                "victory": battle_result["victory"]
+            },
+            battle_timeline=battle_result["battle_timeline"],
+            total_time=battle_result["total_time"],
+            player_health_before=player_data.health,
+            player_health_after=battle_result["player_health_after"],
+            enemy_health_after=battle_result["enemy_health_after"],
+            enemy_data=enemy_data,
+            victory=battle_result["victory"],
+            loot=loot
+        )
     
     def execute_battle(self, player_data: 'PlayerSystem', enemy_data: dict, 
                       spell_system: Optional['SpellSystem']) -> Dict[str, Any]:
@@ -526,15 +580,16 @@ class LianliSystem:
             结算结果
         """
         if not self.is_battling or not self.current_battle_data:
-            return {
-                "success": False,
-                "reason": "当前未在战斗状态",
-                "settled_index": 0,
-                "total_index": 0,
-                "player_health_after": player_data.health,
-                "loot_gained": [],
-                "exp_gained": 0
-            }
+            return self._build_settlement_result(
+                False,
+                "LIANLI_FINISH_NOT_ACTIVE",
+                {},
+                settled_index=0,
+                total_index=0,
+                player_health_after=player_data.health,
+                loot_gained=[],
+                exp_gained=0
+            )
         
         # 判断客户端上报的时间是否符合预期
         current_time = time.time()
@@ -555,16 +610,22 @@ class LianliSystem:
         
         if actual_time < expected_time * 0.9:
             if account_system:
-                account_system.add_suspicious_operation()
-            return {
-                "success": False,
-                "reason": f"战斗结算异常：时间验证失败，实际用时{actual_time:.1f}秒，最小需要{expected_time * 0.9:.1f}秒",
-                "settled_index": 0,
-                "total_index": total_index,
-                "player_health_after": player_data.health,
-                "loot_gained": [],
-                "exp_gained": 0
-            }
+                account_system.increment_suspicious_operations()
+            return self._build_settlement_result(
+                False,
+                "LIANLI_FINISH_TIME_INVALID",
+                {
+                    "actual_time": round(actual_time, 2),
+                    "min_allowed_time": round(expected_time * 0.9, 2),
+                    "battle_speed": round(float(battle_speed), 2),
+                    "settle_index": index
+                },
+                settled_index=0,
+                total_index=total_index,
+                player_health_after=player_data.health,
+                loot_gained=[],
+                exp_gained=0
+            )
         
         # 计算玩家气血、术法变化
         player_health_after = battle_data["player_health_before"]
@@ -622,16 +683,20 @@ class LianliSystem:
         self.battle_start_time = None
         self.current_battle_data = None
         
-        return {
-            "success": True,
-            "reason": "",
-            "settled_index": index + 1,
-            "total_index": total_index,
-            "player_health_after": player_health_after,
-            "loot_gained": loot_gained,
-            "exp_gained": 0,
-            "message": "战斗结算成功" if is_full_settlement else "战斗部分结算成功"
-        }
+        return self._build_settlement_result(
+            True,
+            "LIANLI_FINISH_FULLY_SETTLED" if is_full_settlement else "LIANLI_FINISH_PARTIALLY_SETTLED",
+            {
+                "is_full_settlement": is_full_settlement,
+                "victory": battle_data["victory"],
+                "area_id": battle_data["area_id"]
+            },
+            settled_index=index + 1,
+            total_index=total_index,
+            player_health_after=player_health_after,
+            loot_gained=loot_gained,
+            exp_gained=0
+        )
 
     def finish_tower_battle(self, floor: int, victory: bool):
         """完成无尽塔战斗"""

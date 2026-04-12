@@ -4,6 +4,7 @@ API依赖注入
 提供统一的依赖注入函数，减少API中的重复代码
 """
 
+import copy
 from typing import Optional, Dict, Any
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials
@@ -35,6 +36,7 @@ class GameContext:
         self.db_data["alchemy_system"] = self.alchemy_system.to_dict()
         self.db_data["lianli_system"] = self.lianli_system.to_dict()
         self.db_data["account_info"] = self.account_system.to_dict()
+        self.player_data.data = copy.deepcopy(self.db_data)
 
 
 async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(security)) -> GameContext:
@@ -60,7 +62,7 @@ async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="玩家数据不存在"
         )
     
-    db_data = player_data.data
+    db_data = copy.deepcopy(player_data.data)
     
     # 先初始化各个系统
     spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))

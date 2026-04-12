@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.ServerConfig import settings
+from app.core.TestAccountSeeder import ensure_test_account_exists
 from app.db.Database import init_db, close_db
 from contextlib import asynccontextmanager
 
@@ -10,6 +11,7 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     await init_db()
+    await ensure_test_account_exists()
     yield
     await close_db()
 

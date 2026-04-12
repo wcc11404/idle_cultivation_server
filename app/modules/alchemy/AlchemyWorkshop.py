@@ -18,6 +18,26 @@ if TYPE_CHECKING:
 
 class AlchemyWorkshop:
     """炼丹工坊 - 提供炼丹相关的静态功能"""
+
+    @staticmethod
+    def _build_result(
+        success: bool,
+        reason_code: str,
+        success_count: int = 0,
+        fail_count: int = 0,
+        products: Dict[str, int] = None,
+        returned_materials: Dict[str, int] = None,
+        reason_data: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        return {
+            "success": success,
+            "reason_code": reason_code,
+            "reason_data": reason_data or {},
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "products": products or {},
+            "returned_materials": returned_materials or {}
+        }
     
     @staticmethod
     def calculate_success_rate(alchemy_system: 'AlchemySystem', recipe_id: str, spell_system: 'SpellSystem' = None) -> int:
@@ -163,54 +183,57 @@ class AlchemyWorkshop:
         Returns:
             {
                 "success": bool,
-                "reason": str,
+                "reason_code": str,
+                "reason_data": dict,
                 "success_count": int,
                 "fail_count": int,
                 "products": dict,
-                "materials_consumed": dict
+                "returned_materials": dict
             }
         """
         if not alchemy_system.has_learned_recipe(recipe_id):
-            return {
-                "success": False,
-                "reason": "未学会该丹方",
-                "success_count": 0,
-                "fail_count": 0,
-                "products": {},
-                "materials_consumed": {}
-            }
-        
+            return AlchemyWorkshop._build_result(
+                False,
+                "ALCHEMY_REPORT_RECIPE_NOT_LEARNED",
+                reason_data={"recipe_id": recipe_id}
+            )
+
         if not inventory_system:
-            return {
-                "success": False,
-                "reason": "背包系统未初始化",
-                "success_count": 0,
-                "fail_count": 0,
-                "products": {},
-                "materials_consumed": {}
-            }
-        
+            return AlchemyWorkshop._build_result(
+                False,
+                "ALCHEMY_REPORT_INVENTORY_UNAVAILABLE",
+                reason_data={"recipe_id": recipe_id}
+            )
+
         material_check = AlchemyWorkshop.check_materials(recipe_id, count, inventory_system)
         if not material_check["enough"]:
-            return {
-                "success": False,
-                "reason": "材料不足",
-                "success_count": 0,
-                "fail_count": 0,
-                "products": {},
-                "materials_consumed": {}
-            }
-        
+            missing_materials = {}
+            for material_id, material_info in material_check["materials"].items():
+                required = int(material_info.get("required", 0))
+                has = int(material_info.get("has", 0))
+                if has < required:
+                    missing_materials[material_id] = required - has
+            return AlchemyWorkshop._build_result(
+                False,
+                "ALCHEMY_REPORT_MATERIALS_INSUFFICIENT",
+                reason_data={
+                    "recipe_id": recipe_id,
+                    "missing_materials": missing_materials
+                }
+            )
+
         spirit_check = AlchemyWorkshop.check_spirit_energy(recipe_id, count, player_data)
         if not spirit_check["enough"]:
-            return {
-                "success": False,
-                "reason": "灵气不足",
-                "success_count": 0,
-                "fail_count": 0,
-                "products": {},
-                "materials_consumed": {}
-            }
+            return AlchemyWorkshop._build_result(
+                False,
+                "ALCHEMY_REPORT_SPIRIT_INSUFFICIENT",
+                reason_data={
+                    "recipe_id": recipe_id,
+                    "required_spirit": int(spirit_check["required"]),
+                    "current_spirit": int(spirit_check["has"]),
+                    "missing_spirit": max(0, int(spirit_check["required"]) - int(spirit_check["has"]))
+                }
+            )
         
         materials = RecipeData.get_recipe_materials(recipe_id)
         spirit_per_pill = RecipeData.get_recipe_spirit_energy(recipe_id)
@@ -223,10 +246,7 @@ class AlchemyWorkshop:
         success_count = 0
         fail_count = 0
         products = {}
-        materials_consumed = {}
-        
-        if spirit_per_pill > 0:
-            materials_consumed["spirit_energy"] = spirit_per_pill * count
+        returned_materials = {}
         
         for i in range(count):
             roll = random.random() * 100.0
@@ -238,7 +258,6 @@ class AlchemyWorkshop:
                 success_count += 1
                 for material_id, material_count in materials.items():
                     inventory_system.remove_item(material_id, material_count)
-                    materials_consumed[material_id] = materials_consumed.get(material_id, 0) + material_count
                 if product_id:
                     if product_id in products:
                         products[product_id] += product_count_per_pill
@@ -249,19 +268,22 @@ class AlchemyWorkshop:
                 for material_id, material_count in materials.items():
                     fail_mat_count = (material_count + 1) // 2
                     inventory_system.remove_item(material_id, fail_mat_count)
-                    materials_consumed[material_id] = materials_consumed.get(material_id, 0) + fail_mat_count
+                    returned_materials[material_id] = returned_materials.get(material_id, 0) + (material_count - fail_mat_count)
         
         for prod_id, prod_count in products.items():
             inventory_system.add_item(prod_id, prod_count)
         
-        return {
-            "success": True,
-            "reason": "炼制完成",
-            "success_count": success_count,
-            "fail_count": fail_count,
-            "products": products,
-            "materials_consumed": materials_consumed
-        }
+        return AlchemyWorkshop._build_result(
+            True,
+            "ALCHEMY_REPORT_SUCCEEDED",
+            success_count=success_count,
+            fail_count=fail_count,
+            products=products,
+            returned_materials=returned_materials,
+            reason_data={
+                "recipe_id": recipe_id
+            }
+        )
     
     @staticmethod
     def _return_half_materials(materials: Dict[str, int], fail_count: int, inventory_system: 'InventorySystem'):

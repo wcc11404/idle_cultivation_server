@@ -73,7 +73,7 @@ class CultivationSystem:
         health_gained = CultivationSystem.calculate_health_regen_per_second(player, spell_system) * delta_seconds
         
         actual_spirit = player.add_spirit_energy(spirit_gained)
-        actual_health = player.add_health(int(health_gained))
+        actual_health = player.add_health(health_gained)
         
         used_count_gained = 0
         # 已装备的第一个吐纳术法，熟练度增加
@@ -147,7 +147,7 @@ class CultivationSystem:
         Returns:
             {
                 "can": bool,
-                "reason": str,
+                "reason_code": str,
                 "breakthrough_info": dict,
                 "missing": dict
             }
@@ -157,7 +157,7 @@ class CultivationSystem:
         if not breakthrough_info["can"]:
             return {
                 "can": False,
-                "reason": "已达到最高境界或境界信息错误",
+                "reason_code": "CULTIVATION_BREAKTHROUGH_NOT_AVAILABLE",
                 "breakthrough_info": breakthrough_info,
                 "missing": {}
             }
@@ -179,14 +179,14 @@ class CultivationSystem:
         if missing:
             return {
                 "can": False,
-                "reason": CultivationSystem._build_breakthrough_missing_reason(missing),
+                "reason_code": "CULTIVATION_BREAKTHROUGH_INSUFFICIENT_RESOURCES",
                 "breakthrough_info": breakthrough_info,
                 "missing": missing
             }
         
         return {
             "can": True,
-            "reason": "可以突破",
+            "reason_code": "CULTIVATION_BREAKTHROUGH_AVAILABLE",
             "breakthrough_info": breakthrough_info,
             "missing": {}
         }
@@ -205,7 +205,8 @@ class CultivationSystem:
                 "success": bool,
                 "new_realm": str,
                 "new_level": int,
-                "reason": str,
+                "reason_code": str,
+                "missing_resources": dict,
                 "costs": dict
             }
         """
@@ -216,7 +217,8 @@ class CultivationSystem:
                 "success": False,
                 "new_realm": player.realm,
                 "new_level": player.realm_level,
-                "reason": check_result["reason"],
+                "reason_code": check_result["reason_code"],
+                "missing_resources": check_result.get("missing", {}),
                 "costs": {}
             }
         
@@ -248,6 +250,7 @@ class CultivationSystem:
             "success": True,
             "new_realm": player.realm,
             "new_level": player.realm_level,
-            "reason": "突破成功",
+            "reason_code": "CULTIVATION_BREAKTHROUGH_SUCCEEDED",
+            "missing_resources": {},
             "costs": costs
         }

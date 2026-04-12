@@ -1,10 +1,12 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import platform
 
 
 class Settings(BaseSettings):
     """应用配置"""
+    model_config = SettingsConfigDict(env_file=".env")
+
     # 服务器配置
     APP_NAME: str = "Idle Cultivation Server"
     APP_VERSION: str = "1.0.0"
@@ -31,9 +33,5 @@ class Settings(BaseSettings):
     # 每日重置时间（小时）
     DAILY_RESET_HOUR: int = 4
     
-    class Config:
-        env_file = ".env"
-
-
 # 创建全局配置实例
 settings = Settings()

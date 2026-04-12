@@ -1,13 +1,13 @@
 """
 炼丹相关 API
 
-包含炼制丹药、学习丹方等功能
+包含炼制丹药相关功能
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.game import (
-    CraftPillsRequest, LearnRecipeRequest,
+    AlchemyRecipesResponse,
     AlchemyStartRequest, AlchemyStartResponse,
     AlchemyReportRequest, AlchemyReportResponse,
     AlchemyStopRequest, AlchemyStopResponse
@@ -25,39 +25,7 @@ import json
 router = APIRouter()
 
 
-@router.post("/alchemy/learn_recipe", response_model=dict)
-async def learn_recipe(
-    request: LearnRecipeRequest,
-    ctx: GameContext = Depends(get_game_context),
-    token_info: dict = Depends(get_token_info)
-):
-    """学习丹方"""
-    start_time = time.time()
-    logger.info(f"[IN] POST /game/alchemy/learn_recipe - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
-    
-    result = ctx.alchemy_system.learn_recipe(request.recipe_id)
-    
-    if result["success"]:
-        ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
-        
-        ctx.player_data.data = ctx.db_data
-        ctx.player_data.last_online_at = datetime.now(timezone.utc)
-        await ctx.player_data.save()
-        
-        logger.info(f"[GAME] 学习丹方成功 - account_id: {ctx.account.id} - recipe_id: {request.recipe_id}")
-    
-    response_data = {
-        "success": result["success"],
-        "operation_id": request.operation_id,
-        "timestamp": request.timestamp,
-        "reason": result.get("reason", ""),
-        "recipe_id": request.recipe_id
-    }
-    logger.info(f"[OUT] POST /game/alchemy/learn_recipe - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
-    return response_data
-
-
-@router.get("/alchemy/recipes", response_model=dict)
+@router.get("/alchemy/recipes", response_model=AlchemyRecipesResponse)
 async def get_recipes(
     ctx: GameContext = Depends(get_game_context),
     token_info: dict = Depends(get_token_info)
@@ -68,12 +36,16 @@ async def get_recipes(
     
     learned_recipes = ctx.alchemy_system.get_learned_recipes()
     
-    response_data = {
-        "success": True,
-        "learned_recipes": learned_recipes,
-        "recipes_config": RecipeData.get_recipes_config()
-    }
-    logger.info(f"[OUT] GET /game/alchemy/recipes - 耗时：{time.time() - start_time:.4f}s")
+    response_data = AlchemyRecipesResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        reason_code="ALCHEMY_RECIPES_SUCCEEDED",
+        reason_data={},
+        learned_recipes=learned_recipes,
+        recipes_config=RecipeData.get_recipes_config()
+    )
+    logger.info(f"[OUT] GET /game/alchemy/recipes - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
@@ -92,8 +64,8 @@ async def start_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            is_alchemizing=True,
-            message="已在炼丹状态"
+            reason_code="ALCHEMY_START_ALREADY_ACTIVE",
+            reason_data={}
         )
         logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -103,8 +75,8 @@ async def start_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            is_alchemizing=False,
-            message="正在修炼中，无法开始炼丹"
+            reason_code="ALCHEMY_START_BLOCKED_BY_CULTIVATION",
+            reason_data={}
         )
         logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -114,8 +86,8 @@ async def start_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            is_alchemizing=False,
-            message="正在战斗中，无法开始炼丹"
+            reason_code="ALCHEMY_START_BLOCKED_BY_BATTLE",
+            reason_data={}
         )
         logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -134,8 +106,8 @@ async def start_alchemy(
         success=True,
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        is_alchemizing=True,
-        message="开始炼丹"
+        reason_code="ALCHEMY_START_SUCCEEDED",
+        reason_data={}
     )
     logger.info(f"[OUT] POST /game/alchemy/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -156,11 +128,12 @@ async def report_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
+            reason_code="ALCHEMY_REPORT_NOT_ACTIVE",
+            reason_data={},
             success_count=0,
             fail_count=0,
             products={},
-            materials_consumed={},
-            message="当前未在炼丹状态"
+            returned_materials={}
         )
         logger.info(f"[OUT] POST /game/alchemy/report - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -171,11 +144,12 @@ async def report_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
+            reason_code="ALCHEMY_REPORT_RECIPE_NOT_FOUND",
+            reason_data={"recipe_id": request.recipe_id},
             success_count=0,
             fail_count=0,
             products={},
-            materials_consumed={},
-            message="丹方不存在"
+            returned_materials={}
         )
         logger.info(f"[OUT] POST /game/alchemy/report - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -192,11 +166,17 @@ async def report_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
+            reason_code="ALCHEMY_REPORT_TIME_INVALID",
+            reason_data={
+                "recipe_id": request.recipe_id,
+                "reported_count": request.count,
+                "actual_interval": round(actual_interval, 2),
+                "min_allowed_interval": round(min_allowed_interval, 2)
+            },
             success_count=0,
             fail_count=0,
             products={},
-            materials_consumed={},
-            message=f"炼丹上报异常：上报{request.count}次，实际间隔{actual_interval:.1f}秒，最小允许{min_allowed_interval:.1f}秒"
+            returned_materials={}
         )
         logger.info(f"[OUT] POST /game/alchemy/report - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -220,11 +200,12 @@ async def report_alchemy(
         success=result["success"],
         operation_id=request.operation_id,
         timestamp=request.timestamp,
+        reason_code=result.get("reason_code", ""),
+        reason_data=result.get("reason_data", {}),
         success_count=result.get("success_count", 0),
         fail_count=result.get("fail_count", 0),
         products=result.get("products", {}),
-        materials_consumed=result.get("materials_consumed", {}),
-        message=result.get("reason", "炼丹完成")
+        returned_materials=result.get("returned_materials", {})
     )
     logger.info(f"[OUT] POST /game/alchemy/report - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
@@ -245,8 +226,8 @@ async def stop_alchemy(
             success=False,
             operation_id=request.operation_id,
             timestamp=request.timestamp,
-            is_alchemizing=False,
-            message="当前未在炼丹状态"
+            reason_code="ALCHEMY_STOP_NOT_ACTIVE",
+            reason_data={}
         )
         logger.info(f"[OUT] POST /game/alchemy/stop - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
@@ -264,8 +245,8 @@ async def stop_alchemy(
         success=True,
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        is_alchemizing=False,
-        message="停止炼丹"
+        reason_code="ALCHEMY_STOP_SUCCEEDED",
+        reason_data={}
     )
     logger.info(f"[OUT] POST /game/alchemy/stop - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data

@@ -40,6 +40,16 @@ class SpellSystem:
             "max_spirit": 1.0,
             "spirit_gain": 1.0
         }
+
+    @staticmethod
+    def _build_result(success: bool, reason_code: str, reason_data: Dict[str, Any] = None, **extra: Any) -> Dict[str, Any]:
+        result = {
+            "success": success,
+            "reason_code": reason_code,
+            "reason_data": reason_data or {}
+        }
+        result.update(extra)
+        return result
     
     def recalculate_bonuses(self):
         """重新计算并缓存属性加成"""
@@ -55,10 +65,10 @@ class SpellSystem:
         for spell_id, spell_info in self.player_spells.items():
             if not spell_info.get("obtained", False) or spell_info.get("level", 0) <= 0:
                 continue
-            
+
             level_data = SpellData.get_spell_level_data(spell_id, spell_info["level"])
             attribute_bonus = level_data.get("attribute_bonus", {})
-            
+
             for attr, value in attribute_bonus.items():
                 if attr == "speed":
                     bonuses[attr] += value
@@ -120,18 +130,18 @@ class SpellSystem:
             }
         """
         if not SpellData.spell_exists(spell_id):
-            return {"success": False, "reason": "术法不存在", "spell_type": ""}
+            return self._build_result(False, "SPELL_EQUIP_NOT_FOUND", {"spell_id": spell_id, "slot_type": ""}, spell_type="")
         
         if not self.has_spell(spell_id):
-            return {"success": False, "reason": "未获取该术法", "spell_type": ""}
+            return self._build_result(False, "SPELL_EQUIP_NOT_OWNED", {"spell_id": spell_id, "slot_type": ""}, spell_type="")
         
         if self.is_spell_equipped(spell_id):
-            return {"success": False, "reason": "术法已装备", "spell_type": ""}
+            return self._build_result(False, "SPELL_EQUIP_ALREADY_EQUIPPED", {"spell_id": spell_id, "slot_type": ""}, spell_type="")
         
         spell_type = SpellData.get_spell_type(spell_id)
         
         if spell_type == SpellData.SPELL_TYPE_PRODUCTION:
-            return {"success": False, "reason": "杂学术法无法装备", "spell_type": spell_type}
+            return self._build_result(False, "SPELL_EQUIP_PRODUCTION_FORBIDDEN", {"spell_id": spell_id, "slot_type": spell_type}, spell_type=spell_type)
         
         # 槽位类型与术法类型一致
         slot_type = spell_type
@@ -140,22 +150,29 @@ class SpellSystem:
         current_count = len(self.equipped_spells.get(slot_type, []))
         
         if limit >= 0 and current_count >= limit:
-            return {
-                "success": False,
-                "reason": f"{slot_type}槽位已达上限",
-                "spell_type": spell_type
-            }
+            return self._build_result(
+                False,
+                "SPELL_SLOT_LIMIT_REACHED",
+                {
+                    "spell_id": spell_id,
+                    "slot_type": spell_type,
+                    "limit": limit,
+                    "current_count": current_count
+                },
+                spell_type=spell_type
+            )
         
         if slot_type not in self.equipped_spells:
             self.equipped_spells[slot_type] = []
         
         self.equipped_spells[slot_type].append(spell_id)
         
-        return {
-            "success": True,
-            "reason": "装备成功",
-            "spell_type": spell_type
-        }
+        return self._build_result(
+            True,
+            "SPELL_EQUIP_SUCCEEDED",
+            {"spell_id": spell_id, "slot_type": spell_type},
+            spell_type=spell_type
+        )
     
     def unequip_spell(self, spell_id: str) -> Dict[str, Any]:
         """
@@ -172,10 +189,10 @@ class SpellSystem:
             }
         """
         if not SpellData.spell_exists(spell_id):
-            return {"success": False, "reason": "术法不存在", "spell_type": ""}
+            return self._build_result(False, "SPELL_UNEQUIP_NOT_FOUND", {"spell_id": spell_id, "slot_type": ""}, spell_type="")
         
         if not self.is_spell_equipped(spell_id):
-            return {"success": False, "reason": "术法未装备", "spell_type": ""}
+            return self._build_result(False, "SPELL_UNEQUIP_NOT_EQUIPPED", {"spell_id": spell_id, "slot_type": ""}, spell_type="")
         
         spell_type = SpellData.get_spell_type(spell_id)
         
@@ -185,11 +202,12 @@ class SpellSystem:
         if slot_type != "" and slot_type in self.equipped_spells and spell_id in self.equipped_spells[slot_type]:
             self.equipped_spells[slot_type].remove(spell_id)
         
-        return {
-            "success": True,
-            "reason": "卸下成功",
-            "spell_type": spell_type
-        }
+        return self._build_result(
+            True,
+            "SPELL_UNEQUIP_SUCCEEDED",
+            {"spell_id": spell_id, "slot_type": spell_type},
+            spell_type=spell_type
+        )
     
     def is_spell_equipped(self, spell_id: str) -> bool:
         """检查术法是否已装备"""
@@ -213,13 +231,18 @@ class SpellSystem:
             }
         """
         if not self.has_spell(spell_id):
-            return {"success": False, "reason": "未获取该术法", "new_level": 0}
+            return self._build_result(False, "SPELL_UPGRADE_NOT_OWNED", {"spell_id": spell_id}, new_level=0)
         
         spell_info = self.player_spells[spell_id]
         max_level = SpellData.get_spell_max_level(spell_id)
         
         if spell_info["level"] >= max_level:
-            return {"success": False, "reason": "已达到最高等级", "new_level": spell_info["level"]}
+            return self._build_result(
+                False,
+                "SPELL_UPGRADE_AT_MAX_LEVEL",
+                {"spell_id": spell_id, "current_level": spell_info["level"], "max_level": max_level},
+                new_level=spell_info["level"]
+            )
         
         current_level = spell_info["level"]
         level_data = SpellData.get_spell_level_data(spell_id, current_level)
@@ -228,18 +251,30 @@ class SpellSystem:
         spirit_cost = level_data.get("spirit_cost", 0)
         
         if spell_info["use_count"] < use_count_required:
-            return {
-                "success": False,
-                "reason": f"使用次数不足（{spell_info['use_count']}/{use_count_required}）",
-                "new_level": current_level
-            }
+            return self._build_result(
+                False,
+                "SPELL_UPGRADE_USE_COUNT_INSUFFICIENT",
+                {
+                    "spell_id": spell_id,
+                    "current_level": current_level,
+                    "current_use_count": spell_info["use_count"],
+                    "required_use_count": use_count_required
+                },
+                new_level=current_level
+            )
         
         if spell_info["charged_spirit"] < spirit_cost:
-            return {
-                "success": False,
-                "reason": f"充灵气不足（{spell_info['charged_spirit']}/{spirit_cost}）",
-                "new_level": current_level
-            }
+            return self._build_result(
+                False,
+                "SPELL_UPGRADE_CHARGED_SPIRIT_INSUFFICIENT",
+                {
+                    "spell_id": spell_id,
+                    "current_level": current_level,
+                    "current_charged_spirit": spell_info["charged_spirit"],
+                    "required_charged_spirit": spirit_cost
+                },
+                new_level=current_level
+            )
         
         spell_info["charged_spirit"] -= spirit_cost
         spell_info["level"] = current_level + 1
@@ -247,11 +282,12 @@ class SpellSystem:
         
         self.recalculate_bonuses()
         
-        return {
-            "success": True,
-            "reason": "升级成功",
-            "new_level": spell_info["level"]
-        }
+        return self._build_result(
+            True,
+            "SPELL_UPGRADE_SUCCEEDED",
+            {"spell_id": spell_id, "new_level": spell_info["level"]},
+            new_level=spell_info["level"]
+        )
     
     def charge_spell_spirit(self, spell_id: str, amount: int, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """
@@ -270,13 +306,18 @@ class SpellSystem:
             }
         """
         if not self.has_spell(spell_id):
-            return {"success": False, "reason": "未获取该术法", "charged_amount": 0}
+            return self._build_result(False, "SPELL_CHARGE_NOT_OWNED", {"spell_id": spell_id}, charged_amount=0)
         
         spell_info = self.player_spells[spell_id]
         max_level = SpellData.get_spell_max_level(spell_id)
         
         if spell_info["level"] >= max_level:
-            return {"success": False, "reason": "已达到最高等级", "charged_amount": 0}
+            return self._build_result(
+                False,
+                "SPELL_CHARGE_AT_MAX_LEVEL",
+                {"spell_id": spell_id, "current_level": spell_info["level"], "max_level": max_level},
+                charged_amount=0
+            )
         
         current_level = spell_info["level"]
         level_data = SpellData.get_spell_level_data(spell_id, current_level)
@@ -284,23 +325,34 @@ class SpellSystem:
         
         need = spirit_cost - spell_info["charged_spirit"]
         if need <= 0:
-            return {"success": False, "reason": "灵气已充足", "charged_amount": 0}
+            return self._build_result(
+                False,
+                "SPELL_CHARGE_ALREADY_FULL",
+                {"spell_id": spell_id, "current_charged_spirit": spell_info["charged_spirit"], "required_charged_spirit": spirit_cost},
+                charged_amount=0
+            )
         
         available = min(amount, need)
         if player_data.spirit_energy < available:
             available = int(player_data.spirit_energy)
         
         if available <= 0:
-            return {"success": False, "reason": "自身灵气不足", "charged_amount": 0}
+            return self._build_result(
+                False,
+                "SPELL_CHARGE_PLAYER_SPIRIT_INSUFFICIENT",
+                {"spell_id": spell_id, "current_spirit": player_data.spirit_energy},
+                charged_amount=0
+            )
         
         player_data.reduce_spirit_energy(float(available))
         spell_info["charged_spirit"] += available
         
-        return {
-            "success": True,
-            "reason": "充灵气成功",
-            "charged_amount": available
-        }
+        return self._build_result(
+            True,
+            "SPELL_CHARGE_SUCCEEDED",
+            {"spell_id": spell_id, "charged_amount": available},
+            charged_amount=available
+        )
     
     def add_spell_use_count(self, spell_id: str, count: int = 1):
         """增加术法使用次数"""

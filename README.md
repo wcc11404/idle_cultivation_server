@@ -7,7 +7,7 @@
 - ✅ **完整的游戏系统**：修炼、术法、背包、炼丹、历练等多个游戏系统
 - ✅ **JWT认证**：基于JWT的用户认证和授权机制
 - ✅ **防作弊系统**：修炼上报时间验证、可疑操作记录
-- ✅ **离线奖励**：根据离线时间计算离线奖励
+- ✅ **离线奖励**：根据离线时间计算离线奖励，超过 4 小时按 4 小时封顶结算
 - ✅ **模块化设计**：清晰的功能模块划分，便于维护和扩展
 - ✅ **完整的API文档**：详细的API接口文档和参数说明
 - ✅ **集成测试**：完整的集成测试覆盖所有核心功能
@@ -30,7 +30,8 @@ idle_cultivation_server/
 │   ├── main.py                 # FastAPI 应用实例
 │   ├── api/                    # API 路由
 │   │   ├── game_base.py        # 游戏基础功能API（含排行榜）
-│   │   └── admin.py            # 管理后台相关
+│   │   ├── admin.py            # 管理后台相关
+│   │   └── test.py             # 测试支持接口
 │   ├── modules/                # 功能模块
 │   │   ├── account/            # 账号模块
 │   │   │   ├── AccountApi.py   # 账号API（注册、登录、登出等）
@@ -74,7 +75,8 @@ idle_cultivation_server/
 │   └── schemas/                # 数据验证模型
 │       ├── base.py             # 基础请求/响应模型
 │       ├── auth.py             # 认证相关
-│       └── game.py             # 游戏数据相关
+│       ├── game.py             # 游戏数据相关
+│       └── test.py             # 测试接口相关
 ├── config/                     # 配置文件软链接
 │   ├── items.json
 │   ├── realms.json
@@ -83,8 +85,11 @@ idle_cultivation_server/
 ├── docs/                       # 文档
 │   ├── api_documentation.md    # API详细文档
 │   └── security_system.md      # 服务安全系统文档
-├── unit_test/                  # 单元测试
-│   └── integration_test.py     # 集成测试
+├── unit_test/                  # 单元测试与测试支持
+│   ├── integration_test.py     # 复杂端到端集成脚本
+│   ├── test_support_flow.py    # 基于测试接口的 smoke 流程测试
+│   ├── presets/                # 测试预设
+│   └── support/                # 测试辅助代码
 ├── sql/                        # SQL 脚本
 │   └── init.sql                # 数据库初始化脚本
 ├── start.sh                    # 启动脚本
@@ -184,7 +189,6 @@ tail -f server.log
 - `POST /api/game/alchemy/start` - 开始炼丹
 - `POST /api/game/alchemy/report` - 炼丹上报
 - `POST /api/game/alchemy/stop` - 停止炼丹
-- `POST /api/game/alchemy/learn_recipe` - 学习丹方
 - `GET /api/game/alchemy/recipes` - 获取丹方列表
 
 ### 历练系统
@@ -198,7 +202,7 @@ tail -f server.log
 
 - `GET /api/game/data` - 加载游戏数据
 - `POST /api/game/save` - 保存游戏数据
-- `POST /api/game/claim_offline_reward` - 领取离线奖励
+- `POST /api/game/claim_offline_reward` - 领取离线奖励（超过 4 小时按 4 小时结算）
 - `GET /api/game/rank` - 获取排行榜
 
 ### 管理后台
@@ -208,12 +212,26 @@ tail -f server.log
 - `GET /api/admin/player/{id}` - 获取玩家详情
 - `POST /api/admin/player/{id}/ban` - 封号
 
+### 测试支持接口
+
+- `POST /api/test/reset_account` - 重置测试账号
+- `POST /api/test/set_player_state` - 精确设置玩家状态
+- `POST /api/test/set_inventory_items` - 精确设置背包
+- `POST /api/test/unlock_content` - 解锁术法/丹方/丹炉
+- `POST /api/test/set_equipped_spells` - 精确设置术法槽位
+- `POST /api/test/set_progress_state` - 设置无尽塔和每日次数
+- `POST /api/test/set_runtime_state` - 设置轻量运行态
+- `POST /api/test/apply_preset` - 应用测试预设
+- `POST /api/test/grant_test_pack` - 补发测试礼包
+- `GET /api/test/state_summary` - 获取状态摘要
+
 ## 测试账号
 
 - **用户名**：test
 - **密码**：test123
 - **用途**：预置的测试用户账号，用于测试游戏功能
 - **定义位置**：`sql/init.sql`（数据库初始化时自动创建）
+- **说明**：只有测试账号可以调用 `/api/test/*`，且只有测试账号会自动获得测试礼包
 
 ## 管理员账号
 
@@ -229,24 +247,34 @@ tail -f server.log
 
 ## 运行测试
 
-项目包含完整的集成测试，覆盖所有核心功能：
+项目包含基于固定测试账号的自动化测试与 smoke 脚本：
 
 ```bash
-# 运行集成测试
+# 运行 pytest 自动化测试
 cd idle_cultivation_server
+pytest unit_test
+
+# 上面这条会包含 integration_test.py 的复杂端到端流程，
+# 并且默认把这条复杂集成测试排到最后执行
+
+# 运行复杂端到端集成脚本
 python3 -m unit_test.integration_test
+
+# 仅运行基于测试接口的 smoke 流程测试
+python3 -m unit_test.test_support_flow
 ```
 
 测试覆盖的功能：
-- ✅ 用户注册和登录
-- ✅ 游戏数据加载和保存
+- ✅ 固定测试账号登录与基础数据加载
+- ✅ `/api/test/*` 状态构造、预设和状态摘要
 - ✅ 修炼系统（开始修炼、上报修炼、突破境界）
 - ✅ 术法系统（装备、卸下、升级、充灵气）
 - ✅ 背包系统（使用物品、整理、丢弃）
-- ✅ 炼丹系统（炼制丹药、学习丹方）
+- ✅ 炼丹系统（炼制丹药、学习丹方、开始/停火）
 - ✅ 历练系统（战斗模拟、战斗结算、防作弊验证）
-- ✅ 离线奖励领取
-- ✅ 防作弊测试
+- ✅ 离线奖励领取（超过 4 小时按 4 小时结算）
+- ✅ 排行榜与设置接口基础回归
+- ✅ 基于测试接口的伪流程 smoke 验证
 
 ## 开发说明
 

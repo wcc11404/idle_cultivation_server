@@ -56,24 +56,20 @@ class InventorySystem:
         Returns:
             {
                 "success": bool,
-                "reason": str,
-                "new_capacity": int
+                "reason_code": str,
+                "reason_data": dict
             }
         """
         if not self.can_expand():
-            return {
-                "success": False,
-                "reason": "已达到最大容量",
+            return self._build_result(False, "INVENTORY_EXPAND_CAPACITY_MAX", {
                 "new_capacity": self.capacity
-            }
+            })
         
         self.capacity = min(self.capacity + self.EXPAND_STEP, self.MAX_SIZE)
         
-        return {
-            "success": True,
-            "reason": "扩容成功",
+        return self._build_result(True, "INVENTORY_EXPAND_SUCCEEDED", {
             "new_capacity": self.capacity
-        }
+        })
     
     def add_item(self, item_id: str, count: int = 1) -> int:
         """
@@ -191,6 +187,31 @@ class InventorySystem:
                 "count": self.slots[i]["count"]
             })
         return result
+
+    @staticmethod
+    def _build_result(success: bool, reason_code: str, reason_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        return {
+            "success": success,
+            "reason_code": reason_code,
+            "reason_data": reason_data or {}
+        }
+
+    @classmethod
+    def _build_use_item_result(
+        cls,
+        success: bool,
+        reason_code: str,
+        item_id: str,
+        used_count: int = 0,
+        effect: Dict[str, Any] = None,
+        contents: Dict[str, int] = None
+    ) -> Dict[str, Any]:
+        return cls._build_result(success, reason_code, {
+            "item_id": item_id,
+            "used_count": used_count,
+            "effect": effect or {},
+            "contents": contents or {}
+        })
     
     def organize_inventory(self) -> Dict[str, Any]:
         """
@@ -199,7 +220,8 @@ class InventorySystem:
         Returns:
             {
                 "success": bool,
-                "reason": str
+                "reason_code": str,
+                "reason_data": dict
             }
         """
         items = []
@@ -217,10 +239,7 @@ class InventorySystem:
         for item in items:
             self.add_item(item["id"], item["count"])
         
-        return {
-            "success": True,
-            "reason": "整理完成"
-        }
+        return self._build_result(True, "INVENTORY_ORGANIZE_SUCCEEDED", {})
     
     def discard_item(self, item_id: str, count: int) -> Dict[str, Any]:
         """
@@ -233,24 +252,22 @@ class InventorySystem:
         Returns:
             {
                 "success": bool,
-                "reason": str,
-                "discarded_count": int
+                "reason_code": str,
+                "reason_data": dict
             }
         """
         removed = self.remove_item(item_id, count)
         
         if removed > 0:
-            return {
-                "success": True,
-                "reason": "丢弃成功",
+            return self._build_result(True, "INVENTORY_DISCARD_SUCCEEDED", {
+                "item_id": item_id,
                 "discarded_count": removed
-            }
+            })
         else:
-            return {
-                "success": False,
-                "reason": "物品不足",
+            return self._build_result(False, "INVENTORY_DISCARD_ITEM_NOT_ENOUGH", {
+                "item_id": item_id,
                 "discarded_count": 0
-            }
+            })
     
     def use_item(self, item_id: str, player_data: 'PlayerSystem', 
                  spell_system: 'SpellSystem' = None,
@@ -267,15 +284,15 @@ class InventorySystem:
         Returns:
             {
                 "success": bool,
-                "reason": str,
-                "effect": dict
+                "reason_code": str,
+                "reason_data": dict
             }
         """
-        if not self.has_item(item_id, 1):
-            return {"success": False, "reason": "物品不足", "effect": {}}
-        
         if not ItemData.item_exists(item_id):
-            return {"success": False, "reason": "物品不存在", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_FOUND", item_id)
+        
+        if not self.has_item(item_id, 1):
+            return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_ENOUGH", item_id)
         
         item_type = ItemData.get_item_type(item_id)
         
@@ -300,29 +317,32 @@ class InventorySystem:
             return self._use_unlock_furnace(item_id, alchemy_system)
         
         else:
-            return {"success": False, "reason": "该物品无法使用", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_USABLE", item_id)
     
     def _use_consumable(self, item_id: str, player_data: 'PlayerSystem') -> Dict[str, Any]:
         """使用消耗品"""
         effect = ItemData.get_item_effect(item_id)
-        actual_effect = {}
+        actual_effect = {"type": ""}
         
         effect_type = effect.get("type", "")
         
         if effect_type == "add_spirit_energy_unlimited":
             amount = int(effect.get("amount", 0))
             player_data.add_spirit_energy_breakthrough(float(amount))
+            actual_effect["type"] = "add_spirit_energy"
             actual_effect["spirit_energy_added"] = amount
         
         elif effect_type == "add_spirit_energy":
             amount = int(effect.get("amount", 0))
-            actual_added = player_data.add_spirit_energy(float(amount))
-            actual_effect["spirit_energy_added"] = actual_added
-        
+            player_data.add_spirit_energy(float(amount))
+            actual_effect["type"] = "add_spirit_energy"
+            actual_effect["spirit_energy_added"] = amount
+
         elif effect_type == "add_health":
             amount = int(effect.get("amount", 0))
-            actual_added = player_data.add_health(amount)
-            actual_effect["health_added"] = actual_added
+            player_data.add_health(float(amount))
+            actual_effect["type"] = "add_health"
+            actual_effect["health_added"] = amount
         
         elif effect_type == "add_spirit_and_health":
             spirit_amount = int(effect.get("spirit_amount", 0))
@@ -335,26 +355,25 @@ class InventorySystem:
                 player_data.add_spirit_energy(float(spirit_amount))
             player_data.add_health(health_amount)
             
+            actual_effect["type"] = "add_spirit_and_health"
             actual_effect["spirit_energy_added"] = spirit_amount
             actual_effect["health_added"] = health_amount
         
         else:
-            return {"success": False, "reason": f"未知效果类型: {effect_type}", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_EFFECT_INVALID", item_id, 0, {
+                "type": effect_type
+            })
         
         self.remove_item(item_id, 1)
         
-        return {
-            "success": True,
-            "reason": "使用成功",
-            "effect": actual_effect
-        }
+        return self._build_use_item_result(True, "INVENTORY_USE_CONSUMABLE_SUCCEEDED", item_id, 1, actual_effect)
     
     def _use_gift(self, item_id: str) -> Dict[str, Any]:
         """打开宝箱/礼包"""
         content = ItemData.get_item_content(item_id)
         
         if not content:
-            return {"success": False, "reason": "礼包内容为空", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_GIFT_EMPTY", item_id)
         
         self.remove_item(item_id, 1)
         
@@ -364,39 +383,44 @@ class InventorySystem:
             if added > 0:
                 actual_contents[content_item_id] = added
         
-        return {
-            "success": True,
-            "reason": "打开成功",
-            "effect": {"contents": actual_contents}
-        }
+        return self._build_use_item_result(
+            True,
+            "INVENTORY_USE_GIFT_SUCCEEDED",
+            item_id,
+            1,
+            {"type": "open_gift"},
+            actual_contents
+        )
     
     def _use_unlock_spell(self, item_id: str, spell_system: 'SpellSystem') -> Dict[str, Any]:
         """使用解锁术法物品"""
         if not spell_system:
-            return {"success": False, "reason": "术法系统未初始化", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_SPELL_SYSTEM_UNAVAILABLE", item_id)
         
         effect = ItemData.get_item_effect(item_id)
         spell_id = effect.get("spell_id", "")
         
         if not spell_id:
-            return {"success": False, "reason": "术法书无效", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_UNLOCK_SPELL_INVALID", item_id)
         
         if spell_system.has_spell(spell_id):
-            return {"success": False, "reason": "已学会该术法", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_SPELL_ALREADY_UNLOCKED", item_id, 0, {
+                "type": "unlock_spell",
+                "spell_id": spell_id
+            })
         
         spell_system.unlock_spell(spell_id)
         self.remove_item(item_id, 1)
         
-        return {
-            "success": True,
-            "reason": "学会新术法",
-            "effect": {"unlocked_spell": spell_id}
-        }
+        return self._build_use_item_result(True, "INVENTORY_USE_UNLOCK_SPELL_SUCCEEDED", item_id, 1, {
+            "type": "unlock_spell",
+            "spell_id": spell_id
+        })
     
     def _use_unlock_recipe(self, item_id: str, alchemy_system: 'AlchemySystem') -> Dict[str, Any]:
         """使用解锁丹方物品"""
         if not alchemy_system:
-            return {"success": False, "reason": "炼丹系统未初始化", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE", item_id)
         
         effect = ItemData.get_item_effect(item_id)
         recipe_id = effect.get("recipe_id", "")
@@ -405,37 +429,44 @@ class InventorySystem:
             recipe_id = item_id.replace("recipe_", "")
         
         if alchemy_system.has_recipe(recipe_id):
-            return {"success": False, "reason": "已学会该丹方", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_RECIPE_ALREADY_UNLOCKED", item_id, 0, {
+                "type": "unlock_recipe",
+                "recipe_id": recipe_id
+            })
         
         result = alchemy_system.learn_recipe(recipe_id)
         
         if not result["success"]:
-            return {"success": False, "reason": result.get("reason", "学习失败"), "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_UNLOCK_RECIPE_INVALID", item_id, 0, {
+                "type": "unlock_recipe",
+                "recipe_id": recipe_id
+            })
         
         self.remove_item(item_id, 1)
         
-        return {
-            "success": True,
-            "reason": "学会新丹方",
-            "effect": {"learned_recipe": recipe_id}
-        }
+        return self._build_use_item_result(True, "INVENTORY_USE_UNLOCK_RECIPE_SUCCEEDED", item_id, 1, {
+            "type": "unlock_recipe",
+            "recipe_id": recipe_id
+        })
     
     def _use_unlock_furnace(self, item_id: str, alchemy_system: 'AlchemySystem') -> Dict[str, Any]:
         """使用解锁炼丹炉物品"""
         if not alchemy_system:
-            return {"success": False, "reason": "炼丹系统未初始化", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE", item_id)
         
         if alchemy_system.has_furnace():
-            return {"success": False, "reason": "已拥有丹炉", "effect": {}}
+            return self._build_use_item_result(False, "INVENTORY_USE_FURNACE_ALREADY_OWNED", item_id, 0, {
+                "type": "unlock_furnace",
+                "furnace_id": item_id
+            })
         
         alchemy_system.equip_furnace(item_id)
         self.remove_item(item_id, 1)
         
-        return {
-            "success": True,
-            "reason": "获得丹炉",
-            "effect": {"unlocked_furnace": item_id}
-        }
+        return self._build_use_item_result(True, "INVENTORY_USE_UNLOCK_FURNACE_SUCCEEDED", item_id, 1, {
+            "type": "unlock_furnace",
+            "furnace_id": item_id
+        })
     
     def check_items_enough(self, items: Dict[str, int]) -> bool:
         """

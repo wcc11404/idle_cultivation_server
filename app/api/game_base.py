@@ -6,10 +6,15 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import SaveGameRequest, SaveGameResponse, LoadGameResponse, ClaimOfflineRewardRequest, GetRankRequest, RankResponse, RankItem
+from app.schemas.game import (
+    SaveGameRequest, SaveGameResponse, LoadGameResponse,
+    ClaimOfflineRewardRequest, ClaimOfflineRewardResponse,
+    RankResponse, RankItem
+)
 from app.db.Models import PlayerData, Account
 from app.core.Security import get_current_user, decode_token, security
-from app.core.InitPlayerInfo import get_initial_player_data
+from app.core.InitPlayerInfo import create_initial_player_data_record
+from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from datetime import datetime, timezone
 import time
@@ -17,6 +22,9 @@ import json
 import os
 
 router = APIRouter()
+
+
+EPOCH_TIME = datetime.fromtimestamp(0, timezone.utc)
 
 
 @router.get("/data", response_model=LoadGameResponse)
@@ -33,14 +41,12 @@ async def load_game(credentials: HTTPAuthorizationCredentials = Depends(security
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
         logger.info(f"[GAME] 首次加载，创建初始数据 - account_id: {current_user.id}")
-        initial_data = get_initial_player_data(str(current_user.id))
-        player_data = await PlayerData.create(
-            account_id=current_user.id,
-            data=initial_data
-        )
+        player_data = await create_initial_player_data_record(current_user, EPOCH_TIME)
     
     response_data = LoadGameResponse(
         success=True,
+        reason_code="GAME_LOAD_SUCCEEDED",
+        reason_data={},
         data=player_data.data
     )
     logger.info(f"[OUT] GET /game/data - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
@@ -68,7 +74,8 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
         logger.info(f"[GAME] 首次保存，创建数据 - account_id: {current_user.id}")
         player_data = await PlayerData.create(
             account_id=current_user.id,
-            data=game_data
+            data=game_data,
+            last_online_at=EPOCH_TIME
         )
     else:
         existing_data = player_data.data
@@ -97,72 +104,58 @@ async def save_game(request: SaveGameRequest, credentials: HTTPAuthorizationCred
         success=True,
         operation_id=request.operation_id,
         timestamp=request.timestamp,
+        reason_code="GAME_SAVE_SUCCEEDED",
+        reason_data={},
         last_online_at=int(player_data.last_online_at.timestamp())
     )
     logger.info(f"[OUT] POST /game/save - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.post("/claim_offline_reward", response_model=dict)
-async def claim_offline_reward(request: ClaimOfflineRewardRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+@router.post("/claim_offline_reward", response_model=ClaimOfflineRewardResponse)
+async def claim_offline_reward(request: ClaimOfflineRewardRequest, ctx: GameContext = Depends(get_game_context), token_info: dict = Depends(get_token_info)):
     """领取离线奖励"""
     start_time = time.time()
-    token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
-    current_user = await get_current_user(credentials)
+    token = token_info["token"]
+    account_id = token_info["account_id"]
+    token_version = token_info["token_version"]
     logger.info(f"[IN] POST /game/claim_offline_reward - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
     
-    player_data = await PlayerData.get_or_none(account_id=current_user.id)
-    if not player_data:
-        initial_data = get_initial_player_data(str(current_user.id))
-        player_data = await PlayerData.create(
-            account_id=current_user.id,
-            data=initial_data
-        )
-    
     current_time = datetime.now(timezone.utc)
-    last_online_time = player_data.last_online_at
+    last_online_time = ctx.player_data.last_online_at
     
-    epoch_time = datetime.fromtimestamp(0, timezone.utc)
-    if last_online_time == epoch_time:
+    if last_online_time == EPOCH_TIME:
         offline_seconds = 0
     else:
         offline_seconds = int((current_time - last_online_time).total_seconds())
     
     if offline_seconds < 0:
-        logger.warning(f"[OUT] POST /game/claim_offline_reward - INVALID_OFFLINE_SECONDS_NEGATIVE - account_id: {current_user.id} - offline_seconds: {offline_seconds} - 耗时：{time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="离线时间不能为负数"
+        logger.warning(f"[OUT] POST /game/claim_offline_reward - INVALID_OFFLINE_SECONDS_NEGATIVE - account_id: {account_id} - offline_seconds: {offline_seconds} - 耗时：{time.time() - start_time:.4f}s")
+        response_data = ClaimOfflineRewardResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="GAME_OFFLINE_REWARD_INVALID_TIME",
+            reason_data={"offline_seconds": offline_seconds},
+            offline_reward=None,
+            offline_seconds=offline_seconds,
+            last_online_at=int(ctx.player_data.last_online_at.timestamp())
         )
-    if offline_seconds > 4 * 3600:
-        logger.warning(f"[OUT] POST /game/claim_offline_reward - INVALID_OFFLINE_SECONDS_TOO_LONG - account_id: {current_user.id} - offline_seconds: {offline_seconds} - 耗时：{time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="离线时间不能超过 4 小时（14400 秒）"
+        logger.info(f"[OUT] POST /game/claim_offline_reward - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
+    max_offline_seconds = 4 * 3600
+    if offline_seconds > max_offline_seconds:
+        logger.info(
+            f"[GAME] 离线奖励按上限结算 - account_id: {account_id} - "
+            f"raw_offline_seconds: {offline_seconds} - capped_offline_seconds: {max_offline_seconds}"
         )
+        offline_seconds = max_offline_seconds
     
-    spirit_per_second = 1.0
-    player_realm = player_data.data.get("player", {}).get("realm", "")
-    realm_bonus = 1.0
-    if player_realm == "筑基期":
-        realm_bonus = 1.5
-    elif player_realm == "金丹期":
-        realm_bonus = 2.0
-    spirit_per_second *= realm_bonus
+    spirit_gain_speed = ctx.player.static_spirit_gain_speed if ctx.player else 1.0
+    total_spirit = spirit_gain_speed * offline_seconds
     
-    efficiency = 1.0
-    total_spirit = spirit_per_second * offline_seconds * efficiency
-    
-    max_spirit = player_data.data.get("player", {}).get("max_spirit_energy", 100) * 60
-    total_spirit = min(total_spirit, max_spirit)
-    
-    offline_minutes = offline_seconds / 60.0
-    total_minutes = int(offline_minutes)
     stone_per_minute = 1.0
-    total_stone = int(stone_per_minute * total_minutes)
+    total_stone = int(stone_per_minute * (offline_seconds / 60))
     
     total_spirit = round(float(total_spirit), 2)
     if total_spirit.is_integer():
@@ -174,42 +167,39 @@ async def claim_offline_reward(request: ClaimOfflineRewardRequest, credentials: 
     }
     
     if offline_seconds > 60:
-        player_data.data["player"]["spirit_energy"] += float(offline_reward["spirit_energy"])
-        player_data.data["player"]["spirit_energy"] = round(player_data.data["player"]["spirit_energy"], 2)
-        if player_data.data["player"]["spirit_energy"].is_integer():
-            player_data.data["player"]["spirit_energy"] = int(player_data.data["player"]["spirit_energy"])
+        if ctx.player:
+            ctx.player.add_spirit_energy(total_spirit)
         
-        if "spirit_stones" in player_data.data["inventory"]["slots"]:
-            current_stones = player_data.data["inventory"]["slots"]["spirit_stones"]
-            if isinstance(current_stones, str):
-                current_stones = int(current_stones)
-            player_data.data["inventory"]["slots"]["spirit_stones"] = current_stones + offline_reward["spirit_stones"]
-        else:
-            player_data.data["inventory"]["slots"]["spirit_stones"] = offline_reward["spirit_stones"]
+        if ctx.inventory_system:
+            ctx.inventory_system.add_item("spirit_stone", total_stone)
     
-    player_data.last_online_at = datetime.now(timezone.utc)
+    ctx.player_data.last_online_at = current_time
+    ctx.save()
+    await ctx.player_data.save()
     
     if offline_seconds <= 60:
-        response_data = {
-            "success": True,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "offline_reward": None,
-            "offline_seconds": offline_seconds,
-            "last_online_at": int(player_data.last_online_at.timestamp()),
-            "message": "离线时间不足，无法领取奖励"
-        }
+        response_data = ClaimOfflineRewardResponse(
+            success=True,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="GAME_OFFLINE_REWARD_SKIPPED_SHORT_OFFLINE",
+            reason_data={},
+            offline_reward=None,
+            offline_seconds=offline_seconds,
+            last_online_at=int(ctx.player_data.last_online_at.timestamp())
+        )
     else:
-        response_data = {
-            "success": True,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "offline_reward": offline_reward,
-            "offline_seconds": offline_seconds,
-            "last_online_at": int(player_data.last_online_at.timestamp()),
-            "message": "领取成功"
-        }
-    logger.info(f"[OUT] POST /game/claim_offline_reward - {json.dumps(response_data, ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        response_data = ClaimOfflineRewardResponse(
+            success=True,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="GAME_OFFLINE_REWARD_GRANTED",
+            reason_data={},
+            offline_reward=offline_reward,
+            offline_seconds=offline_seconds,
+            last_online_at=int(ctx.player_data.last_online_at.timestamp())
+        )
+    logger.info(f"[OUT] POST /game/claim_offline_reward - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
     return response_data
 
 
@@ -288,6 +278,8 @@ async def get_rank(server_id: str = "default"):
         success=True,
         operation_id="",
         timestamp=time.time(),
+        reason_code="GAME_RANK_SUCCEEDED",
+        reason_data={},
         ranks=rank_items
     )
     logger.info(f"[OUT] GET /game/rank - 返回{len(rank_items)}条排行榜数据 - 耗时：{time.time() - start_time:.4f}s")

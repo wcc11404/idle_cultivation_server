@@ -45,18 +45,31 @@ class AlchemySystem:
         Returns:
             {
                 "success": bool,
-                "reason": str
+                "reason_code": str,
+                "reason_data": dict
             }
         """
         if not RecipeData.recipe_exists(recipe_id):
-            return {"success": False, "reason": "丹方不存在"}
+            return {
+                "success": False,
+                "reason_code": "ALCHEMY_LEARN_RECIPE_NOT_FOUND",
+                "reason_data": {"recipe_id": recipe_id}
+            }
         
         if recipe_id in self.learned_recipes:
-            return {"success": False, "reason": "已学会该丹方"}
+            return {
+                "success": False,
+                "reason_code": "ALCHEMY_LEARN_RECIPE_ALREADY_LEARNED",
+                "reason_data": {"recipe_id": recipe_id}
+            }
         
         self.learned_recipes.append(recipe_id)
         
-        return {"success": True, "reason": "学习成功"}
+        return {
+            "success": True,
+            "reason_code": "ALCHEMY_LEARN_RECIPE_SUCCEEDED",
+            "reason_data": {"recipe_id": recipe_id}
+        }
     
     def has_learned_recipe(self, recipe_id: str) -> bool:
         """检查是否学会丹方"""

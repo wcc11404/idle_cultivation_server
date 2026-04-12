@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.schemas.auth import RegisterRequest, LoginRequest, LoginResponse, RefreshResponse, ErrorResponse, AccountInfo, ChangePasswordRequest, ChangePasswordResponse, ChangeNicknameRequest, ChangeNicknameResponse, ChangeAvatarRequest, ChangeAvatarResponse
+from app.schemas.auth import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse, RefreshResponse, ChangePasswordRequest, ChangePasswordResponse, ChangeNicknameRequest, ChangeNicknameResponse, ChangeAvatarRequest, ChangeAvatarResponse, LogoutResponse
 from app.db.Models import Account, PlayerData
 from app.core.Security import verify_password, get_password_hash, create_access_token, decode_token, security, get_current_user
 from app.core.ServerConfig import settings
-from app.core.InitPlayerInfo import get_initial_player_data
+from app.core.InitPlayerInfo import create_initial_player_data_record
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.core.Validator import Validator
@@ -21,7 +21,48 @@ from datetime import datetime, timezone, timedelta
 router = APIRouter()
 
 
-@router.post("/register", response_model=dict)
+EPOCH_TIME = datetime.fromtimestamp(0, timezone.utc)
+
+NICKNAME_REASON_CODE_MAP = {
+    "昵称不能为空": "ACCOUNT_NICKNAME_EMPTY",
+    "昵称长度必须在4-10位之间": "ACCOUNT_NICKNAME_LENGTH_INVALID",
+    "昵称不能包含空格": "ACCOUNT_NICKNAME_CONTAINS_SPACE",
+    "昵称包含非法字符": "ACCOUNT_NICKNAME_INVALID_CHARACTER",
+    "昵称不能全是数字": "ACCOUNT_NICKNAME_ALL_DIGITS",
+    "昵称包含敏感词汇": "ACCOUNT_NICKNAME_SENSITIVE"
+}
+
+USERNAME_REASON_CODE_MAP = {
+    "用户名不能为空": "ACCOUNT_REGISTER_USERNAME_EMPTY",
+    "用户名长度必须在4-20位之间": "ACCOUNT_REGISTER_USERNAME_LENGTH_INVALID",
+    "用户名只能包含英文、数字和下划线": "ACCOUNT_REGISTER_USERNAME_INVALID_CHARACTER"
+}
+
+PASSWORD_REASON_CODE_MAP = {
+    "密码不能为空": "ACCOUNT_REGISTER_PASSWORD_EMPTY",
+    "密码长度必须在6-20位之间": "ACCOUNT_REGISTER_PASSWORD_LENGTH_INVALID",
+    "密码只能包含英文、数字和英文标点符号": "ACCOUNT_REGISTER_PASSWORD_INVALID_CHARACTER"
+}
+
+USERNAME_PASSWORD_REASON_CODE_MAP = {
+    "用户名和密码不能相同": "ACCOUNT_REGISTER_USERNAME_PASSWORD_SAME"
+}
+
+LOGIN_REASON_CODE_MAP = {
+    "username_not_found": "ACCOUNT_LOGIN_USERNAME_NOT_FOUND",
+    "password_incorrect": "ACCOUNT_LOGIN_PASSWORD_INCORRECT",
+    "account_banned": "ACCOUNT_LOGIN_ACCOUNT_BANNED"
+}
+
+CHANGE_PASSWORD_REASON_CODE_MAP = {
+    "account_not_found": "ACCOUNT_PASSWORD_CHANGE_ACCOUNT_NOT_FOUND",
+    "old_password_incorrect": "ACCOUNT_PASSWORD_CHANGE_OLD_PASSWORD_INCORRECT",
+    "same_as_old": "ACCOUNT_PASSWORD_CHANGE_SAME_AS_OLD",
+    "same_as_username": "ACCOUNT_PASSWORD_CHANGE_SAME_AS_USERNAME"
+}
+
+
+@router.post("/register", response_model=RegisterResponse)
 async def register(request: RegisterRequest):
     """注册账号"""
     start_time = time.time()
@@ -30,46 +71,46 @@ async def register(request: RegisterRequest):
     is_valid, message = Validator.validate_username(request.username)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {
-            "success": False,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "error_code": 400,
-            "message": message
-        }
+        return RegisterResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=USERNAME_REASON_CODE_MAP.get(message, "ACCOUNT_REGISTER_USERNAME_INVALID"),
+            reason_data={"username": request.username}
+        )
     
     is_valid, message = Validator.validate_password(request.password)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {
-            "success": False,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "error_code": 400,
-            "message": message
-        }
+        return RegisterResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=PASSWORD_REASON_CODE_MAP.get(message, "ACCOUNT_REGISTER_PASSWORD_INVALID"),
+            reason_data={"username": request.username}
+        )
     
     is_valid, message = Validator.validate_username_password_different(request.username, request.password)
     if not is_valid:
         logger.info(f"[OUT] POST /auth/register - {message} - 耗时: {time.time() - start_time:.4f}s")
-        return {
-            "success": False,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "error_code": 400,
-            "message": message
-        }
+        return RegisterResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=USERNAME_PASSWORD_REASON_CODE_MAP.get(message, "ACCOUNT_REGISTER_USERNAME_PASSWORD_INVALID"),
+            reason_data={"username": request.username}
+        )
     
     existing_account = await Account.get_or_none(username=request.username)
     if existing_account:
         logger.info(f"[OUT] POST /auth/register - 用户名已存在 - 耗时: {time.time() - start_time:.4f}s")
-        return {
-            "success": False,
-            "operation_id": request.operation_id,
-            "timestamp": request.timestamp,
-            "error_code": 400,
-            "message": "用户名已存在"
-        }
+        return RegisterResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="ACCOUNT_REGISTER_USERNAME_EXISTS",
+            reason_data={"username": request.username}
+        )
     
     password_hash = get_password_hash(request.password)
     account = await Account.create(
@@ -77,16 +118,8 @@ async def register(request: RegisterRequest):
         password_hash=password_hash
     )
     
-    initial_data = get_initial_player_data(str(account.id))
-    
     # 为新注册用户设置一个特殊的 last_online_at 值（使用 epoch 时间0）
-    epoch_time = datetime.fromtimestamp(0, timezone.utc)
-    
-    await PlayerData.create(
-        account_id=account.id,
-        data=initial_data,
-        last_online_at=epoch_time
-    )
+    await create_initial_player_data_record(account, EPOCH_TIME)
     
     # 为新注册用户生成初始token
     access_token_expires = timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
@@ -95,19 +128,19 @@ async def register(request: RegisterRequest):
         expires_delta=access_token_expires
     )
     
-    response_data = {
-        "success": True,
-        "operation_id": request.operation_id,
-        "timestamp": request.timestamp,
-        "account_id": str(account.id),
-        "token": access_token,
-        "message": "注册成功"
-    }
-    logger.info(f"[OUT] POST /auth/register - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    response_data = RegisterResponse(
+        success=True,
+        operation_id=request.operation_id,
+        timestamp=request.timestamp,
+        reason_code="ACCOUNT_REGISTER_SUCCEEDED",
+        reason_data={"username": request.username},
+        token=access_token
+    )
+    logger.info(f"[OUT] POST /auth/register - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
 
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     """登录账号"""
     start_time = time.time()
@@ -116,23 +149,44 @@ async def login(request: LoginRequest):
     account = await Account.get_or_none(username=request.username)
     if not account:
         logger.warning(f"[OUT] POST /auth/login - 用户名未注册 - username: {request.username} - 耗时: {time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名未注册"
+        return LoginResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=LOGIN_REASON_CODE_MAP["username_not_found"],
+            reason_data={"username": request.username},
+            token="",
+            expires_in=0,
+            account_info={"id": "00000000-0000-0000-0000-000000000000", "username": "", "server_id": ""},
+            data={}
         )
     
     if not verify_password(request.password, account.password_hash):
         logger.warning(f"[OUT] POST /auth/login - 密码错误 - username: {request.username} - 耗时: {time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="密码错误"
+        return LoginResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=LOGIN_REASON_CODE_MAP["password_incorrect"],
+            reason_data={"username": request.username},
+            token="",
+            expires_in=0,
+            account_info={"id": "00000000-0000-0000-0000-000000000000", "username": "", "server_id": ""},
+            data={}
         )
     
     if account.is_banned:
         logger.warning(f"[OUT] POST /auth/login - 账号已被封禁 - username: {request.username} - 耗时: {time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已被封禁"
+        return LoginResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=LOGIN_REASON_CODE_MAP["account_banned"],
+            reason_data={"username": request.username},
+            token="",
+            expires_in=0,
+            account_info={"id": "00000000-0000-0000-0000-000000000000", "username": "", "server_id": ""},
+            data={}
         )
     
     account.token_version += 1
@@ -146,11 +200,7 @@ async def login(request: LoginRequest):
     
     player_data = await PlayerData.get_or_none(account_id=account.id)
     if not player_data:
-        initial_data = get_initial_player_data(str(account.id))
-        player_data = await PlayerData.create(
-            account_id=account.id,
-            data=initial_data
-        )
+        player_data = await create_initial_player_data_record(account, EPOCH_TIME)
     
     # 检查是否需要每日重置
     def check_daily_reset(player_data):
@@ -190,26 +240,25 @@ async def login(request: LoginRequest):
     # 执行每日重置检查
     check_daily_reset(player_data)
     
-    # 更新上次登录时间
-    player_data.last_online_at = datetime.now(timezone.utc)
-    
     # 保存数据
     await player_data.save()
     
-    response_data = {
-        "success": True,
-        "operation_id": request.operation_id,
-        "timestamp": request.timestamp,
-        "token": access_token,
-        "expires_in": int(access_token_expires.total_seconds()),
-        "account_info": {
+    response_data = LoginResponse(
+        success=True,
+        operation_id=request.operation_id,
+        timestamp=request.timestamp,
+        reason_code="ACCOUNT_LOGIN_SUCCEEDED",
+        reason_data={"username": request.username},
+        token=access_token,
+        expires_in=int(access_token_expires.total_seconds()),
+        account_info={
             "id": str(account.id),
             "username": account.username,
             "server_id": account.server_id
         },
-        "data": player_data.data
-    }
-    logger.info(f"[OUT] POST /auth/login - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+        data=player_data.data
+    )
+    logger.info(f"[OUT] POST /auth/login - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
 
 
@@ -257,6 +306,8 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
     
     response_data = RefreshResponse(
         success=True,
+        reason_code="ACCOUNT_REFRESH_SUCCEEDED",
+        reason_data={},
         token=new_token,
         expires_in=int(access_token_expires.total_seconds())
     )
@@ -264,7 +315,7 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
     return response_data
 
 
-@router.post("/logout", response_model=dict)
+@router.post("/logout", response_model=LogoutResponse)
 async def logout(
     ctx: GameContext = Depends(get_game_context),
     token_info: dict = Depends(get_token_info)
@@ -301,8 +352,12 @@ async def logout(
     ctx.player_data.last_online_at = datetime.now(timezone.utc)
     await ctx.player_data.save()
     
-    response_data = {"success": True, "message": "登出成功"}
-    logger.info(f"[OUT] POST /auth/logout - {json.dumps(response_data, ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
+    response_data = LogoutResponse(
+        success=True,
+        reason_code="ACCOUNT_LOGOUT_SUCCEEDED",
+        reason_data={}
+    )
+    logger.info(f"[OUT] POST /auth/logout - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
 
 
@@ -315,30 +370,42 @@ async def change_password(request: ChangePasswordRequest):
     account = await Account.get_or_none(username=request.username)
     if not account:
         logger.warning(f"[OUT] POST /auth/change_password - 账号不存在 - username: {request.username}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="账号不存在"
+        return ChangePasswordResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=CHANGE_PASSWORD_REASON_CODE_MAP["account_not_found"],
+            reason_data={"username": request.username}
         )
     
     if not verify_password(request.old_password, account.password_hash):
         logger.warning(f"[OUT] POST /auth/change_password - 旧密码错误 - username: {request.username}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="旧密码错误"
+        return ChangePasswordResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=CHANGE_PASSWORD_REASON_CODE_MAP["old_password_incorrect"],
+            reason_data={"username": request.username}
         )
     
     if request.old_password == request.new_password:
         logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与旧密码相同 - username: {request.username}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="新密码不能与旧密码相同"
+        return ChangePasswordResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=CHANGE_PASSWORD_REASON_CODE_MAP["same_as_old"],
+            reason_data={"username": request.username}
         )
     
     if account.username == request.new_password:
         logger.warning(f"[OUT] POST /auth/change_password - 新密码不能与用户名相同 - username: {request.username}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="新密码不能与用户名相同"
+        return ChangePasswordResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code=CHANGE_PASSWORD_REASON_CODE_MAP["same_as_username"],
+            reason_data={"username": request.username}
         )
     
     account.password_hash = get_password_hash(request.new_password)
@@ -361,7 +428,8 @@ async def change_password(request: ChangePasswordRequest):
         success=True,
         operation_id=request.operation_id,
         timestamp=request.timestamp,
-        message="密码修改成功"
+        reason_code="ACCOUNT_PASSWORD_CHANGE_SUCCEEDED",
+        reason_data={"username": request.username}
     )
     logger.info(f"[OUT] POST /auth/change_password - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
@@ -385,7 +453,10 @@ async def change_nickname(request: ChangeNicknameRequest, credentials: HTTPAutho
             operation_id=request.operation_id,
             timestamp=request.timestamp,
             nickname=request.nickname,
-            message=message
+            reason_code=NICKNAME_REASON_CODE_MAP.get(message, "ACCOUNT_NICKNAME_INVALID"),
+            reason_data={
+                "nickname": request.nickname
+            }
         )
     
     current_user = await get_current_user(credentials)
@@ -393,9 +464,15 @@ async def change_nickname(request: ChangeNicknameRequest, credentials: HTTPAutho
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
         logger.warning(f"[OUT] POST /auth/change_nickname - 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
+        return ChangeNicknameResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            nickname=request.nickname,
+            reason_code="ACCOUNT_NICKNAME_PLAYER_NOT_FOUND",
+            reason_data={
+                "nickname": request.nickname
+            }
         )
     
     db_data = player_data.data
@@ -413,7 +490,10 @@ async def change_nickname(request: ChangeNicknameRequest, credentials: HTTPAutho
         operation_id=request.operation_id,
         timestamp=request.timestamp,
         nickname=request.nickname,
-        message="昵称修改成功"
+        reason_code="ACCOUNT_NICKNAME_CHANGE_SUCCEEDED",
+        reason_data={
+            "nickname": request.nickname
+        }
     )
     logger.info(f"[OUT] POST /auth/change_nickname - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
@@ -434,9 +514,13 @@ async def change_avatar(request: ChangeAvatarRequest, credentials: HTTPAuthoriza
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
         logger.warning(f"[OUT] POST /auth/change_avatar - 玩家数据不存在 - account_id: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家数据不存在"
+        return ChangeAvatarResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="ACCOUNT_AVATAR_PLAYER_NOT_FOUND",
+            reason_data={"avatar_id": request.avatar_id},
+            avatar_id=request.avatar_id
         )
     
     db_data = player_data.data
@@ -454,10 +538,8 @@ async def change_avatar(request: ChangeAvatarRequest, credentials: HTTPAuthoriza
         operation_id=request.operation_id,
         timestamp=request.timestamp,
         avatar_id=request.avatar_id,
-        message="头像修改成功"
+        reason_code="ACCOUNT_AVATAR_CHANGE_SUCCEEDED",
+        reason_data={"avatar_id": request.avatar_id}
     )
     logger.info(f"[OUT] POST /auth/change_avatar - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时: {time.time() - start_time:.4f}s")
     return response_data
-
-
-
