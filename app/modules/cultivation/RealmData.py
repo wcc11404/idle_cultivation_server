@@ -136,7 +136,7 @@ class RealmData:
                 }
             
             materials_config = cls._REALMS_CONFIG.get("breakthrough_materials", {})
-            materials = materials_config.get("realm_breakthrough", {}).get(realm_name, {})
+            materials = materials_config.get(realm_name, {}).get(str(level), {})
             
             return {
                 "can": True,
@@ -148,8 +148,7 @@ class RealmData:
             }
         else:
             materials_config = cls._REALMS_CONFIG.get("breakthrough_materials", {})
-            level_materials = materials_config.get("level_breakthrough", {}).get(realm_name, {})
-            materials = level_materials.get(str(level + 1), {})
+            materials = materials_config.get(realm_name, {}).get(str(level), {})
             
             return {
                 "can": True,
