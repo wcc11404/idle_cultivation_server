@@ -25,6 +25,7 @@ class AccountSystem:
         self.is_vip: bool = False
         self.vip_expire_time: Optional[datetime] = None
         self.suspicious_operations_count: int = 0
+        self.suspicious_operation_type: str = ""
     
     def set_nickname(self, nickname: str) -> bool:
         """
@@ -101,19 +102,27 @@ class AccountSystem:
         self.is_vip = False
         return False
     
-    def increment_suspicious_operations(self) -> int:
+    def increment_suspicious_operations(self, operation_type: str = "") -> int:
         """
         增加可疑操作次数
+        
+        Args:
+            operation_type: 操作类型。若与上次不同则重新按新类型计数。
         
         Returns:
             当前可疑操作次数
         """
+        if operation_type and self.suspicious_operation_type != operation_type:
+            self.suspicious_operations_count = 0
+        if operation_type:
+            self.suspicious_operation_type = operation_type
         self.suspicious_operations_count += 1
         return self.suspicious_operations_count
     
     def reset_suspicious_operations(self) -> None:
         """重置可疑操作次数"""
         self.suspicious_operations_count = 0
+        self.suspicious_operation_type = ""
     
     def to_dict(self) -> dict:
         """转换为字典格式"""
@@ -123,7 +132,8 @@ class AccountSystem:
             "title_id": self.title_id,
             "is_vip": self.is_vip,
             "vip_expire_time": self.vip_expire_time.isoformat() if self.vip_expire_time else None,
-            "suspicious_operations_count": self.suspicious_operations_count
+            "suspicious_operations_count": self.suspicious_operations_count,
+            "suspicious_operation_type": self.suspicious_operation_type
         }
     
     @classmethod
@@ -143,6 +153,7 @@ class AccountSystem:
                 instance.vip_expire_time = None
         
         instance.suspicious_operations_count = data.get("suspicious_operations_count", 0)
+        instance.suspicious_operation_type = data.get("suspicious_operation_type", "")
         
         return instance
     

@@ -55,6 +55,17 @@ def test_cultivation_blockers_and_anticheat(reset_client_state):
     invalid_report = reset_client_state.cultivation_report(5)
     assert invalid_report["success"] is False
     assert invalid_report["reason_code"] == "CULTIVATION_REPORT_TIME_INVALID"
+    assert int(invalid_report["reason_data"]["invalid_report_count"]) == 1
+
+    for _ in range(9):
+        invalid_report = reset_client_state.cultivation_report(5)
+    assert invalid_report["success"] is False
+    assert invalid_report["reason_code"] == "CULTIVATION_REPORT_TIME_INVALID"
+    assert int(invalid_report["reason_data"]["invalid_report_count"]) == 10
+    assert bool(invalid_report["reason_data"]["kicked_out"]) is True
+
+    kicked = reset_client_state.cultivation_stop()
+    assert kicked.get("detail") == "KICKED_OUT"
 
 
 def test_breakthrough_success_and_missing_resources(reset_client_state):

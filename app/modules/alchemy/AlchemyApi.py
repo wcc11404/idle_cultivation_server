@@ -16,6 +16,7 @@ from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
 from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
+from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import PlayerSystem, AlchemySystem, RecipeData, SpellSystem, InventorySystem, LianliSystem
 from .AlchemyWorkshop import AlchemyWorkshop
 from datetime import datetime, timezone
@@ -95,8 +96,14 @@ async def start_alchemy(
     current_time = time.time()
     ctx.alchemy_system.is_alchemizing = True
     ctx.alchemy_system.last_alchemy_report_time = current_time
+    await AntiCheatSystem.reset_suspicious_operations(
+        account_id=str(ctx.account.id),
+        account_system=ctx.account_system,
+        db_player_data=ctx.player_data
+    )
     
     ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
+    ctx.db_data["account_info"] = ctx.account_system.to_dict()
     
     ctx.player_data.data = ctx.db_data
     ctx.player_data.last_online_at = datetime.now(timezone.utc)
@@ -162,6 +169,17 @@ async def report_alchemy(
     min_allowed_interval = expected_interval * 0.9
     
     if actual_interval < min_allowed_interval:
+        anti_cheat_result = await AntiCheatSystem.record_suspicious_operation(
+            account_id=str(ctx.account.id),
+            operation_type="alchemy_report",
+            detail=(
+                f"上报次数{request.count}，配方{request.recipe_id}，"
+                f"实际间隔{actual_interval:.2f}s，小于最小允许{min_allowed_interval:.2f}s"
+            ),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data,
+            db_account=ctx.account
+        )
         response_data = AlchemyReportResponse(
             success=False,
             operation_id=request.operation_id,
@@ -171,7 +189,10 @@ async def report_alchemy(
                 "recipe_id": request.recipe_id,
                 "reported_count": request.count,
                 "actual_interval": round(actual_interval, 2),
-                "min_allowed_interval": round(min_allowed_interval, 2)
+                "min_allowed_interval": round(min_allowed_interval, 2),
+                "invalid_report_count": anti_cheat_result.get("invalid_count", 0),
+                "kicked_out": bool(anti_cheat_result.get("kicked_out", False)),
+                "kick_threshold": anti_cheat_result.get("threshold", 10),
             },
             success_count=0,
             fail_count=0,
@@ -186,11 +207,17 @@ async def report_alchemy(
     )
     
     if result["success"]:
+        await AntiCheatSystem.reset_suspicious_operations(
+            account_id=str(ctx.account.id),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data
+        )
         ctx.alchemy_system.last_alchemy_report_time = current_time
         
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
+        ctx.db_data["account_info"] = ctx.account_system.to_dict()
         
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)

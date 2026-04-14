@@ -15,6 +15,7 @@ from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
 from app.core.Dependencies import get_game_context, get_token_info, GameContext
 from app.core.Logger import logger
+from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import (
     PlayerSystem, LianliSystem, SpellSystem, InventorySystem, AlchemySystem, AccountSystem
 )
@@ -78,6 +79,12 @@ async def simulate_battle(
     )
     
     if result["success"]:
+        await AntiCheatSystem.reset_suspicious_operations(
+            account_id=str(ctx.account.id),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data
+        )
+        ctx.db_data["account_info"] = ctx.account_system.to_dict()
         ctx.db_data["lianli_system"] = ctx.lianli_system.to_dict()
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)
@@ -117,8 +124,32 @@ async def finish_battle(
     result = ctx.lianli_system.finish_battle(
         request.speed, request.index, ctx.player, ctx.spell_system, ctx.inventory_system, ctx.account_system
     )
+
+    if (not result.get("success", False)) and result.get("reason_code") == "LIANLI_FINISH_TIME_INVALID":
+        anti_cheat_result = await AntiCheatSystem.record_suspicious_operation(
+            account_id=str(ctx.account.id),
+            operation_type="lianli_finish",
+            detail=(
+                f"speed={request.speed}, index={request.index}, "
+                f"actual={result.get('reason_data', {}).get('actual_time')}, "
+                f"min_allowed={result.get('reason_data', {}).get('min_allowed_time')}"
+            ),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data,
+            db_account=ctx.account
+        )
+        reason_data = result.get("reason_data", {})
+        reason_data["invalid_report_count"] = anti_cheat_result.get("invalid_count", 0)
+        reason_data["kicked_out"] = bool(anti_cheat_result.get("kicked_out", False))
+        reason_data["kick_threshold"] = anti_cheat_result.get("threshold", 10)
+        result["reason_data"] = reason_data
     
     if result["success"]:
+        await AntiCheatSystem.reset_suspicious_operations(
+            account_id=str(ctx.account.id),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data
+        )
         ctx.save()
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)

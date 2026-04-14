@@ -8,7 +8,7 @@ from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.core.Validator import Validator
 from app.core.Dependencies import get_game_context, get_token_info, GameContext
-from app.modules import PlayerSystem as GamePlayerData, AccountSystem
+from app.modules import PlayerSystem as GamePlayerData, AccountSystem, SpellSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.lianli.LianliSystem import LianliSystem
@@ -60,6 +60,39 @@ CHANGE_PASSWORD_REASON_CODE_MAP = {
     "same_as_old": "ACCOUNT_PASSWORD_CHANGE_SAME_AS_OLD",
     "same_as_username": "ACCOUNT_PASSWORD_CHANGE_SAME_AS_USERNAME"
 }
+
+
+async def _reset_runtime_state(
+    *,
+    account_id: str,
+    player_data: PlayerData,
+    player_system: PlayerSystem,
+    alchemy_system: AlchemySystem,
+    lianli_system: LianliSystem,
+    account_system: AccountSystem,
+    source: str
+) -> dict:
+    """统一重置登录态运行时状态（登录/登出复用）"""
+    player_system.reset_cultivation_state()
+    alchemy_system.reset_alchemy_state()
+    lianli_system.reset_battle_state()
+    await AntiCheatSystem.reset_suspicious_operations(
+        account_id=account_id,
+        account_system=account_system,
+        db_player_data=player_data
+    )
+    db_data = player_data.data if isinstance(player_data.data, dict) else {}
+    db_data["player"] = player_system.to_dict()
+    db_data["alchemy_system"] = alchemy_system.to_dict()
+    db_data["lianli_system"] = lianli_system.to_dict()
+    db_data["account_info"] = account_system.to_dict()
+    player_data.data = db_data
+    logger.info(
+        f"[AUTH] {source} reset runtime state - account_id: {account_id} "
+        f"- suspicious_count={account_system.suspicious_operations_count} "
+        f"- suspicious_type={account_system.suspicious_operation_type}"
+    )
+    return db_data
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -239,6 +272,30 @@ async def login(request: LoginRequest):
     
     # 执行每日重置检查
     check_daily_reset(player_data)
+
+    player_dict = player_data.data.get("player", {})
+    login_spell = SpellSystem.from_dict(player_data.data.get("spell_system", {}))
+    login_player = GamePlayerData(
+        health=float(player_dict.get("health", 100.0)),
+        spirit_energy=float(player_dict.get("spirit_energy", 0.0)),
+        realm=player_dict.get("realm", "炼气期"),
+        realm_level=player_dict.get("realm_level", 1),
+        spell_system=login_spell
+    )
+    login_player.is_cultivating = bool(player_dict.get("is_cultivating", False))
+    login_player.last_cultivation_report_time = float(player_dict.get("last_cultivation_report_time", 0.0))
+    login_alchemy = AlchemySystem.from_dict(player_data.data.get("alchemy_system", {}))
+    login_lianli = LianliSystem.from_dict(player_data.data.get("lianli_system", {}))
+    login_account = AccountSystem.from_dict(player_data.data.get("account_info", {}))
+    await _reset_runtime_state(
+        account_id=str(account.id),
+        player_data=player_data,
+        player_system=login_player,
+        alchemy_system=login_alchemy,
+        lianli_system=login_lianli,
+        account_system=login_account,
+        source="login"
+    )
     
     # 保存数据
     await player_data.save()
@@ -324,30 +381,16 @@ async def logout(
     start_time = time.time()
     logger.info(f"[IN] POST /auth/logout - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    # 重置修炼状态
-    ctx.player.reset_cultivation_state()
-    ctx.db_data["player"] = ctx.player.to_dict()
-    logger.info(f"[GAME] 登出时重置修炼状态 - account_id: {ctx.account.id}")
-    
-    # 重置炼丹状态
-    ctx.alchemy_system.reset_alchemy_state()
-    ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
-    logger.info(f"[GAME] 登出时重置炼丹状态 - account_id: {ctx.account.id}")
-    
-    # 重置战斗状态
-    ctx.lianli_system.reset_battle_state()
-    ctx.db_data["lianli_system"] = ctx.lianli_system.to_dict()
-    logger.info(f"[GAME] 登出时重置战斗状态 - account_id: {ctx.account.id}")
-    
-    # 重置可疑操作计数
-    await AntiCheatSystem.reset_suspicious_operations(
+    reset_db_data = await _reset_runtime_state(
         account_id=str(ctx.account.id),
+        player_data=ctx.player_data,
+        player_system=ctx.player,
+        alchemy_system=ctx.alchemy_system,
+        lianli_system=ctx.lianli_system,
         account_system=ctx.account_system,
-        db_player_data=ctx.player_data
+        source="logout"
     )
-    
-    ctx.db_data["account_info"] = ctx.account_system.to_dict()
-    ctx.player_data.data = ctx.db_data
+    ctx.db_data = reset_db_data
     # 更新上次登录时间
     ctx.player_data.last_online_at = datetime.now(timezone.utc)
     await ctx.player_data.save()

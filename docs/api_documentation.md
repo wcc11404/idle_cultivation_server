@@ -849,7 +849,10 @@
   "reason_data": {
     "reported_count": 5,
     "actual_interval": 0.2,
-    "max_acceptable_count": 0.22
+    "max_acceptable_count": 0.22,
+    "invalid_report_count": 3,
+    "kicked_out": false,
+    "kick_threshold": 10
   },
   "spirit_gained": 0.0,
   "health_gained": 0.0,
@@ -862,6 +865,7 @@
 - `CULTIVATION_REPORT_SUCCEEDED`：修炼上报成功
 - `CULTIVATION_REPORT_NOT_ACTIVE`：当前未在修炼状态
 - `CULTIVATION_REPORT_TIME_INVALID`：上报时间校验失败
+- 当 `reason_data.kicked_out=true` 时，服务端已执行 `token_version + 1`，客户端下一次请求将收到鉴权失效并回到登录态
 
 ---
 
@@ -892,7 +896,8 @@
 
 #### `reason_code` 枚举
 
-- `INVENTORY_ORGANIZE_SUCCEEDED`
+- `CULTIVATION_STOP_SUCCEEDED`
+- `CULTIVATION_STOP_NOT_ACTIVE`
 
 #### 失败响应
 
@@ -1049,14 +1054,10 @@
 - `INVENTORY_USE_ITEM_NOT_ENOUGH`
 - `INVENTORY_USE_ITEM_NOT_USABLE`
 - `INVENTORY_USE_EFFECT_INVALID`
-- `INVENTORY_USE_GIFT_EMPTY`
-- `INVENTORY_USE_SPELL_SYSTEM_UNAVAILABLE`
 - `INVENTORY_USE_UNLOCK_SPELL_INVALID`
-- `INVENTORY_USE_SPELL_ALREADY_UNLOCKED`
-- `INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE`
-- `INVENTORY_USE_RECIPE_ALREADY_UNLOCKED`
 - `INVENTORY_USE_UNLOCK_RECIPE_INVALID`
-- `INVENTORY_USE_FURNACE_ALREADY_OWNED`
+- `INVENTORY_USE_ALREADY_USED`
+- `INVENTORY_USE_SYSTEM_ERROR`
 
 #### `reason_data` 字段说明
 
@@ -1064,6 +1065,11 @@
 - `used_count`：本次实际消耗数量
 - `effect`：结构化效果对象，客户端据此生成提示文案
 - `contents`：礼包/开包奖励内容，结构为 `{item_id: count}`
+
+#### 特殊失败语义
+
+- `INVENTORY_USE_ALREADY_USED`：一次性解锁类物品已被消耗过，客户端应基于 `item_id` 输出统一提示，例如“xx已经使用过了，无法重复使用”
+- `INVENTORY_USE_SYSTEM_ERROR`：服务端依赖缺失或物品配置异常导致的内部错误，客户端应输出通用失败提示，不应暴露服务端内部细节
 
 #### `effect.type` 枚举
 
@@ -1653,7 +1659,10 @@
     "recipe_id": "health_pill",
     "reported_count": 1,
     "actual_interval": 2.0,
-    "min_allowed_interval": 2.7
+    "min_allowed_interval": 2.7,
+    "invalid_report_count": 4,
+    "kicked_out": false,
+    "kick_threshold": 10
   },
   "success_count": 0,
   "fail_count": 0,
@@ -1678,6 +1687,7 @@
 - `recipe_id`：丹方 ID
 - `missing_materials`：材料不足时缺少的材料，结构为 `{item_id: count}`
 - `required_spirit` / `current_spirit` / `missing_spirit`：灵气不足时的结构化字段
+- `invalid_report_count` / `kicked_out` / `kick_threshold`：上报时间非法计数与阈值状态（`kicked_out=true` 表示服务端已执行强制下线）
 
 ---
 
@@ -1946,7 +1956,10 @@
     "actual_time": 0.0,
     "min_allowed_time": 9.0,
     "battle_speed": 1.0,
-    "settle_index": 10
+    "settle_index": 10,
+    "invalid_report_count": 2,
+    "kicked_out": false,
+    "kick_threshold": 10
   },
   "settled_index": 0,
   "total_index": 11,

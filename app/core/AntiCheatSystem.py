@@ -12,6 +12,7 @@ class AntiCheatSystem:
     """
     防作弊系统 - 负责检测和处理可疑操作
     """
+    MAX_CONSECUTIVE_INVALID_REPORTS: int = 10
     
     @staticmethod
     def validate_cultivation_report(
@@ -54,8 +55,9 @@ class AntiCheatSystem:
         operation_type: str,
         detail: str,
         account_system: 'AccountSystem',
-        db_player_data
-    ) -> int:
+        db_player_data,
+        db_account
+    ) -> Dict[str, Any]:
         """
         记录可疑操作
         
@@ -67,20 +69,46 @@ class AntiCheatSystem:
             db_player_data: 数据库玩家数据实例
         
         Returns:
-            当前可疑操作次数
+            dict: {
+                "invalid_count": int,  # 本次累计后的非法次数（触发踢下线时为触发阈值前的计数）
+                "kicked_out": bool,    # 是否触发强制下线
+                "threshold": int
+            }
         """
-        count = account_system.increment_suspicious_operations()
-        
+        before_count = int(account_system.suspicious_operations_count)
+        before_type = str(account_system.suspicious_operation_type)
+        before_token_version = int(db_account.token_version)
+        invalid_count = account_system.increment_suspicious_operations(operation_type)
+        kicked_out = False
+
         logger.warning(
             f"[ANTI_CHEAT] 可疑操作 - account_id: {account_id} - "
             f"type: {operation_type} - detail: {detail} - "
-            f"count: {count}"
+            f"before_count: {before_count} - before_type: {before_type} - "
+            f"after_count: {invalid_count} - threshold: {AntiCheatSystem.MAX_CONSECUTIVE_INVALID_REPORTS}"
         )
-        
-        db_player_data.data["account_info"]["suspicious_operations_count"] = count
+
+        if invalid_count >= AntiCheatSystem.MAX_CONSECUTIVE_INVALID_REPORTS:
+            db_account.token_version += 1
+            await db_account.save(update_fields=["token_version"])
+            kicked_out = True
+            logger.warning(
+                f"[ANTI_CHEAT] 连续非法上报达到阈值，执行踢下线 - account_id: {account_id} "
+                f"- old_token_version: {before_token_version} - new_token_version: {db_account.token_version}"
+            )
+            # 触发踢下线后重置计数，避免重新登录后立即再次触发
+            account_system.reset_suspicious_operations()
+            db_player_data.data["account_info"] = account_system.to_dict()
+        else:
+            db_player_data.data["account_info"] = account_system.to_dict()
+
         await db_player_data.save()
-        
-        return count
+
+        return {
+            "invalid_count": invalid_count,
+            "kicked_out": kicked_out,
+            "threshold": AntiCheatSystem.MAX_CONSECUTIVE_INVALID_REPORTS,
+        }
     
     @staticmethod
     async def reset_suspicious_operations(
@@ -96,9 +124,17 @@ class AntiCheatSystem:
             account_system: 账号系统实例
             db_player_data: 数据库玩家数据实例
         """
+        if account_system.suspicious_operations_count <= 0:
+            return
+
+        old_count = int(account_system.suspicious_operations_count)
+        old_type = str(account_system.suspicious_operation_type)
         account_system.reset_suspicious_operations()
+
+        logger.info(
+            f"[ANTI_CHEAT] 重置可疑操作次数 - account_id: {account_id} "
+            f"- old_count: {old_count} - old_type: {old_type}"
+        )
         
-        logger.info(f"[ANTI_CHEAT] 重置可疑操作次数 - account_id: {account_id}")
-        
-        db_player_data.data["account_info"]["suspicious_operations_count"] = 0
+        db_player_data.data["account_info"] = account_system.to_dict()
         await db_player_data.save()

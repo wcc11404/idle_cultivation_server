@@ -109,8 +109,14 @@ async def start_cultivation(
     current_time = time.time()
     ctx.player.is_cultivating = True
     ctx.player.last_cultivation_report_time = current_time
+    await AntiCheatSystem.reset_suspicious_operations(
+        account_id=str(ctx.account.id),
+        account_system=ctx.account_system,
+        db_player_data=ctx.player_data
+    )
 
     ctx.db_data["player"] = ctx.player.to_dict()
+    ctx.db_data["account_info"] = ctx.account_system.to_dict()
     
     ctx.player_data.data = ctx.db_data
     ctx.player_data.last_online_at = datetime.now(timezone.utc)
@@ -162,12 +168,13 @@ async def report_cultivation(
     )
     
     if not is_valid:
-        await AntiCheatSystem.record_suspicious_operation(
+        anti_cheat_result = await AntiCheatSystem.record_suspicious_operation(
             account_id=str(ctx.account.id),
             operation_type="cultivation_report",
             detail=reason,
             account_system=ctx.account_system,
-            db_player_data=ctx.player_data
+            db_player_data=ctx.player_data,
+            db_account=ctx.account
         )
         
         response_data = CultivationReportResponse(
@@ -178,7 +185,10 @@ async def report_cultivation(
             reason_data={
                 "reported_count": request.count,
                 "actual_interval": round(current_time - ctx.player.last_cultivation_report_time, 2),
-                "max_acceptable_count": round((current_time - ctx.player.last_cultivation_report_time) * (1 + tolerance), 2)
+                "max_acceptable_count": round((current_time - ctx.player.last_cultivation_report_time) * (1 + tolerance), 2),
+                "invalid_report_count": anti_cheat_result.get("invalid_count", 0),
+                "kicked_out": bool(anti_cheat_result.get("kicked_out", False)),
+                "kick_threshold": anti_cheat_result.get("threshold", 10),
             },
             spirit_gained=0.0,
             health_gained=0.0,
@@ -196,6 +206,11 @@ async def report_cultivation(
             player=ctx.player,
             delta_seconds=float(request.count),
             spell_system=ctx.spell_system
+        )
+        await AntiCheatSystem.reset_suspicious_operations(
+            account_id=str(ctx.account.id),
+            account_system=ctx.account_system,
+            db_player_data=ctx.player_data
         )
         logger.info(
             f"[DEBUG] cultivation_report after - account_id: {ctx.account.id} "

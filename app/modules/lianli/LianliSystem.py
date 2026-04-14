@@ -609,8 +609,6 @@ class LianliSystem:
         actual_time = current_time - self.battle_start_time
         
         if actual_time < expected_time * 0.9:
-            if account_system:
-                account_system.increment_suspicious_operations()
             return self._build_settlement_result(
                 False,
                 "LIANLI_FINISH_TIME_INVALID",

@@ -1,5 +1,7 @@
 from app.modules.lianli.AreasData import AreasData
 from app.modules.cultivation.RealmData import RealmData
+from app.modules.inventory.InventorySystem import InventorySystem
+from app.modules.player.PlayerSystem import PlayerSystem
 from unit_test.support.db_support import set_alchemy_elapsed_seconds, set_offline_seconds
 
 
@@ -63,19 +65,41 @@ def test_inventory_duplicate_unlock_edges(reset_client_state):
     assert first_spell["success"] is True
     second_spell = reset_client_state.inventory_use("spell_basic_health")
     assert second_spell["success"] is False
-    assert second_spell["reason_code"] == "INVENTORY_USE_SPELL_ALREADY_UNLOCKED"
+    assert second_spell["reason_code"] == "INVENTORY_USE_ALREADY_USED"
 
     first_recipe = reset_client_state.inventory_use("recipe_health_pill")
     assert first_recipe["success"] is True
     second_recipe = reset_client_state.inventory_use("recipe_health_pill")
     assert second_recipe["success"] is False
-    assert second_recipe["reason_code"] == "INVENTORY_USE_RECIPE_ALREADY_UNLOCKED"
+    assert second_recipe["reason_code"] == "INVENTORY_USE_ALREADY_USED"
 
     first_furnace = reset_client_state.inventory_use("alchemy_furnace")
     assert first_furnace["success"] is True
     second_furnace = reset_client_state.inventory_use("alchemy_furnace")
     assert second_furnace["success"] is False
-    assert second_furnace["reason_code"] == "INVENTORY_USE_FURNACE_ALREADY_OWNED"
+    assert second_furnace["reason_code"] == "INVENTORY_USE_ALREADY_USED"
+
+
+def test_inventory_internal_dependency_errors_use_generic_code():
+    player = PlayerSystem(health=100.0, spirit_energy=100.0, realm="炼气期", realm_level=1)
+
+    spell_inventory = InventorySystem()
+    spell_inventory.add_item("spell_basic_health", 1)
+    spell_result = spell_inventory.use_item("spell_basic_health", player, spell_system=None)
+    assert spell_result["success"] is False
+    assert spell_result["reason_code"] == "INVENTORY_USE_SYSTEM_ERROR"
+
+    recipe_inventory = InventorySystem()
+    recipe_inventory.add_item("recipe_health_pill", 1)
+    recipe_result = recipe_inventory.use_item("recipe_health_pill", player, alchemy_system=None)
+    assert recipe_result["success"] is False
+    assert recipe_result["reason_code"] == "INVENTORY_USE_SYSTEM_ERROR"
+
+    furnace_inventory = InventorySystem()
+    furnace_inventory.add_item("alchemy_furnace", 1)
+    furnace_result = furnace_inventory.use_item("alchemy_furnace", player, alchemy_system=None)
+    assert furnace_result["success"] is False
+    assert furnace_result["reason_code"] == "INVENTORY_USE_SYSTEM_ERROR"
 
 
 def test_spell_error_edges(reset_client_state):
@@ -198,6 +222,15 @@ def test_alchemy_error_edges(reset_client_state):
     too_fast = reset_client_state.alchemy_report("health_pill", 1)
     assert too_fast["success"] is False
     assert too_fast["reason_code"] == "ALCHEMY_REPORT_TIME_INVALID"
+    assert int(too_fast["reason_data"]["invalid_report_count"]) == 1
+
+    for _ in range(9):
+        too_fast = reset_client_state.alchemy_report("health_pill", 1)
+    assert too_fast["success"] is False
+    assert too_fast["reason_code"] == "ALCHEMY_REPORT_TIME_INVALID"
+    assert int(too_fast["reason_data"]["invalid_report_count"]) == 10
+    assert bool(too_fast["reason_data"]["kicked_out"]) is True
+    assert reset_client_state.alchemy_stop().get("detail") == "KICKED_OUT"
 
 
 def test_lianli_error_edges(reset_client_state):
@@ -211,7 +244,17 @@ def test_lianli_error_edges(reset_client_state):
     finish_too_fast = reset_client_state.lianli_finish(1.0, 9999)
     assert finish_too_fast["success"] is False
     assert finish_too_fast["reason_code"] == "LIANLI_FINISH_TIME_INVALID"
+    assert int(finish_too_fast["reason_data"]["invalid_report_count"]) == 1
 
+    for _ in range(9):
+        finish_too_fast = reset_client_state.lianli_finish(1.0, 9999)
+    assert finish_too_fast["success"] is False
+    assert finish_too_fast["reason_code"] == "LIANLI_FINISH_TIME_INVALID"
+    assert int(finish_too_fast["reason_data"]["invalid_report_count"]) == 10
+    assert bool(finish_too_fast["reason_data"]["kicked_out"]) is True
+    assert reset_client_state.get_game_data().get("detail") == "KICKED_OUT"
+    relogin = reset_client_state.login_test_account()
+    assert relogin["success"] is True
     reset_client_state.reset_account()
 
     reset_client_state.set_player_state(health=0)

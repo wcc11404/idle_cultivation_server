@@ -373,7 +373,9 @@ class InventorySystem:
         content = ItemData.get_item_content(item_id)
         
         if not content:
-            return self._build_use_item_result(False, "INVENTORY_USE_GIFT_EMPTY", item_id)
+            return self._build_use_item_result(False, "INVENTORY_USE_SYSTEM_ERROR", item_id, 0, {
+                "type": "open_gift"
+            })
         
         self.remove_item(item_id, 1)
         
@@ -395,7 +397,7 @@ class InventorySystem:
     def _use_unlock_spell(self, item_id: str, spell_system: 'SpellSystem') -> Dict[str, Any]:
         """使用解锁术法物品"""
         if not spell_system:
-            return self._build_use_item_result(False, "INVENTORY_USE_SPELL_SYSTEM_UNAVAILABLE", item_id)
+            return self._build_use_item_result(False, "INVENTORY_USE_SYSTEM_ERROR", item_id)
         
         effect = ItemData.get_item_effect(item_id)
         spell_id = effect.get("spell_id", "")
@@ -404,7 +406,7 @@ class InventorySystem:
             return self._build_use_item_result(False, "INVENTORY_USE_UNLOCK_SPELL_INVALID", item_id)
         
         if spell_system.has_spell(spell_id):
-            return self._build_use_item_result(False, "INVENTORY_USE_SPELL_ALREADY_UNLOCKED", item_id, 0, {
+            return self._build_use_item_result(False, "INVENTORY_USE_ALREADY_USED", item_id, 0, {
                 "type": "unlock_spell",
                 "spell_id": spell_id
             })
@@ -420,7 +422,7 @@ class InventorySystem:
     def _use_unlock_recipe(self, item_id: str, alchemy_system: 'AlchemySystem') -> Dict[str, Any]:
         """使用解锁丹方物品"""
         if not alchemy_system:
-            return self._build_use_item_result(False, "INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE", item_id)
+            return self._build_use_item_result(False, "INVENTORY_USE_SYSTEM_ERROR", item_id)
         
         effect = ItemData.get_item_effect(item_id)
         recipe_id = effect.get("recipe_id", "")
@@ -429,7 +431,7 @@ class InventorySystem:
             recipe_id = item_id.replace("recipe_", "")
         
         if alchemy_system.has_recipe(recipe_id):
-            return self._build_use_item_result(False, "INVENTORY_USE_RECIPE_ALREADY_UNLOCKED", item_id, 0, {
+            return self._build_use_item_result(False, "INVENTORY_USE_ALREADY_USED", item_id, 0, {
                 "type": "unlock_recipe",
                 "recipe_id": recipe_id
             })
@@ -452,10 +454,10 @@ class InventorySystem:
     def _use_unlock_furnace(self, item_id: str, alchemy_system: 'AlchemySystem') -> Dict[str, Any]:
         """使用解锁炼丹炉物品"""
         if not alchemy_system:
-            return self._build_use_item_result(False, "INVENTORY_USE_ALCHEMY_SYSTEM_UNAVAILABLE", item_id)
+            return self._build_use_item_result(False, "INVENTORY_USE_SYSTEM_ERROR", item_id)
         
         if alchemy_system.has_furnace():
-            return self._build_use_item_result(False, "INVENTORY_USE_FURNACE_ALREADY_OWNED", item_id, 0, {
+            return self._build_use_item_result(False, "INVENTORY_USE_ALREADY_USED", item_id, 0, {
                 "type": "unlock_furnace",
                 "furnace_id": item_id
             })
