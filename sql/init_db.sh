@@ -104,6 +104,6 @@ else
 fi
 
 echo "数据库初始化完成！"
-echo "测试账号：test / test123"
+echo "测试账号：test / test123, test2 / test123"
 echo "服务地址：http://127.0.0.1:8444"
 echo "API 文档：http://127.0.0.1:8444/api/docs"

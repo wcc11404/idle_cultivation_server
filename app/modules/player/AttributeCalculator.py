@@ -152,9 +152,13 @@ class AttributeCalculator:
         Returns:
             最终伤害值
         """
-        base_damage = attack - defense
-        final_damage = base_damage * damage_percent
-        return round(max(1.0, final_damage), 2)
+        k_value = 100.0
+        penetration = 0.0
+        effective_defense = max(defense - penetration, 0.0)
+        defense_ratio = effective_defense / max(effective_defense + k_value, k_value)
+        base_damage = attack * (1.0 - defense_ratio)
+        final_damage = max(base_damage, 1.0) * damage_percent
+        return round(final_damage, 2)
     
     @staticmethod
     def format_default(value: float) -> str:

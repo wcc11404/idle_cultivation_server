@@ -15,11 +15,11 @@ from app.modules.lianli.LianliSystem import LianliSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.cultivation.RealmData import RealmData
 from app.modules.account.AccountSystem import AccountSystem
-from unit_test.support.test_support_config import TEST_PACK_ITEM_ID, TEST_USERNAME
+from unit_test.support.test_support_config import TEST_PACK_ITEM_ID, TEST_USERNAMES
 
 
 def should_grant_test_pack(username: str) -> bool:
-    return str(username) == TEST_USERNAME
+    return str(username) in TEST_USERNAMES
 
 
 def get_initial_player_data(account_id: str, username: str = "", include_test_pack: Optional[bool] = None) -> dict:

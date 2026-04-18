@@ -227,7 +227,7 @@ def main() -> int:
 
     run_breakthrough_to_target(client)
 
-    print_step("丢弃一个补气丹")
+    print_step("丢弃一个聚气丹")
     expect_success(
         client.inventory_discard("spirit_pill", 1),
         "inventory_discard spirit_pill",

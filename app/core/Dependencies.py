@@ -6,12 +6,13 @@ API依赖注入
 
 import copy
 from typing import Optional, Dict, Any
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from app.core.Security import get_current_user, decode_token, security
 from app.db.Models import PlayerData, Account
 from app.modules import PlayerSystem, SpellSystem, InventorySystem, AlchemySystem, LianliSystem, AccountSystem
 from app.core.Logger import logger
+from app.core.WriteLock import begin_write_lock_by_account_id
 from dataclasses import dataclass
 
 
@@ -39,6 +40,39 @@ class GameContext:
         self.player_data.data = copy.deepcopy(self.db_data)
 
 
+def _build_game_context(account: Account, player_data: PlayerData) -> GameContext:
+    db_data = copy.deepcopy(player_data.data)
+
+    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
+    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
+    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
+    lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
+    account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
+
+    player_data_dict = db_data.get("player", {})
+    player = PlayerSystem(
+        health=float(player_data_dict.get("health", 100.0)),
+        spirit_energy=float(player_data_dict.get("spirit_energy", 0.0)),
+        realm=player_data_dict.get("realm", "炼气期"),
+        realm_level=player_data_dict.get("realm_level", 1),
+        spell_system=spell_system
+    )
+    player.is_cultivating = player_data_dict.get("is_cultivating", False)
+    player.last_cultivation_report_time = player_data_dict.get("last_cultivation_report_time", 0.0)
+
+    return GameContext(
+        account=account,
+        player_data=player_data,
+        db_data=db_data,
+        player=player,
+        spell_system=spell_system,
+        inventory_system=inventory_system,
+        alchemy_system=alchemy_system,
+        lianli_system=lianli_system,
+        account_system=account_system
+    )
+
+
 async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(security)) -> GameContext:
     """
     获取游戏上下文（依赖注入）
@@ -62,38 +96,38 @@ async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="玩家数据不存在"
         )
     
-    db_data = copy.deepcopy(player_data.data)
-    
-    # 先初始化各个系统
-    spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
-    inventory_system = InventorySystem.from_dict(db_data.get("inventory", {}))
-    alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
-    lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
-    account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
-    
-    # 初始化player时传入spell_system
-    player_data_dict = db_data.get("player", {})
-    player = PlayerSystem(
-        health=float(player_data_dict.get("health", 100.0)),
-        spirit_energy=float(player_data_dict.get("spirit_energy", 0.0)),
-        realm=player_data_dict.get("realm", "炼气期"),
-        realm_level=player_data_dict.get("realm_level", 1),
-        spell_system=spell_system
-    )
-    player.is_cultivating = player_data_dict.get("is_cultivating", False)
-    player.last_cultivation_report_time = player_data_dict.get("last_cultivation_report_time", 0.0)
-    
-    return GameContext(
-        account=current_user,
-        player_data=player_data,
-        db_data=db_data,
-        player=player,
-        spell_system=spell_system,
-        inventory_system=inventory_system,
-        alchemy_system=alchemy_system,
-        lianli_system=lianli_system,
-        account_system=account_system
-    )
+    return _build_game_context(current_user, player_data)
+
+
+async def get_write_game_context(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> GameContext:
+    token = credentials.credentials
+    payload = decode_token(token)
+    if not payload:
+        logger.warning("[AUTH] INVALID_TOKEN")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="INVALID_TOKEN"
+        )
+
+    account_id = str(payload.get("account_id", ""))
+    token_version = payload.get("version")
+    endpoint = f"{request.method} {request.url.path}"
+    async with begin_write_lock_by_account_id(
+        endpoint=endpoint,
+        account_id=account_id,
+        token_version=token_version,
+        lock_player=True,
+    ) as locked:
+        if not locked.player_data:
+            logger.warning(f"[GAME] 玩家数据不存在 - account_id: {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="玩家数据不存在"
+            )
+        yield _build_game_context(locked.account, locked.player_data)
 
 
 async def get_token_info(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
@@ -104,7 +138,7 @@ async def get_token_info(credentials: HTTPAuthorizationCredentials = Depends(sec
         dict: 包含token, account_id, token_version的字典
     """
     token = credentials.credentials
-    payload = decode_token(token)
+    payload = decode_token(token) or {}
     return {
         "token": token,
         "account_id": payload.get("account_id"),

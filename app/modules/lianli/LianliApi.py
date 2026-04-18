@@ -13,7 +13,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
-from app.core.Dependencies import get_game_context, get_token_info, GameContext
+from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import (
@@ -29,7 +29,7 @@ router = APIRouter()
 @router.post("/lianli/simulate", response_model=LianliBattleResponse)
 async def simulate_battle(
     request: LianliBattleRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """历练战斗模拟"""
@@ -114,7 +114,7 @@ async def simulate_battle(
 @router.post("/lianli/finish", response_model=LianliSettleResponse)
 async def finish_battle(
     request: LianliSettleRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """历练战斗结算"""

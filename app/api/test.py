@@ -9,7 +9,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.InitPlayerInfo import reset_player_data_record
-from app.core.Dependencies import GameContext, get_game_context, get_token_info
+from app.core.Dependencies import GameContext, get_game_context, get_write_game_context, get_token_info
 from app.core.Logger import logger
 from app.schemas.test import (
     ApplyPresetRequest,
@@ -82,7 +82,7 @@ async def _persist_context(ctx: GameContext) -> None:
 @router.post("/reset_account", response_model=TestActionResponse)
 async def reset_account(
     request: ResetTestAccountRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -114,7 +114,7 @@ async def reset_account(
 @router.post("/set_player_state", response_model=TestActionResponse)
 async def set_player_state_api(
     request: SetPlayerStateRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -153,7 +153,7 @@ async def set_player_state_api(
 @router.post("/set_inventory_items", response_model=TestActionResponse)
 async def set_inventory_items_api(
     request: SetInventoryItemsRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -187,7 +187,7 @@ async def set_inventory_items_api(
 @router.post("/unlock_content", response_model=TestActionResponse)
 async def unlock_content_api(
     request: UnlockContentRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -222,7 +222,7 @@ async def unlock_content_api(
 @router.post("/set_equipped_spells", response_model=TestActionResponse)
 async def set_equipped_spells_api(
     request: SetEquippedSpellsRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -257,7 +257,7 @@ async def set_equipped_spells_api(
 @router.post("/set_progress_state", response_model=TestActionResponse)
 async def set_progress_state_api(
     request: SetProgressStateRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -291,7 +291,7 @@ async def set_progress_state_api(
 @router.post("/set_runtime_state", response_model=TestActionResponse)
 async def set_runtime_state_api(
     request: SetRuntimeStateRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -328,7 +328,7 @@ async def set_runtime_state_api(
 @router.post("/apply_preset", response_model=TestActionResponse)
 async def apply_preset_api(
     request: ApplyPresetRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
@@ -364,7 +364,7 @@ async def apply_preset_api(
 @router.post("/grant_test_pack", response_model=TestActionResponse)
 async def grant_test_pack_api(
     request: GrantTestPackRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()

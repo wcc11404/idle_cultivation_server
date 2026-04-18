@@ -4,6 +4,7 @@ from app.db.Models import Account, PlayerData
 from app.core.Security import decode_token, verify_password, get_password_hash, create_access_token, security
 from app.core.ServerConfig import settings
 from app.core.Logger import logger
+from app.core.WriteLock import begin_write_lock_by_account_id
 from datetime import timedelta
 from typing import List
 import time
@@ -116,16 +117,23 @@ async def ban_player(player_id: str, admin: bool = Depends(get_admin)):
     start_time = time.time()
     logger.info(f"[IN] POST /admin/player/{player_id}/ban")
     
-    account = await Account.get_or_none(id=player_id)
-    if not account:
-        logger.warning(f"[OUT] POST /admin/player/{player_id}/ban - 玩家不存在 - 耗时: {time.time() - start_time:.4f}s")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="玩家不存在"
-        )
-    
-    account.is_banned = True
-    await account.save()
+    async with begin_write_lock_by_account_id(
+        endpoint=f"POST /api/admin/player/{player_id}/ban",
+        account_id=player_id,
+        token_version=None,
+        lock_player=False,
+        allow_missing_account=True,
+    ) as locked:
+        account = locked.account
+        if not account:
+            logger.warning(f"[OUT] POST /admin/player/{player_id}/ban - 玩家不存在 - 耗时: {time.time() - start_time:.4f}s")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="玩家不存在"
+            )
+
+        account.is_banned = True
+        await account.save()
     
     logger.info(f"[OUT] POST /admin/player/{player_id}/ban - 封号成功 - username: {account.username} - 耗时: {time.time() - start_time:.4f}s")
     return {"success": True, "message": "封号成功"}

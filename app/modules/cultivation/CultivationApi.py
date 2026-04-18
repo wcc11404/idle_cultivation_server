@@ -14,7 +14,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
-from app.core.Dependencies import get_game_context, get_token_info, GameContext
+from app.core.Dependencies import get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import PlayerSystem, CultivationSystem, InventorySystem, SpellSystem, AccountSystem, AlchemySystem, LianliSystem
@@ -28,7 +28,7 @@ router = APIRouter()
 @router.post("/player/breakthrough", response_model=BreakthroughResponse)
 async def breakthrough(
     request: BreakthroughRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """突破境界"""
@@ -66,7 +66,7 @@ async def breakthrough(
 @router.post("/player/cultivation/start", response_model=CultivationStartResponse)
 async def start_cultivation(
     request: CultivationStartRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """开始修炼"""
@@ -136,7 +136,7 @@ async def start_cultivation(
 @router.post("/player/cultivation/report", response_model=CultivationReportResponse)
 async def report_cultivation(
     request: CultivationReportRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """上报修炼进度"""
@@ -246,7 +246,7 @@ async def report_cultivation(
 @router.post("/player/cultivation/stop", response_model=CultivationStopResponse)
 async def stop_cultivation(
     request: CultivationStopRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """停止修炼"""

@@ -15,7 +15,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
-from app.core.Dependencies import get_game_context, get_token_info, GameContext
+from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.modules import PlayerSystem, InventorySystem, SpellSystem, AlchemySystem
 from datetime import datetime, timezone
@@ -28,7 +28,7 @@ router = APIRouter()
 @router.post("/inventory/use", response_model=UseItemResponse)
 async def use_item(
     request: UseItemRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """使用物品"""
@@ -63,7 +63,7 @@ async def use_item(
 @router.post("/inventory/organize", response_model=OrganizeInventoryResponse)
 async def organize_inventory(
     request: OrganizeInventoryRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """整理背包"""
@@ -95,7 +95,7 @@ async def organize_inventory(
 @router.post("/inventory/discard", response_model=dict)
 async def discard_item(
     request: DiscardItemRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """丢弃物品"""
@@ -127,7 +127,7 @@ async def discard_item(
 @router.post("/inventory/expand", response_model=ExpandInventoryResponse)
 async def expand_inventory(
     request: ExpandInventoryRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """扩容背包"""

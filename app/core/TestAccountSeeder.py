@@ -1,17 +1,21 @@
 from datetime import datetime, timezone
+from typing import Dict, List
 
 from app.core.InitPlayerInfo import create_initial_player_data_record
 from app.core.Security import get_password_hash, verify_password
 from app.db.Models import Account, PlayerData
-from unit_test.support.test_support_config import TEST_PASSWORD, TEST_USERNAME
+from unit_test.support.test_support_config import (
+    HUMAN_TEST_USERNAME,
+    TEST_PASSWORD,
+    TEST_USERNAME,
+)
 
 
 EPOCH_TIME = datetime.fromtimestamp(0, timezone.utc)
 
 
-async def ensure_test_account_exists() -> dict:
-    """确保固定测试账号和基础玩家数据存在。"""
-    account = await Account.get_or_none(username=TEST_USERNAME)
+async def _ensure_single_test_account(username: str) -> Dict[str, object]:
+    account = await Account.get_or_none(username=username)
     created_account = False
     created_player_data = False
     reset_password = False
@@ -20,7 +24,7 @@ async def ensure_test_account_exists() -> dict:
 
     if not account:
         account = await Account.create(
-            username=TEST_USERNAME,
+            username=username,
             password_hash=password_hash,
             is_banned=False,
         )
@@ -44,8 +48,19 @@ async def ensure_test_account_exists() -> dict:
         created_player_data = True
 
     return {
-        "username": TEST_USERNAME,
+        "username": username,
         "created_account": created_account,
         "created_player_data": created_player_data,
         "password_reset": reset_password,
+    }
+
+
+async def ensure_test_account_exists() -> dict:
+    """确保固定测试账号和基础玩家数据存在。"""
+    managed_accounts: List[str] = [TEST_USERNAME, HUMAN_TEST_USERNAME]
+    results = []
+    for username in managed_accounts:
+        results.append(await _ensure_single_test_account(username))
+    return {
+        "managed_accounts": results
     }

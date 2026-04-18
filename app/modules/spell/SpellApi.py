@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.game import EquipSpellRequest, UnequipSpellRequest, UpgradeSpellRequest, ChargeSpellRequest, SpellListResponse
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
-from app.core.Dependencies import get_game_context, get_token_info, GameContext
+from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.modules import PlayerSystem, SpellSystem, SpellData
 from datetime import datetime, timezone
@@ -32,7 +32,7 @@ def _battle_locked_result(action_code: str) -> dict:
 @router.post("/spell/equip", response_model=dict)
 async def equip_spell(
     request: EquipSpellRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """装备术法"""
@@ -73,7 +73,7 @@ async def equip_spell(
 @router.post("/spell/unequip", response_model=dict)
 async def unequip_spell(
     request: UnequipSpellRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """卸下术法"""
@@ -114,7 +114,7 @@ async def unequip_spell(
 @router.post("/spell/upgrade", response_model=dict)
 async def upgrade_spell(
     request: UpgradeSpellRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """升级术法"""
@@ -157,7 +157,7 @@ async def upgrade_spell(
 @router.post("/spell/charge", response_model=dict)
 async def charge_spell(
     request: ChargeSpellRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """给术法充灵气"""

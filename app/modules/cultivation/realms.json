@@ -151,7 +151,7 @@
                     "max_spirit_energy": 5
                 },
                 "2": {
-                    "health": 55,
+                    "health": 58,
                     "attack": 6,
                     "defense": 2,
                     "spirit_stone_cost": 6,
@@ -159,15 +159,15 @@
                     "max_spirit_energy": 10
                 },
                 "3": {
-                    "health": 60,
+                    "health": 66,
                     "attack": 7,
-                    "defense": 3,
+                    "defense": 2,
                     "spirit_stone_cost": 8,
                     "spirit_energy_cost": 12,
                     "max_spirit_energy": 12
                 },
                 "4": {
-                    "health": 68,
+                    "health": 76,
                     "attack": 8,
                     "defense": 3,
                     "spirit_stone_cost": 10,
@@ -175,49 +175,49 @@
                     "max_spirit_energy": 13
                 },
                 "5": {
-                    "health": 76,
+                    "health": 87,
                     "attack": 9,
-                    "defense": 4,
+                    "defense": 3,
                     "spirit_stone_cost": 12,
                     "spirit_energy_cost": 20,
                     "max_spirit_energy": 20
                 },
                 "6": {
-                    "health": 86,
+                    "health": 101,
                     "attack": 10,
-                    "defense": 5,
+                    "defense": 3,
                     "spirit_stone_cost": 15,
                     "spirit_energy_cost": 28,
                     "max_spirit_energy": 28
                 },
                 "7": {
-                    "health": 96,
+                    "health": 116,
                     "attack": 12,
-                    "defense": 5,
+                    "defense": 4,
                     "spirit_stone_cost": 17,
                     "spirit_energy_cost": 38,
                     "max_spirit_energy": 38
                 },
                 "8": {
-                    "health": 110,
-                    "attack": 14,
-                    "defense": 6,
+                    "health": 133,
+                    "attack": 13,
+                    "defense": 4,
                     "spirit_stone_cost": 19,
                     "spirit_energy_cost": 50,
                     "max_spirit_energy": 50
                 },
                 "9": {
-                    "health": 130,
-                    "attack": 16,
-                    "defense": 7,
+                    "health": 153,
+                    "attack": 15,
+                    "defense": 4,
                     "spirit_stone_cost": 21,
                     "spirit_energy_cost": 64,
                     "max_spirit_energy": 64
                 },
                 "10": {
-                    "health": 150,
-                    "attack": 20,
-                    "defense": 9,
+                    "health": 176,
+                    "attack": 17,
+                    "defense": 5,
                     "spirit_stone_cost": 24,
                     "spirit_energy_cost": 80,
                     "max_spirit_energy": 80
@@ -244,84 +244,84 @@
             },
             "levels": {
                 "1": {
-                    "health": 250,
-                    "attack": 30,
-                    "defense": 13,
-                    "spirit_stone_cost": 50,
-                    "spirit_energy_cost": 1000,
-                    "max_spirit_energy": 1200
+                    "health": 200,
+                    "attack": 20,
+                    "defense": 8,
+                    "spirit_stone_cost": 60,
+                    "spirit_energy_cost": 500,
+                    "max_spirit_energy": 600
                 },
                 "2": {
-                    "health": 275,
-                    "attack": 33,
-                    "defense": 14,
-                    "spirit_stone_cost": 55,
-                    "spirit_energy_cost": 1150,
-                    "max_spirit_energy": 1380
+                    "health": 220,
+                    "attack": 22,
+                    "defense": 8,
+                    "spirit_stone_cost": 72,
+                    "spirit_energy_cost": 600,
+                    "max_spirit_energy": 720
                 },
                 "3": {
-                    "health": 302,
-                    "attack": 36,
-                    "defense": 15,
-                    "spirit_stone_cost": 60,
-                    "spirit_energy_cost": 1322,
-                    "max_spirit_energy": 1586
+                    "health": 242,
+                    "attack": 24,
+                    "defense": 8,
+                    "spirit_stone_cost": 86,
+                    "spirit_energy_cost": 720,
+                    "max_spirit_energy": 864
                 },
                 "4": {
-                    "health": 332,
-                    "attack": 39,
-                    "defense": 17,
-                    "spirit_stone_cost": 66,
-                    "spirit_energy_cost": 1520,
-                    "max_spirit_energy": 1823
+                    "health": 266,
+                    "attack": 26,
+                    "defense": 8,
+                    "spirit_stone_cost": 103,
+                    "spirit_energy_cost": 864,
+                    "max_spirit_energy": 1036
                 },
                 "5": {
-                    "health": 366,
-                    "attack": 43,
-                    "defense": 19,
-                    "spirit_stone_cost": 73,
-                    "spirit_energy_cost": 1747,
-                    "max_spirit_energy": 2096
+                    "health": 292,
+                    "attack": 28,
+                    "defense": 8,
+                    "spirit_stone_cost": 123,
+                    "spirit_energy_cost": 1036,
+                    "max_spirit_energy": 1243
                 },
                 "6": {
-                    "health": 402,
-                    "attack": 48,
-                    "defense": 20,
-                    "spirit_stone_cost": 80,
-                    "spirit_energy_cost": 2009,
-                    "max_spirit_energy": 2410
+                    "health": 321,
+                    "attack": 30,
+                    "defense": 8,
+                    "spirit_stone_cost": 147,
+                    "spirit_energy_cost": 1243,
+                    "max_spirit_energy": 1491
                 },
                 "7": {
-                    "health": 442,
-                    "attack": 53,
-                    "defense": 23,
-                    "spirit_stone_cost": 88,
-                    "spirit_energy_cost": 2310,
-                    "max_spirit_energy": 2771
+                    "health": 353,
+                    "attack": 33,
+                    "defense": 8,
+                    "spirit_stone_cost": 176,
+                    "spirit_energy_cost": 1491,
+                    "max_spirit_energy": 1789
                 },
                 "8": {
-                    "health": 487,
-                    "attack": 58,
-                    "defense": 25,
-                    "spirit_stone_cost": 97,
-                    "spirit_energy_cost": 2656,
-                    "max_spirit_energy": 3186
+                    "health": 388,
+                    "attack": 36,
+                    "defense": 8,
+                    "spirit_stone_cost": 211,
+                    "spirit_energy_cost": 1789,
+                    "max_spirit_energy": 2146
                 },
                 "9": {
-                    "health": 535,
-                    "attack": 64,
-                    "defense": 27,
-                    "spirit_stone_cost": 107,
-                    "spirit_energy_cost": 3054,
-                    "max_spirit_energy": 3663
+                    "health": 426,
+                    "attack": 39,
+                    "defense": 8,
+                    "spirit_stone_cost": 253,
+                    "spirit_energy_cost": 2146,
+                    "max_spirit_energy": 2575
                 },
                 "10": {
-                    "health": 589,
-                    "attack": 70,
-                    "defense": 30,
-                    "spirit_stone_cost": 117,
-                    "spirit_energy_cost": 3512,
-                    "max_spirit_energy": 4212
+                    "health": 468,
+                    "attack": 42,
+                    "defense": 8,
+                    "spirit_stone_cost": 303,
+                    "spirit_energy_cost": 2575,
+                    "max_spirit_energy": 3090
                 }
             },
             "next_realm": "金丹期",
@@ -345,84 +345,84 @@
             },
             "levels": {
                 "1": {
-                    "health": 1250,
-                    "attack": 105,
-                    "defense": 45,
-                    "spirit_stone_cost": 250,
-                    "spirit_energy_cost": 6000,
-                    "max_spirit_energy": 7200
+                    "health": 800,
+                    "attack": 80,
+                    "defense": 32,
+                    "spirit_stone_cost": 360,
+                    "spirit_energy_cost": 3000,
+                    "max_spirit_energy": 3600
                 },
                 "2": {
-                    "health": 1375,
-                    "attack": 115,
-                    "defense": 49,
-                    "spirit_stone_cost": 275,
-                    "spirit_energy_cost": 6899,
-                    "max_spirit_energy": 8280
+                    "health": 880,
+                    "attack": 88,
+                    "defense": 35,
+                    "spirit_stone_cost": 432,
+                    "spirit_energy_cost": 3600,
+                    "max_spirit_energy": 4320
                 },
                 "3": {
-                    "health": 1512,
-                    "attack": 127,
-                    "defense": 54,
-                    "spirit_stone_cost": 302,
-                    "spirit_energy_cost": 7933,
-                    "max_spirit_energy": 9522
+                    "health": 968,
+                    "attack": 96,
+                    "defense": 38,
+                    "spirit_stone_cost": 518,
+                    "spirit_energy_cost": 4320,
+                    "max_spirit_energy": 5184
                 },
                 "4": {
-                    "health": 1663,
-                    "attack": 139,
-                    "defense": 59,
-                    "spirit_stone_cost": 332,
-                    "spirit_energy_cost": 9122,
-                    "max_spirit_energy": 10950
+                    "health": 1064,
+                    "attack": 105,
+                    "defense": 41,
+                    "spirit_stone_cost": 621,
+                    "spirit_energy_cost": 5184,
+                    "max_spirit_energy": 6220
                 },
                 "5": {
-                    "health": 1830,
-                    "attack": 153,
-                    "defense": 65,
-                    "spirit_stone_cost": 366,
-                    "spirit_energy_cost": 10490,
-                    "max_spirit_energy": 12592
+                    "health": 1170,
+                    "attack": 115,
+                    "defense": 45,
+                    "spirit_stone_cost": 745,
+                    "spirit_energy_cost": 6220,
+                    "max_spirit_energy": 7464
                 },
                 "6": {
-                    "health": 2013,
-                    "attack": 169,
-                    "defense": 72,
-                    "spirit_stone_cost": 402,
-                    "spirit_energy_cost": 12063,
-                    "max_spirit_energy": 14480
+                    "health": 1287,
+                    "attack": 126,
+                    "defense": 49,
+                    "spirit_stone_cost": 894,
+                    "spirit_energy_cost": 7464,
+                    "max_spirit_energy": 8956
                 },
                 "7": {
-                    "health": 2214,
-                    "attack": 186,
-                    "defense": 79,
-                    "spirit_stone_cost": 442,
-                    "spirit_energy_cost": 13872,
-                    "max_spirit_energy": 16652
+                    "health": 1415,
+                    "attack": 138,
+                    "defense": 53,
+                    "spirit_stone_cost": 1072,
+                    "spirit_energy_cost": 8956,
+                    "max_spirit_energy": 10747
                 },
                 "8": {
-                    "health": 2435,
-                    "attack": 204,
-                    "defense": 87,
-                    "spirit_stone_cost": 487,
-                    "spirit_energy_cost": 15952,
-                    "max_spirit_energy": 19149
+                    "health": 1556,
+                    "attack": 151,
+                    "defense": 58,
+                    "spirit_stone_cost": 1286,
+                    "spirit_energy_cost": 10747,
+                    "max_spirit_energy": 12896
                 },
                 "9": {
-                    "health": 2679,
-                    "attack": 225,
-                    "defense": 96,
-                    "spirit_stone_cost": 535,
-                    "spirit_energy_cost": 18344,
-                    "max_spirit_energy": 22021
+                    "health": 1711,
+                    "attack": 166,
+                    "defense": 63,
+                    "spirit_stone_cost": 1543,
+                    "spirit_energy_cost": 12896,
+                    "max_spirit_energy": 15475
                 },
                 "10": {
-                    "health": 2947,
-                    "attack": 247,
-                    "defense": 106,
-                    "spirit_stone_cost": 589,
-                    "spirit_energy_cost": 21095,
-                    "max_spirit_energy": 25324
+                    "health": 1882,
+                    "attack": 182,
+                    "defense": 69,
+                    "spirit_stone_cost": 1851,
+                    "spirit_energy_cost": 15475,
+                    "max_spirit_energy": 18570
                 }
             },
             "next_realm": "元婴期",
@@ -446,84 +446,84 @@
             },
             "levels": {
                 "1": {
-                    "health": 6250,
-                    "attack": 370,
-                    "defense": 159,
-                    "spirit_stone_cost": 1250,
-                    "spirit_energy_cost": 36000,
-                    "max_spirit_energy": 43200
+                    "health": 3200,
+                    "attack": 320,
+                    "defense": 128,
+                    "spirit_stone_cost": 2160,
+                    "spirit_energy_cost": 18000,
+                    "max_spirit_energy": 21600
                 },
                 "2": {
-                    "health": 6875,
-                    "attack": 407,
-                    "defense": 174,
-                    "spirit_stone_cost": 1375,
-                    "spirit_energy_cost": 41400,
-                    "max_spirit_energy": 49679
+                    "health": 3520,
+                    "attack": 352,
+                    "defense": 140,
+                    "spirit_stone_cost": 2592,
+                    "spirit_energy_cost": 21600,
+                    "max_spirit_energy": 25920
                 },
                 "3": {
-                    "health": 7562,
-                    "attack": 447,
-                    "defense": 192,
-                    "spirit_stone_cost": 1512,
-                    "spirit_energy_cost": 47609,
-                    "max_spirit_energy": 57130
+                    "health": 3872,
+                    "attack": 387,
+                    "defense": 154,
+                    "spirit_stone_cost": 3110,
+                    "spirit_energy_cost": 25920,
+                    "max_spirit_energy": 31104
                 },
                 "4": {
-                    "health": 8318,
-                    "attack": 492,
-                    "defense": 211,
-                    "spirit_stone_cost": 1663,
-                    "spirit_energy_cost": 54750,
-                    "max_spirit_energy": 65699
+                    "health": 4259,
+                    "attack": 425,
+                    "defense": 169,
+                    "spirit_stone_cost": 3732,
+                    "spirit_energy_cost": 31104,
+                    "max_spirit_energy": 37324
                 },
                 "5": {
-                    "health": 9150,
-                    "attack": 541,
-                    "defense": 232,
-                    "spirit_stone_cost": 1830,
-                    "spirit_energy_cost": 62962,
-                    "max_spirit_energy": 75553
+                    "health": 4684,
+                    "attack": 467,
+                    "defense": 185,
+                    "spirit_stone_cost": 4478,
+                    "spirit_energy_cost": 37324,
+                    "max_spirit_energy": 44788
                 },
                 "6": {
-                    "health": 10065,
-                    "attack": 595,
-                    "defense": 256,
-                    "spirit_stone_cost": 2013,
-                    "spirit_energy_cost": 72406,
-                    "max_spirit_energy": 86885
+                    "health": 5152,
+                    "attack": 513,
+                    "defense": 203,
+                    "spirit_stone_cost": 5373,
+                    "spirit_energy_cost": 44788,
+                    "max_spirit_energy": 53745
                 },
                 "7": {
-                    "health": 11072,
-                    "attack": 655,
-                    "defense": 281,
-                    "spirit_stone_cost": 2214,
-                    "spirit_energy_cost": 83266,
-                    "max_spirit_energy": 99917
+                    "health": 5667,
+                    "attack": 564,
+                    "defense": 223,
+                    "spirit_stone_cost": 6447,
+                    "spirit_energy_cost": 53745,
+                    "max_spirit_energy": 64494
                 },
                 "8": {
-                    "health": 12179,
-                    "attack": 721,
-                    "defense": 309,
-                    "spirit_stone_cost": 2435,
-                    "spirit_energy_cost": 95755,
-                    "max_spirit_energy": 114904
+                    "health": 6233,
+                    "attack": 620,
+                    "defense": 245,
+                    "spirit_stone_cost": 7736,
+                    "spirit_energy_cost": 64494,
+                    "max_spirit_energy": 77392
                 },
                 "9": {
-                    "health": 13397,
-                    "attack": 793,
-                    "defense": 340,
-                    "spirit_stone_cost": 2679,
-                    "spirit_energy_cost": 110118,
-                    "max_spirit_energy": 132139
+                    "health": 6856,
+                    "attack": 682,
+                    "defense": 269,
+                    "spirit_stone_cost": 9283,
+                    "spirit_energy_cost": 77392,
+                    "max_spirit_energy": 92870
                 },
                 "10": {
-                    "health": 14737,
-                    "attack": 872,
-                    "defense": 374,
-                    "spirit_stone_cost": 2947,
-                    "spirit_energy_cost": 126635,
-                    "max_spirit_energy": 151959
+                    "health": 7541,
+                    "attack": 750,
+                    "defense": 295,
+                    "spirit_stone_cost": 11139,
+                    "spirit_energy_cost": 92870,
+                    "max_spirit_energy": 111444
                 }
             },
             "next_realm": "化神期",
@@ -547,89 +547,89 @@
             },
             "levels": {
                 "1": {
-                    "health": 31250,
-                    "attack": 1308,
-                    "defense": 561,
-                    "spirit_stone_cost": 6250,
-                    "spirit_energy_cost": 216000,
-                    "max_spirit_energy": 259200
+                    "health": 12800,
+                    "attack": 1280,
+                    "defense": 512,
+                    "spirit_stone_cost": 12960,
+                    "spirit_energy_cost": 108000,
+                    "max_spirit_energy": 129600
                 },
                 "2": {
-                    "health": 34375,
-                    "attack": 1438,
-                    "defense": 617,
-                    "spirit_stone_cost": 6875,
-                    "spirit_energy_cost": 248399,
-                    "max_spirit_energy": 298080
+                    "health": 14080,
+                    "attack": 1408,
+                    "defense": 563,
+                    "spirit_stone_cost": 15552,
+                    "spirit_energy_cost": 129600,
+                    "max_spirit_energy": 155520
                 },
                 "3": {
-                    "health": 37812,
-                    "attack": 1582,
-                    "defense": 678,
-                    "spirit_stone_cost": 7562,
-                    "spirit_energy_cost": 285658,
-                    "max_spirit_energy": 342792
+                    "health": 15488,
+                    "attack": 1548,
+                    "defense": 619,
+                    "spirit_stone_cost": 18662,
+                    "spirit_energy_cost": 155520,
+                    "max_spirit_energy": 186624
                 },
                 "4": {
-                    "health": 41593,
-                    "attack": 1740,
-                    "defense": 746,
-                    "spirit_stone_cost": 8318,
-                    "spirit_energy_cost": 328506,
-                    "max_spirit_energy": 394210
+                    "health": 17036,
+                    "attack": 1702,
+                    "defense": 680,
+                    "spirit_stone_cost": 22394,
+                    "spirit_energy_cost": 186624,
+                    "max_spirit_energy": 223948
                 },
                 "5": {
-                    "health": 45753,
-                    "attack": 1915,
-                    "defense": 821,
-                    "spirit_stone_cost": 9150,
-                    "spirit_energy_cost": 377781,
-                    "max_spirit_energy": 453341
+                    "health": 18739,
+                    "attack": 1872,
+                    "defense": 748,
+                    "spirit_stone_cost": 26872,
+                    "spirit_energy_cost": 223948,
+                    "max_spirit_energy": 268737
                 },
                 "6": {
-                    "health": 50328,
-                    "attack": 2106,
-                    "defense": 903,
-                    "spirit_stone_cost": 10065,
-                    "spirit_energy_cost": 434448,
-                    "max_spirit_energy": 521342
+                    "health": 20612,
+                    "attack": 2059,
+                    "defense": 822,
+                    "spirit_stone_cost": 32246,
+                    "spirit_energy_cost": 268737,
+                    "max_spirit_energy": 322484
                 },
                 "7": {
-                    "health": 55361,
-                    "attack": 2317,
-                    "defense": 993,
-                    "spirit_stone_cost": 11072,
-                    "spirit_energy_cost": 499615,
-                    "max_spirit_energy": 599543
+                    "health": 22673,
+                    "attack": 2264,
+                    "defense": 904,
+                    "spirit_stone_cost": 38695,
+                    "spirit_energy_cost": 322484,
+                    "max_spirit_energy": 386980
                 },
                 "8": {
-                    "health": 60897,
-                    "attack": 2548,
-                    "defense": 1093,
-                    "spirit_stone_cost": 12179,
-                    "spirit_energy_cost": 574557,
-                    "max_spirit_energy": 689474
+                    "health": 24940,
+                    "attack": 2490,
+                    "defense": 994,
+                    "spirit_stone_cost": 46434,
+                    "spirit_energy_cost": 386980,
+                    "max_spirit_energy": 464376
                 },
                 "9": {
-                    "health": 66987,
-                    "attack": 2803,
-                    "defense": 1202,
-                    "spirit_stone_cost": 13397,
-                    "spirit_energy_cost": 660740,
-                    "max_spirit_energy": 792895
+                    "health": 27434,
+                    "attack": 2739,
+                    "defense": 1093,
+                    "spirit_stone_cost": 55720,
+                    "spirit_energy_cost": 464376,
+                    "max_spirit_energy": 557251
                 },
                 "10": {
-                    "health": 73685,
-                    "attack": 3084,
-                    "defense": 1322,
-                    "spirit_stone_cost": 14737,
-                    "spirit_energy_cost": 759850,
-                    "max_spirit_energy": 911829
+                    "health": 30177,
+                    "attack": 3012,
+                    "defense": 1202,
+                    "spirit_stone_cost": 66864,
+                    "spirit_energy_cost": 557251,
+                    "max_spirit_energy": 668701
                 }
             },
             "next_realm": "炼虚期",
             "description": "返璞归真，化神为虚",
-            "spirit_gain_speed": 3,
+            "spirit_gain_speed": 2.5,
             "speed": 5
         },
         "炼虚期": {
@@ -648,89 +648,89 @@
             },
             "levels": {
                 "1": {
-                    "health": 156250,
-                    "attack": 4626,
-                    "defense": 1983,
-                    "spirit_stone_cost": 31250,
-                    "spirit_energy_cost": 1296000,
-                    "max_spirit_energy": 1555200
+                    "health": 51200,
+                    "attack": 5120,
+                    "defense": 2048,
+                    "spirit_stone_cost": 77760,
+                    "spirit_energy_cost": 648000,
+                    "max_spirit_energy": 777600
                 },
                 "2": {
-                    "health": 171875,
-                    "attack": 5088,
-                    "defense": 2181,
-                    "spirit_stone_cost": 34375,
-                    "spirit_energy_cost": 1490400,
-                    "max_spirit_energy": 1788479
+                    "health": 56320,
+                    "attack": 5632,
+                    "defense": 2252,
+                    "spirit_stone_cost": 93312,
+                    "spirit_energy_cost": 777600,
+                    "max_spirit_energy": 933120
                 },
                 "3": {
-                    "health": 189062,
-                    "attack": 5597,
-                    "defense": 2399,
-                    "spirit_stone_cost": 37812,
-                    "spirit_energy_cost": 1713959,
-                    "max_spirit_energy": 2056750
+                    "health": 61952,
+                    "attack": 6195,
+                    "defense": 2477,
+                    "spirit_stone_cost": 111974,
+                    "spirit_energy_cost": 933120,
+                    "max_spirit_energy": 1119744
                 },
                 "4": {
-                    "health": 207968,
-                    "attack": 6157,
-                    "defense": 2639,
-                    "spirit_stone_cost": 41593,
-                    "spirit_energy_cost": 1971052,
-                    "max_spirit_energy": 2365262
+                    "health": 68147,
+                    "attack": 6814,
+                    "defense": 2724,
+                    "spirit_stone_cost": 134368,
+                    "spirit_energy_cost": 1119744,
+                    "max_spirit_energy": 1343692
                 },
                 "5": {
-                    "health": 228765,
-                    "attack": 6772,
-                    "defense": 2903,
-                    "spirit_stone_cost": 45753,
-                    "spirit_energy_cost": 2266709,
-                    "max_spirit_energy": 2720051
+                    "health": 74961,
+                    "attack": 7495,
+                    "defense": 2996,
+                    "spirit_stone_cost": 161241,
+                    "spirit_energy_cost": 1343692,
+                    "max_spirit_energy": 1612430
                 },
                 "6": {
-                    "health": 251642,
-                    "attack": 7450,
-                    "defense": 3193,
-                    "spirit_stone_cost": 50328,
-                    "spirit_energy_cost": 2606715,
-                    "max_spirit_energy": 3128058
+                    "health": 82457,
+                    "attack": 8244,
+                    "defense": 3295,
+                    "spirit_stone_cost": 193489,
+                    "spirit_energy_cost": 1612430,
+                    "max_spirit_energy": 1934916
                 },
                 "7": {
-                    "health": 276806,
-                    "attack": 8195,
-                    "defense": 3513,
-                    "spirit_stone_cost": 55361,
-                    "spirit_energy_cost": 2997722,
-                    "max_spirit_energy": 3597266
+                    "health": 90702,
+                    "attack": 9068,
+                    "defense": 3624,
+                    "spirit_stone_cost": 232186,
+                    "spirit_energy_cost": 1934916,
+                    "max_spirit_energy": 2321899
                 },
                 "8": {
-                    "health": 304487,
-                    "attack": 9014,
-                    "defense": 3864,
-                    "spirit_stone_cost": 60897,
-                    "spirit_energy_cost": 3447380,
-                    "max_spirit_energy": 4136855
+                    "health": 99772,
+                    "attack": 9974,
+                    "defense": 3986,
+                    "spirit_stone_cost": 278623,
+                    "spirit_energy_cost": 2321899,
+                    "max_spirit_energy": 2786278
                 },
                 "9": {
-                    "health": 334935,
-                    "attack": 9916,
-                    "defense": 4250,
-                    "spirit_stone_cost": 66987,
-                    "spirit_energy_cost": 3964486,
-                    "max_spirit_energy": 4757383
+                    "health": 109749,
+                    "attack": 10971,
+                    "defense": 4384,
+                    "spirit_stone_cost": 334347,
+                    "spirit_energy_cost": 2786278,
+                    "max_spirit_energy": 3343533
                 },
                 "10": {
-                    "health": 368429,
-                    "attack": 10907,
-                    "defense": 4675,
-                    "spirit_stone_cost": 73685,
-                    "spirit_energy_cost": 4559158,
-                    "max_spirit_energy": 5470990
+                    "health": 120723,
+                    "attack": 12068,
+                    "defense": 4822,
+                    "spirit_stone_cost": 401216,
+                    "spirit_energy_cost": 3343533,
+                    "max_spirit_energy": 4012239
                 }
             },
             "next_realm": "合体期",
             "description": "虚实合一，神通无量",
-            "spirit_gain_speed": 5,
+            "spirit_gain_speed": 3,
             "speed": 5
         },
         "合体期": {
@@ -749,89 +749,89 @@
             },
             "levels": {
                 "1": {
-                    "health": 781250,
-                    "attack": 16360,
-                    "defense": 7012,
-                    "spirit_stone_cost": 156250,
-                    "spirit_energy_cost": 7776000,
-                    "max_spirit_energy": 9331200
+                    "health": 204800,
+                    "attack": 20480,
+                    "defense": 8192,
+                    "spirit_stone_cost": 466560,
+                    "spirit_energy_cost": 3888000,
+                    "max_spirit_energy": 4665600
                 },
                 "2": {
-                    "health": 859375,
-                    "attack": 17996,
-                    "defense": 7713,
-                    "spirit_stone_cost": 171875,
-                    "spirit_energy_cost": 8942400,
-                    "max_spirit_energy": 10730880
+                    "health": 225280,
+                    "attack": 22528,
+                    "defense": 9011,
+                    "spirit_stone_cost": 559872,
+                    "spirit_energy_cost": 4665600,
+                    "max_spirit_energy": 5598720
                 },
                 "3": {
-                    "health": 945312,
-                    "attack": 19795,
-                    "defense": 8484,
-                    "spirit_stone_cost": 189062,
-                    "spirit_energy_cost": 10283760,
-                    "max_spirit_energy": 12340511
+                    "health": 247808,
+                    "attack": 24780,
+                    "defense": 9912,
+                    "spirit_stone_cost": 671846,
+                    "spirit_energy_cost": 5598720,
+                    "max_spirit_energy": 6718464
                 },
                 "4": {
-                    "health": 1039843,
-                    "attack": 21775,
-                    "defense": 9332,
-                    "spirit_stone_cost": 207968,
-                    "spirit_energy_cost": 11826324,
-                    "max_spirit_energy": 14191587
+                    "health": 272588,
+                    "attack": 27258,
+                    "defense": 10903,
+                    "spirit_stone_cost": 806215,
+                    "spirit_energy_cost": 6718464,
+                    "max_spirit_energy": 8062156
                 },
                 "5": {
-                    "health": 1143828,
-                    "attack": 23952,
-                    "defense": 10266,
-                    "spirit_stone_cost": 228765,
-                    "spirit_energy_cost": 13600272,
-                    "max_spirit_energy": 16320325
+                    "health": 299846,
+                    "attack": 29983,
+                    "defense": 11993,
+                    "spirit_stone_cost": 967458,
+                    "spirit_energy_cost": 8062156,
+                    "max_spirit_energy": 9674587
                 },
                 "6": {
-                    "health": 1258210,
-                    "attack": 26347,
-                    "defense": 11292,
-                    "spirit_stone_cost": 251642,
-                    "spirit_energy_cost": 15640312,
-                    "max_spirit_energy": 18768373
+                    "health": 329830,
+                    "attack": 32981,
+                    "defense": 13192,
+                    "spirit_stone_cost": 1160949,
+                    "spirit_energy_cost": 9674587,
+                    "max_spirit_energy": 11609504
                 },
                 "7": {
-                    "health": 1384032,
-                    "attack": 28982,
-                    "defense": 12422,
-                    "spirit_stone_cost": 276806,
-                    "spirit_energy_cost": 17986358,
-                    "max_spirit_energy": 21583628
+                    "health": 362813,
+                    "attack": 36279,
+                    "defense": 14511,
+                    "spirit_stone_cost": 1393138,
+                    "spirit_energy_cost": 11609504,
+                    "max_spirit_energy": 13931404
                 },
                 "8": {
-                    "health": 1522435,
-                    "attack": 31881,
-                    "defense": 13664,
-                    "spirit_stone_cost": 304487,
-                    "spirit_energy_cost": 20684311,
-                    "max_spirit_energy": 24821172
+                    "health": 399094,
+                    "attack": 39906,
+                    "defense": 15962,
+                    "spirit_stone_cost": 1671765,
+                    "spirit_energy_cost": 13931404,
+                    "max_spirit_energy": 16717684
                 },
                 "9": {
-                    "health": 1674678,
-                    "attack": 35069,
-                    "defense": 15030,
-                    "spirit_stone_cost": 334935,
-                    "spirit_energy_cost": 23786957,
-                    "max_spirit_energy": 28544347
+                    "health": 439003,
+                    "attack": 43896,
+                    "defense": 17558,
+                    "spirit_stone_cost": 2006118,
+                    "spirit_energy_cost": 16717684,
+                    "max_spirit_energy": 20061220
                 },
                 "10": {
-                    "health": 1842146,
-                    "attack": 38576,
-                    "defense": 16533,
-                    "spirit_stone_cost": 368429,
-                    "spirit_energy_cost": 27355000,
-                    "max_spirit_energy": 32825999
+                    "health": 482903,
+                    "attack": 48285,
+                    "defense": 19313,
+                    "spirit_stone_cost": 2407341,
+                    "spirit_energy_cost": 20061220,
+                    "max_spirit_energy": 24073464
                 }
             },
             "next_realm": "大乘期",
             "description": "天地合一，接近仙人",
-            "spirit_gain_speed": 9,
+            "spirit_gain_speed": 4,
             "speed": 5
         },
         "大乘期": {
@@ -850,89 +850,89 @@
             },
             "levels": {
                 "1": {
-                    "health": 3906250,
-                    "attack": 57864,
-                    "defense": 24799,
-                    "spirit_stone_cost": 781250,
-                    "spirit_energy_cost": 46656000,
-                    "max_spirit_energy": 55987200
+                    "health": 819200,
+                    "attack": 81920,
+                    "defense": 32768,
+                    "spirit_stone_cost": 2799360,
+                    "spirit_energy_cost": 23328000,
+                    "max_spirit_energy": 27993600
                 },
                 "2": {
-                    "health": 4296875,
-                    "attack": 63650,
-                    "defense": 27278,
-                    "spirit_stone_cost": 859375,
-                    "spirit_energy_cost": 53654399,
-                    "max_spirit_energy": 64385279
+                    "health": 901120,
+                    "attack": 90112,
+                    "defense": 36044,
+                    "spirit_stone_cost": 3359232,
+                    "spirit_energy_cost": 27993600,
+                    "max_spirit_energy": 33592320
                 },
                 "3": {
-                    "health": 4726562,
-                    "attack": 70015,
-                    "defense": 30006,
-                    "spirit_stone_cost": 945312,
-                    "spirit_energy_cost": 61702558,
-                    "max_spirit_energy": 74043070
+                    "health": 991232,
+                    "attack": 99123,
+                    "defense": 39648,
+                    "spirit_stone_cost": 4031078,
+                    "spirit_energy_cost": 33592320,
+                    "max_spirit_energy": 40310784
                 },
                 "4": {
-                    "health": 5199218,
-                    "attack": 77016,
-                    "defense": 33007,
-                    "spirit_stone_cost": 1039843,
-                    "spirit_energy_cost": 70957941,
-                    "max_spirit_energy": 85149530
+                    "health": 1090355,
+                    "attack": 109035,
+                    "defense": 43612,
+                    "spirit_stone_cost": 4837293,
+                    "spirit_energy_cost": 40310784,
+                    "max_spirit_energy": 48372940
                 },
                 "5": {
-                    "health": 5719140,
-                    "attack": 84718,
-                    "defense": 36308,
-                    "spirit_stone_cost": 1143828,
-                    "spirit_energy_cost": 81601632,
-                    "max_spirit_energy": 97921959
+                    "health": 1199390,
+                    "attack": 119938,
+                    "defense": 47973,
+                    "spirit_stone_cost": 5804751,
+                    "spirit_energy_cost": 48372940,
+                    "max_spirit_energy": 58047528
                 },
                 "6": {
-                    "health": 6291054,
-                    "attack": 93190,
-                    "defense": 39939,
-                    "spirit_stone_cost": 1258210,
-                    "spirit_energy_cost": 93841876,
-                    "max_spirit_energy": 112610252
+                    "health": 1319329,
+                    "attack": 131931,
+                    "defense": 52770,
+                    "spirit_stone_cost": 6965701,
+                    "spirit_energy_cost": 58047528,
+                    "max_spirit_energy": 69657033
                 },
                 "7": {
-                    "health": 6920160,
-                    "attack": 102509,
-                    "defense": 43932,
-                    "spirit_stone_cost": 1384032,
-                    "spirit_energy_cost": 107918157,
-                    "max_spirit_energy": 129501789
+                    "health": 1451261,
+                    "attack": 145124,
+                    "defense": 58047,
+                    "spirit_stone_cost": 8358841,
+                    "spirit_energy_cost": 69657033,
+                    "max_spirit_energy": 83588439
                 },
                 "8": {
-                    "health": 7612176,
-                    "attack": 112760,
-                    "defense": 48326,
-                    "spirit_stone_cost": 1522435,
-                    "spirit_energy_cost": 124105880,
-                    "max_spirit_energy": 148927057
+                    "health": 1596387,
+                    "attack": 159636,
+                    "defense": 63851,
+                    "spirit_stone_cost": 10030609,
+                    "spirit_energy_cost": 83588439,
+                    "max_spirit_energy": 100306126
                 },
                 "9": {
-                    "health": 8373393,
-                    "attack": 124036,
-                    "defense": 53158,
-                    "spirit_stone_cost": 1674678,
-                    "spirit_energy_cost": 142721762,
-                    "max_spirit_energy": 171266115
+                    "health": 1756025,
+                    "attack": 175599,
+                    "defense": 70236,
+                    "spirit_stone_cost": 12036730,
+                    "spirit_energy_cost": 100306126,
+                    "max_spirit_energy": 120367351
                 },
                 "10": {
-                    "health": 9210733,
-                    "attack": 136440,
-                    "defense": 58474,
-                    "spirit_stone_cost": 1842146,
-                    "spirit_energy_cost": 164130026,
-                    "max_spirit_energy": 196956032
+                    "health": 1931627,
+                    "attack": 193158,
+                    "defense": 77259,
+                    "spirit_stone_cost": 14444076,
+                    "spirit_energy_cost": 120367351,
+                    "max_spirit_energy": 144440821
                 }
             },
             "next_realm": "渡劫期",
             "description": "功德圆满，渡劫飞升",
-            "spirit_gain_speed": 18,
+            "spirit_gain_speed": 5,
             "speed": 5
         },
         "渡劫期": {
@@ -951,89 +951,89 @@
             },
             "levels": {
                 "1": {
-                    "health": 19531250,
-                    "attack": 204660,
-                    "defense": 87711,
-                    "spirit_stone_cost": 3906250,
-                    "spirit_energy_cost": 279936000,
-                    "max_spirit_energy": 335923200
+                    "health": 3276800,
+                    "attack": 327680,
+                    "defense": 131072,
+                    "spirit_stone_cost": 16796160,
+                    "spirit_energy_cost": 139968000,
+                    "max_spirit_energy": 167961600
                 },
                 "2": {
-                    "health": 21484375,
-                    "attack": 225126,
-                    "defense": 96482,
-                    "spirit_stone_cost": 4296875,
-                    "spirit_energy_cost": 321926400,
-                    "max_spirit_energy": 386311679
+                    "health": 3604480,
+                    "attack": 360448,
+                    "defense": 144179,
+                    "spirit_stone_cost": 20155392,
+                    "spirit_energy_cost": 167961600,
+                    "max_spirit_energy": 201553920
                 },
                 "3": {
-                    "health": 23632812,
-                    "attack": 247638,
-                    "defense": 106130,
-                    "spirit_stone_cost": 4726562,
-                    "spirit_energy_cost": 370215360,
-                    "max_spirit_energy": 444258430
+                    "health": 3964928,
+                    "attack": 396492,
+                    "defense": 158596,
+                    "spirit_stone_cost": 24186470,
+                    "spirit_energy_cost": 201553920,
+                    "max_spirit_energy": 241864704
                 },
                 "4": {
-                    "health": 25996093,
-                    "attack": 272402,
-                    "defense": 116743,
-                    "spirit_stone_cost": 5199218,
-                    "spirit_energy_cost": 425747663,
-                    "max_spirit_energy": 510897194
+                    "health": 4361420,
+                    "attack": 436141,
+                    "defense": 174455,
+                    "spirit_stone_cost": 29023764,
+                    "spirit_energy_cost": 241864704,
+                    "max_spirit_energy": 290237644
                 },
                 "5": {
-                    "health": 28595703,
-                    "attack": 299642,
-                    "defense": 128417,
-                    "spirit_stone_cost": 5719140,
-                    "spirit_energy_cost": 489609812,
-                    "max_spirit_energy": 587531773
+                    "health": 4797562,
+                    "attack": 479755,
+                    "defense": 191900,
+                    "spirit_stone_cost": 34828516,
+                    "spirit_energy_cost": 290237644,
+                    "max_spirit_energy": 348285172
                 },
                 "6": {
-                    "health": 31455273,
-                    "attack": 329606,
-                    "defense": 141259,
-                    "spirit_stone_cost": 6291054,
-                    "spirit_energy_cost": 563051283,
-                    "max_spirit_energy": 675661538
+                    "health": 5277318,
+                    "attack": 527730,
+                    "defense": 211090,
+                    "spirit_stone_cost": 41794219,
+                    "spirit_energy_cost": 348285172,
+                    "max_spirit_energy": 417942206
                 },
                 "7": {
-                    "health": 34600800,
-                    "attack": 362567,
-                    "defense": 155385,
-                    "spirit_stone_cost": 6920160,
-                    "spirit_energy_cost": 647508975,
-                    "max_spirit_energy": 777010768
+                    "health": 5805049,
+                    "attack": 580503,
+                    "defense": 232199,
+                    "spirit_stone_cost": 50153062,
+                    "spirit_energy_cost": 417942206,
+                    "max_spirit_energy": 501530647
                 },
                 "8": {
-                    "health": 38060880,
-                    "attack": 398824,
-                    "defense": 170923,
-                    "spirit_stone_cost": 7612176,
-                    "spirit_energy_cost": 744635321,
-                    "max_spirit_energy": 893562383
+                    "health": 6385553,
+                    "attack": 638553,
+                    "defense": 255418,
+                    "spirit_stone_cost": 60183674,
+                    "spirit_energy_cost": 501530647,
+                    "max_spirit_energy": 601836776
                 },
                 "9": {
-                    "health": 41866968,
-                    "attack": 438706,
-                    "defense": 188016,
-                    "spirit_stone_cost": 8373393,
-                    "spirit_energy_cost": 856330619,
-                    "max_spirit_energy": 1027596740
+                    "health": 7024108,
+                    "attack": 702408,
+                    "defense": 280959,
+                    "spirit_stone_cost": 72220408,
+                    "spirit_energy_cost": 601836776,
+                    "max_spirit_energy": 722204131
                 },
                 "10": {
-                    "health": 46053665,
-                    "attack": 482577,
-                    "defense": 206817,
-                    "spirit_stone_cost": 9210733,
-                    "spirit_energy_cost": 984780211,
-                    "max_spirit_energy": 1181736251
+                    "health": 7726518,
+                    "attack": 772648,
+                    "defense": 309054,
+                    "spirit_stone_cost": 86664489,
+                    "spirit_energy_cost": 722204131,
+                    "max_spirit_energy": 866644957
                 }
             },
             "next_realm": "",
             "description": "历尽天劫，羽化登仙",
-            "spirit_gain_speed": 40,
+            "spirit_gain_speed": 6,
             "speed": 5
         }
     }

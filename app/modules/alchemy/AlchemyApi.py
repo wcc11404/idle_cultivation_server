@@ -14,7 +14,7 @@ from app.schemas.game import (
 )
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
-from app.core.Dependencies import get_game_context, get_token_info, GameContext
+from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import PlayerSystem, AlchemySystem, RecipeData, SpellSystem, InventorySystem, LianliSystem
@@ -53,7 +53,7 @@ async def get_recipes(
 @router.post("/alchemy/start", response_model=AlchemyStartResponse)
 async def start_alchemy(
     request: AlchemyStartRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """开始炼丹"""
@@ -123,7 +123,7 @@ async def start_alchemy(
 @router.post("/alchemy/report", response_model=AlchemyReportResponse)
 async def report_alchemy(
     request: AlchemyReportRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """炼丹上报"""
@@ -241,7 +241,7 @@ async def report_alchemy(
 @router.post("/alchemy/stop", response_model=AlchemyStopResponse)
 async def stop_alchemy(
     request: AlchemyStopRequest,
-    ctx: GameContext = Depends(get_game_context),
+    ctx: GameContext = Depends(get_write_game_context),
     token_info: dict = Depends(get_token_info)
 ):
     """停止炼丹"""
