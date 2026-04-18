@@ -51,6 +51,33 @@
 - 客户端必须根据 `reason_code + reason_data` 生成最终中文提示，不再直接使用接口中的 `message/reason`
 - `auth/refresh` 这类纯鉴权接口的失败仍可能通过 `detail` 表达认证异常
 
+#### 并发写冲突响应（HTTP 409）
+
+- 为避免同一账号并发写入导致数据覆盖，所有修改账号/玩家数据的 `POST` 接口采用按账号串行写入策略
+- 同一账号的后续写请求会等待前一个写请求完成；最大等待时间为 `1` 秒
+- 超过等待上限时，接口统一返回 `HTTP 409`，并携带统一业务码：
+  - `reason_code`: `GAME_WRITE_CONFLICT_RETRY`
+  - `reason_data.retryable`: `true`
+  - `reason_data.lock_timeout_ms`: `1000`
+- 只读 `GET` 接口不受该策略影响
+
+示例响应：
+
+```json
+{
+  "success": false,
+  "operation_id": null,
+  "timestamp": null,
+  "reason_code": "GAME_WRITE_CONFLICT_RETRY",
+  "reason_data": {
+    "retryable": true,
+    "lock_timeout_ms": 1000
+  }
+}
+```
+
+客户端建议：收到该业务码后执行短暂退避重试（例如 100-300ms 后重试 1-2 次）。
+
 #### 异常响应
 
 ```json
@@ -406,6 +433,12 @@
 - `ACCOUNT_NICKNAME_ALL_DIGITS`
 - `ACCOUNT_NICKNAME_SENSITIVE`
 - `ACCOUNT_NICKNAME_PLAYER_NOT_FOUND`
+
+#### 昵称敏感词检测说明
+
+- 昵称会经过统一敏感词系统检测（本地中文词表 + 本地英文词表 + `pyahocorasick`）。
+- 命中敏感词时返回 `ACCOUNT_NICKNAME_SENSITIVE`。
+- 检测器运行异常时不阻断请求，仅记录服务端日志并按未命中处理。
 
 ---
 

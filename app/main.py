@@ -1,15 +1,19 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.api import api_router
 from app.core.ServerConfig import settings
 from app.core.TestAccountSeeder import ensure_test_account_exists
 from app.db.Database import init_db, close_db
+from app.core.WriteLock import WriteConflictError, build_write_conflict_payload
+from app.core.SensitiveWordFilter import init_sensitive_word_filter
 from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    init_sensitive_word_filter()
     await init_db()
     await ensure_test_account_exists()
     yield
@@ -37,6 +41,14 @@ app.add_middleware(
 
 # 注册 API 路由
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.exception_handler(WriteConflictError)
+async def handle_write_conflict(_: Request, exc: WriteConflictError):
+    return JSONResponse(
+        status_code=409,
+        content=build_write_conflict_payload(),
+    )
 
 # 根路径
 @app.get("/")

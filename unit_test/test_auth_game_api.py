@@ -29,10 +29,14 @@ def test_change_nickname_success_and_validation(reset_client_state):
     assert all_digits["success"] is False
     assert all_digits["reason_code"] == "ACCOUNT_NICKNAME_ALL_DIGITS"
 
-    success = reset_client_state.change_nickname("测试道友")
+    sensitive = reset_client_state.change_nickname("毒品道友")
+    assert sensitive["success"] is False
+    assert sensitive["reason_code"] == "ACCOUNT_NICKNAME_SENSITIVE"
+
+    success = reset_client_state.change_nickname("青松明月")
     assert success["success"] is True
     assert success["reason_code"] == "ACCOUNT_NICKNAME_CHANGE_SUCCEEDED"
-    assert success["nickname"] == "测试道友"
+    assert success["nickname"] == "青松明月"
 
 
 def test_game_data_refresh_avatar_and_logout(reset_client_state):

@@ -1,11 +1,8 @@
 import re
 from typing import Tuple
 
-try:
-    import minganci
-    MINGANCI_AVAILABLE = True
-except ImportError:
-    MINGANCI_AVAILABLE = False
+from app.core.Logger import logger
+from app.core.SensitiveWordFilter import get_sensitive_word_filter
 
 
 class Validator:
@@ -77,12 +74,13 @@ class Validator:
         if nickname.isdigit():
             return False, "昵称不能全是数字"
         
-        if MINGANCI_AVAILABLE:
-            try:
-                if minganci.check(nickname):
-                    return False, "昵称包含敏感词汇"
-            except Exception:
-                pass
+        try:
+            sensitive_filter = get_sensitive_word_filter()
+            if sensitive_filter.check(nickname):
+                return False, "昵称包含敏感词汇"
+        except Exception:
+            # 检测器异常时放行，保持服务可用性
+            logger.exception("[VALIDATOR] nickname sensitive check failed, fallback pass")
         
         return True, "昵称合法"
     

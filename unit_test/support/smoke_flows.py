@@ -101,7 +101,7 @@ def run_full_unlock_smoke(client: TestApiClient, verbose: bool = False) -> dict:
     _log(verbose, "\n=== 排行榜与设置 smoke ===")
     assert_success(client.reset_account(), "reset_account")
     assert_success(client.apply_preset(PRESET_FULL_UNLOCK), "apply_preset full_unlock")
-    nickname_result = assert_success(client.change_nickname("测试道友"), "change_nickname")
+    nickname_result = assert_success(client.change_nickname("青松明月"), "change_nickname")
     rank_result = assert_success(client.get_rank(), "get_rank")
     return {
         "nickname": nickname_result,

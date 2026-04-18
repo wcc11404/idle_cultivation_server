@@ -347,39 +347,42 @@ def validate_nickname(nickname: str) -> Tuple[bool, str]:
     if nickname.isdigit():
         return False, "昵称不能全是数字"
     
-    if MINGANCI_AVAILABLE:
-        try:
-            if minganci.check(nickname):
-                return False, "昵称包含敏感词汇"
-        except Exception:
-            pass
+    try:
+        sensitive_filter = get_sensitive_word_filter()
+        if sensitive_filter.check(nickname):
+            return False, "昵称包含敏感词汇"
+    except Exception:
+        # 检测器异常时放行，避免影响业务可用性
+        pass
     
     return True, "昵称合法"
 ```
 
 ### 5.2 敏感词过滤
 
-**工具**: minganci库
+**工具**: 统一敏感词系统（`pyahocorasick` + 本地中英文词库）
 
 **位置**: `requirements.txt`
 
 **安装**:
 ```bash
-pip install minganci>=1.0.0
+pip install pyahocorasick
 ```
 
 **使用**:
 ```python
-import minganci
+from app.core.SensitiveWordFilter import get_sensitive_word_filter
 
-if minganci.check(nickname):
+sensitive_filter = get_sensitive_word_filter()
+if sensitive_filter.check(nickname):
     return False, "昵称包含敏感词汇"
 ```
 
 **特点**:
-- 内置中文敏感词库
-- 自动更新词库
-- 支持自定义词库
+- Aho-Corasick 多模式高性能匹配
+- 仓库内置词库，支持版本化管理
+- 中文词表：`app/resources/sensitive_words_zh.txt`
+- 英文词表：`app/resources/sensitive_words_en.txt`
 
 ---
 
@@ -441,9 +444,9 @@ class SensitiveWordFilter:
         }
         self.words.update(base_words)
         
-        # 从文件加载自定义敏感词
+        # 从文件加载自定义敏感词（示例可读取 app/resources/sensitive_words_zh.txt 与 sensitive_words_en.txt）
         try:
-            with open("config/sensitive_words.txt", 'r', encoding='utf-8') as f:
+            with open("app/resources/sensitive_words_zh.txt", 'r', encoding='utf-8') as f:
                 for line in f:
                     word = line.strip()
                     if word:
