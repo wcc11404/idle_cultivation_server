@@ -12,6 +12,8 @@ from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.account.AccountSystem import AccountSystem
 from app.modules.alchemy.RecipeData import RecipeData
 from app.modules.cultivation.RealmData import RealmData
+from app.modules.herb.HerbGatherSystem import HerbGatherSystem
+from app.modules.herb.HerbPointData import HerbPointData
 from app.modules.inventory.InventorySystem import InventorySystem
 from app.modules.inventory.ItemData import ItemData
 from app.modules.lianli.AreasData import AreasData
@@ -34,6 +36,7 @@ def hydrate_context_from_data(ctx: GameContext, db_data: Dict[str, Any]) -> None
     ctx.inventory_system = InventorySystem.from_dict(ctx.db_data.get("inventory", {}))
     ctx.alchemy_system = AlchemySystem.from_dict(ctx.db_data.get("alchemy_system", {}))
     ctx.lianli_system = LianliSystem.from_dict(ctx.db_data.get("lianli_system", {}))
+    ctx.herb_system = HerbGatherSystem.from_dict(ctx.db_data.get("herb_system", {}))
     ctx.account_system = AccountSystem.from_dict(ctx.db_data.get("account_info", {}))
 
     player_data = ctx.db_data.get("player", {})
@@ -69,6 +72,7 @@ def build_state_summary(ctx: GameContext) -> Dict[str, Any]:
             "equipped_spells": copy.deepcopy(ctx.spell_system.equipped_spells),
         },
         "alchemy_system": ctx.alchemy_system.to_dict(),
+        "herb_system": ctx.herb_system.to_dict(),
         "lianli_system": {
             "tower_highest_floor": ctx.lianli_system.tower_highest_floor,
             "daily_dungeon_data": copy.deepcopy(ctx.lianli_system.daily_dungeon_data),
@@ -205,9 +209,12 @@ def set_runtime_state(
     ctx: GameContext,
     is_cultivating: Optional[bool] = None,
     is_alchemizing: Optional[bool] = None,
+    is_gathering: Optional[bool] = None,
     is_in_lianli: Optional[bool] = None,
     is_battling: Optional[bool] = None,
     current_area_id: Optional[str] = None,
+    current_herb_point_id: Optional[str] = None,
+    herb_elapsed_seconds: Optional[float] = None,
 ) -> Dict[str, Any]:
     if is_cultivating is not None:
         ctx.player.is_cultivating = bool(is_cultivating)
@@ -216,6 +223,21 @@ def set_runtime_state(
     if is_alchemizing is not None:
         ctx.alchemy_system.is_alchemizing = bool(is_alchemizing)
         ctx.alchemy_system.last_alchemy_report_time = time.time() if ctx.alchemy_system.is_alchemizing else 0.0
+
+    if is_gathering is not None:
+        ctx.herb_system.is_gathering = bool(is_gathering)
+        if ctx.herb_system.is_gathering:
+            point_id = current_herb_point_id
+            if not point_id:
+                points = HerbPointData.get_all_points()
+                point_id = next(iter(points.keys()), "")
+            ctx.herb_system.current_point_id = str(point_id)
+            if herb_elapsed_seconds is not None:
+                ctx.herb_system.last_report_time = time.time() - float(herb_elapsed_seconds)
+            else:
+                ctx.herb_system.last_report_time = time.time()
+        else:
+            ctx.herb_system.reset_gather_state()
 
     current_area = current_area_id
     if not current_area:
@@ -302,9 +324,11 @@ def apply_preset(ctx: GameContext, preset_name: str) -> Dict[str, Any]:
             ctx,
             is_cultivating=preset.get("runtime_state", {}).get("is_cultivating"),
             is_alchemizing=preset.get("runtime_state", {}).get("is_alchemizing"),
+            is_gathering=preset.get("runtime_state", {}).get("is_gathering"),
             is_in_lianli=preset.get("runtime_state", {}).get("is_in_lianli"),
             is_battling=preset.get("runtime_state", {}).get("is_battling"),
             current_area_id=preset.get("runtime_state", {}).get("current_area_id"),
+            current_herb_point_id=preset.get("runtime_state", {}).get("current_herb_point_id"),
         )
 
     return build_state_summary(ctx)
@@ -390,9 +414,11 @@ def validate_progress_state(tower_highest_floor: Optional[int], daily_counts: Di
     return None
 
 
-def validate_runtime_state(current_area_id: Optional[str]) -> Optional[str]:
+def validate_runtime_state(current_area_id: Optional[str], current_herb_point_id: Optional[str]) -> Optional[str]:
     if current_area_id and current_area_id not in AreasData.get_all_area_ids() and current_area_id != AreasData.get_tower_area_id():
         return "TEST_SET_RUNTIME_STATE_AREA_NOT_FOUND"
+    if current_herb_point_id and not HerbPointData.point_exists(current_herb_point_id):
+        return "TEST_SET_RUNTIME_STATE_HERB_POINT_NOT_FOUND"
     return None
 
 

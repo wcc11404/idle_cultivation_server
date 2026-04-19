@@ -85,3 +85,13 @@ def set_battle_elapsed_seconds(account_id: str, elapsed_seconds: float) -> None:
         lianli_system["battle_start_time"] = time.time() - float(elapsed_seconds)
 
     _run(_patch_player_data(account_id, _mutate))
+
+
+def set_herb_elapsed_seconds(account_id: str, elapsed_seconds: float, point_id: str = "point_low_yield") -> None:
+    def _mutate(data: dict[str, Any]) -> None:
+        herb_system = data.setdefault("herb_system", {})
+        herb_system["is_gathering"] = True
+        herb_system["current_point_id"] = point_id
+        herb_system["last_report_time"] = time.time() - float(elapsed_seconds)
+
+    _run(_patch_player_data(account_id, _mutate))

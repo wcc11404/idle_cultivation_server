@@ -105,6 +105,17 @@ async def start_cultivation(
         )
         logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
+
+    if ctx.herb_system.is_gathering:
+        response_data = CultivationStartResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="CULTIVATION_START_BLOCKED_BY_HERB_GATHERING",
+            reason_data={}
+        )
+        logger.info(f"[OUT] POST /game/player/cultivation/start - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
     
     current_time = time.time()
     ctx.player.is_cultivating = True

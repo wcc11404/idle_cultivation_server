@@ -12,10 +12,16 @@ from app.modules.spell.SpellSystem import SpellSystem
 from app.modules.inventory.InventorySystem import InventorySystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.lianli.LianliSystem import LianliSystem
+from app.modules.herb.HerbGatherSystem import HerbGatherSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.cultivation.RealmData import RealmData
 from app.modules.account.AccountSystem import AccountSystem
-from unit_test.support.test_support_config import TEST_PACK_ITEM_ID, TEST_USERNAMES
+from unit_test.support.test_support_config import (
+    HUMAN_TEST_HERB_UNLOCK_ITEM_ID,
+    HUMAN_TEST_USERNAME,
+    TEST_PACK_ITEM_ID,
+    TEST_USERNAMES,
+)
 
 
 def should_grant_test_pack(username: str) -> bool:
@@ -42,6 +48,7 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
     inventory_system = InventorySystem()
     alchemy_system = AlchemySystem()
     lianli_system = LianliSystem()
+    herb_system = HerbGatherSystem()
     account_system = AccountSystem.create_with_nickname(f"修仙者{str(account_id)[:6]}")
     
     # 创建PlayerSystem实例
@@ -58,6 +65,8 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
     inventory_system.add_item("starter_pack", 1)
     if include_test_pack:
         inventory_system.add_item(TEST_PACK_ITEM_ID, 1)
+    if str(username) == HUMAN_TEST_USERNAME:
+        inventory_system.add_item(HUMAN_TEST_HERB_UNLOCK_ITEM_ID, 1)
     
     return {
         "account_info": account_system.to_dict(),
@@ -66,6 +75,7 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
         "spell_system": spell_system.to_dict(),
         "alchemy_system": alchemy_system.to_dict(),
         "lianli_system": lianli_system.to_dict(),
+        "herb_system": herb_system.to_dict(),
         "version": "1.0"
     }
 

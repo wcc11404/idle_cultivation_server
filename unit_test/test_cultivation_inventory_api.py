@@ -29,7 +29,7 @@ def test_cultivation_blockers_and_anticheat(reset_client_state):
     blocked_by_battle = reset_client_state.set_runtime_state(
         is_in_lianli=True,
         is_battling=True,
-        current_area_id="qi_refining_outer",
+        current_area_id="area_1",
     )
     assert blocked_by_battle["success"] is True
     start = reset_client_state.cultivation_start()

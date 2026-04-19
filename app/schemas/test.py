@@ -52,9 +52,12 @@ class SetRuntimeStateRequest(BaseRequest):
     """设置运行状态请求。"""
     is_cultivating: Optional[bool] = None
     is_alchemizing: Optional[bool] = None
+    is_gathering: Optional[bool] = None
     is_in_lianli: Optional[bool] = None
     is_battling: Optional[bool] = None
     current_area_id: Optional[str] = None
+    current_herb_point_id: Optional[str] = None
+    herb_elapsed_seconds: Optional[float] = None
 
 
 class ApplyPresetRequest(BaseRequest):

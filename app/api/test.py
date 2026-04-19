@@ -301,7 +301,7 @@ async def set_runtime_state_api(
         f" - account_id: {token_info['account_id']}"
     )
 
-    validation_error = validate_runtime_state(request.current_area_id)
+    validation_error = validate_runtime_state(request.current_area_id, request.current_herb_point_id)
     if validation_error:
         return _build_response(False, request.operation_id, request.timestamp, validation_error)
 
@@ -309,9 +309,12 @@ async def set_runtime_state_api(
         ctx,
         is_cultivating=request.is_cultivating,
         is_alchemizing=request.is_alchemizing,
+        is_gathering=request.is_gathering,
         is_in_lianli=request.is_in_lianli,
         is_battling=request.is_battling,
         current_area_id=request.current_area_id,
+        current_herb_point_id=request.current_herb_point_id,
+        herb_elapsed_seconds=request.herb_elapsed_seconds,
     )
     await _persist_context(ctx)
     response_data = _build_response(

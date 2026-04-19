@@ -107,15 +107,23 @@ def test_progress_runtime_preset_and_state_summary(reset_client_state):
     assert bad_runtime["success"] is False
     assert bad_runtime["reason_code"] == "TEST_SET_RUNTIME_STATE_AREA_NOT_FOUND"
 
+    bad_herb_runtime = reset_client_state.set_runtime_state(current_herb_point_id="missing_point")
+    assert bad_herb_runtime["success"] is False
+    assert bad_herb_runtime["reason_code"] == "TEST_SET_RUNTIME_STATE_HERB_POINT_NOT_FOUND"
+
     runtime = reset_client_state.set_runtime_state(
         is_cultivating=True,
+        is_gathering=True,
+        current_herb_point_id="point_low_yield",
+        herb_elapsed_seconds=8,
         is_in_lianli=True,
         is_battling=True,
-        current_area_id="qi_refining_outer",
+        current_area_id="area_1",
     )
     assert runtime["success"] is True
+    assert runtime["state_summary"]["herb_system"]["is_gathering"] is True
     assert runtime["state_summary"]["lianli_system"]["is_battling"] is True
-    assert runtime["state_summary"]["lianli_system"]["current_area_id"] == "qi_refining_outer"
+    assert runtime["state_summary"]["lianli_system"]["current_area_id"] == "area_1"
 
     bad_preset = reset_client_state.apply_preset("missing_preset")
     assert bad_preset["success"] is False

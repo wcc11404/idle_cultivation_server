@@ -183,6 +183,19 @@ class TestApiClient:
     def alchemy_stop(self) -> Dict[str, Any]:
         return self._post("/game/alchemy/stop", self._request_params())
 
+    def herb_points(self) -> Dict[str, Any]:
+        return self._get("/game/herb/points")
+
+    def herb_start(self, point_id: str) -> Dict[str, Any]:
+        payload = {"point_id": point_id, **self._request_params()}
+        return self._post("/game/herb/start", payload)
+
+    def herb_report(self) -> Dict[str, Any]:
+        return self._post("/game/herb/report", self._request_params())
+
+    def herb_stop(self) -> Dict[str, Any]:
+        return self._post("/game/herb/stop", self._request_params())
+
     def spell_equip(self, spell_id: str) -> Dict[str, Any]:
         payload = {"spell_id": spell_id, **self._request_params()}
         return self._post("/game/spell/equip", payload)

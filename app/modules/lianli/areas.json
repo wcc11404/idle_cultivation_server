@@ -1,15 +1,15 @@
 {
     "normal_areas": {
-        "qi_refining_outer": {
-            "id": "qi_refining_outer",
-            "name": "炼气期外围森林",
-            "description": "最外围的森林，妖兽实力极弱，适合新手历练和长时间挂机",
+        "area_1": {
+            "id": "area_1",
+            "name": "青梧林地外围",
+            "description": "稷安里西行三十里的青梧林地外缘，林雾稀薄，适合初入历练者。",
             "default_continuous": true,
             "enemies_template": [
                 {
                     "enemies": [
                         {
-                            "template": "wolf",
+                            "template": "qingwen_fox",
                             "min_level": 1,
                             "max_level": 3
                         }
@@ -26,7 +26,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "snake",
+                            "template": "qinglin_snake",
                             "min_level": 1,
                             "max_level": 3
                         }
@@ -43,7 +43,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "boar",
+                            "template": "yunjiao_deer",
                             "min_level": 1,
                             "max_level": 3
                         }
@@ -59,16 +59,16 @@
                 }
             ]
         },
-        "qi_refining_inner": {
-            "id": "qi_refining_inner",
-            "name": "炼气期内围山谷",
-            "description": "妖兽实力适中，偶尔能遇到强大的狼王，是炼气期修士的主要历练场所",
+        "area_2": {
+            "id": "area_2",
+            "name": "白石丘原外围",
+            "description": "白石丘原外带，风道开阔，古驿旧道穿丘而过，偶见残魂徘徊。",
             "default_continuous": true,
             "enemies_template": [
                 {
                     "enemies": [
                         {
-                            "template": "wolf",
+                            "template": "baiwen_forest_wolf",
                             "min_level": 6,
                             "max_level": 8
                         }
@@ -85,7 +85,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "snake",
+                            "template": "white_snake",
                             "min_level": 6,
                             "max_level": 8
                         }
@@ -102,7 +102,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "boar",
+                            "template": "duanzong_boar",
                             "min_level": 6,
                             "max_level": 8
                         }
@@ -119,7 +119,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "iron_back_wolf",
+                            "template": "old_post_soldier_wraith",
                             "min_level": 6,
                             "max_level": 8
                         }
@@ -140,33 +140,16 @@
                 }
             ]
         },
-        "foundation_outer": {
-            "id": "foundation_outer",
-            "name": "筑基期外围荒原",
-            "description": "荒原上栖息着筑基初期的妖兽，实力远超炼气期",
+        "area_3": {
+            "id": "area_3",
+            "name": "青梧林地深处",
+            "description": "青梧古林腹地，林雾深重、兽道盘结，以活体妖兽活动为主。",
             "default_continuous": true,
             "enemies_template": [
                 {
                     "enemies": [
                         {
-                            "template": "wolf",
-                            "min_level": 11,
-                            "max_level": 13
-                        }
-                    ],
-                    "weight": 40,
-                    "drops": {
-                        "spirit_stone": {
-                            "min": 2,
-                            "max": 3,
-                            "chance": 1.0
-                        }
-                    }
-                },
-                {
-                    "enemies": [
-                        {
-                            "template": "snake",
+                            "template": "qingwen_fox",
                             "min_level": 11,
                             "max_level": 13
                         }
@@ -183,7 +166,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "boar",
+                            "template": "qinglin_snake",
                             "min_level": 11,
                             "max_level": 13
                         }
@@ -196,19 +179,41 @@
                             "chance": 1.0
                         }
                     }
+                },
+                {
+                    "enemies": [
+                        {
+                            "template": "yunjiao_deer",
+                            "min_level": 11,
+                            "max_level": 13
+                        }
+                    ],
+                    "weight": 30,
+                    "drops": {
+                        "spirit_stone": {
+                            "min": 1,
+                            "max": 3,
+                            "chance": 1.0
+                        },
+                        "mat_herb": {
+                            "min": 1,
+                            "max": 1,
+                            "chance": 0.2
+                        }
+                    }
                 }
             ]
         },
-        "foundation_inner": {
-            "id": "foundation_inner",
-            "name": "筑基期内围沼泽",
-            "description": "沼泽深处的妖兽更加凶猛，偶尔能遇到狼王",
+        "area_4": {
+            "id": "area_4",
+            "name": "白石丘原中心",
+            "description": "丘原腹心地带，夜风急厉，古驿残念与凶兽同栖，风险显著提升。",
             "default_continuous": true,
             "enemies_template": [
                 {
                     "enemies": [
                         {
-                            "template": "wolf",
+                            "template": "baiwen_forest_wolf",
                             "min_level": 16,
                             "max_level": 18
                         }
@@ -225,12 +230,12 @@
                 {
                     "enemies": [
                         {
-                            "template": "snake",
+                            "template": "white_snake",
                             "min_level": 16,
                             "max_level": 18
                         }
                     ],
-                    "weight": 25,
+                    "weight": 30,
                     "drops": {
                         "spirit_stone": {
                             "min": 2,
@@ -242,7 +247,7 @@
                 {
                     "enemies": [
                         {
-                            "template": "boar",
+                            "template": "duanzong_boar",
                             "min_level": 16,
                             "max_level": 18
                         }
@@ -253,18 +258,23 @@
                             "min": 2,
                             "max": 5,
                             "chance": 1.0
+                        },
+                        "mat_herb": {
+                            "min": 1,
+                            "max": 1,
+                            "chance": 0.2
                         }
                     }
                 },
                 {
                     "enemies": [
                         {
-                            "template": "iron_back_wolf",
+                            "template": "old_post_soldier_wraith",
                             "min_level": 16,
                             "max_level": 18
                         }
                     ],
-                    "weight": 10,
+                    "weight": 5,
                     "drops": {
                         "spirit_stone": {
                             "min": 3,
@@ -315,14 +325,17 @@
     },
     "tower": {
         "max_floor": 51,
-        "id": "endless_tower",
+        "id": "sourth_endless_tower",
         "config": {
-            "name": "无尽塔",
-            "description": "挑战无尽层数，每5层获得奖励，测试你的实力极限",
+            "name": "南麓试练塔",
+            "description": "上古南麓试练塔遗制，逐层加压，每5层结算奖励，用于衡量修士稳定战力与应变能力。",
             "templates": [
-                "wolf",
-                "snake",
-                "boar"
+                "qingwen_fox",
+                "qinglin_snake",
+                "yunjiao_deer",
+                "baiwen_forest_wolf",
+                "white_snake",
+                "duanzong_boar"
             ],
             "reward_floors": [
                 5,

@@ -16,6 +16,7 @@ from app.core.Security import get_current_user, decode_token, security
 from app.core.InitPlayerInfo import create_initial_player_data_record
 from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.Logger import logger
+from app.modules.herb.HerbGatherSystem import HerbGatherSystem
 from datetime import datetime, timezone
 import time
 import json
@@ -42,6 +43,11 @@ async def load_game(credentials: HTTPAuthorizationCredentials = Depends(security
     if not player_data:
         logger.info(f"[GAME] 首次加载，创建初始数据 - account_id: {current_user.id}")
         player_data = await create_initial_player_data_record(current_user, EPOCH_TIME)
+    elif "herb_system" not in player_data.data:
+        migrated_data = player_data.data
+        migrated_data["herb_system"] = HerbGatherSystem().to_dict()
+        player_data.data = migrated_data
+        await player_data.save()
     
     response_data = LoadGameResponse(
         success=True,
@@ -68,7 +74,7 @@ async def save_game(
 
     player_data = ctx.player_data
     
-    allowed_fields = ["account_info", "player", "inventory", "spell_system", "alchemy_system", "lianli_system"]
+    allowed_fields = ["account_info", "player", "inventory", "spell_system", "alchemy_system", "lianli_system", "herb_system"]
     
     game_data = request.data
     

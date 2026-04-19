@@ -13,6 +13,7 @@ from app.modules import PlayerSystem as GamePlayerData, AccountSystem, SpellSyst
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.lianli.LianliSystem import LianliSystem
+from app.modules.herb.HerbGatherSystem import HerbGatherSystem
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
@@ -69,6 +70,7 @@ async def _reset_runtime_state(
     player_system: PlayerSystem,
     alchemy_system: AlchemySystem,
     lianli_system: LianliSystem,
+    herb_system: HerbGatherSystem,
     account_system: AccountSystem,
     source: str
 ) -> dict:
@@ -76,6 +78,7 @@ async def _reset_runtime_state(
     player_system.reset_cultivation_state()
     alchemy_system.reset_alchemy_state()
     lianli_system.reset_battle_state()
+    herb_system.reset_gather_state()
     await AntiCheatSystem.reset_suspicious_operations(
         account_id=account_id,
         account_system=account_system,
@@ -85,6 +88,7 @@ async def _reset_runtime_state(
     db_data["player"] = player_system.to_dict()
     db_data["alchemy_system"] = alchemy_system.to_dict()
     db_data["lianli_system"] = lianli_system.to_dict()
+    db_data["herb_system"] = herb_system.to_dict()
     db_data["account_info"] = account_system.to_dict()
     player_data.data = db_data
     logger.info(
@@ -277,6 +281,7 @@ async def login(request: LoginRequest):
         login_player.last_cultivation_report_time = float(player_dict.get("last_cultivation_report_time", 0.0))
         login_alchemy = AlchemySystem.from_dict(player_data.data.get("alchemy_system", {}))
         login_lianli = LianliSystem.from_dict(player_data.data.get("lianli_system", {}))
+        login_herb = HerbGatherSystem.from_dict(player_data.data.get("herb_system", {}))
         login_account = AccountSystem.from_dict(player_data.data.get("account_info", {}))
         await _reset_runtime_state(
             account_id=str(account.id),
@@ -284,6 +289,7 @@ async def login(request: LoginRequest):
             player_system=login_player,
             alchemy_system=login_alchemy,
             lianli_system=login_lianli,
+            herb_system=login_herb,
             account_system=login_account,
             source="login"
         )
@@ -377,6 +383,7 @@ async def logout(
         player_system=ctx.player,
         alchemy_system=ctx.alchemy_system,
         lianli_system=ctx.lianli_system,
+        herb_system=ctx.herb_system,
         account_system=ctx.account_system,
         source="logout"
     )

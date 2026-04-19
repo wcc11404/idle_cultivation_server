@@ -213,21 +213,22 @@ def validate_cultivation_report(
 
 **实现**:
 ```python
-battle_time_at_index = battle_timeline[index]["time"]
-expected_time = battle_time_at_index / speed
-actual_time = current_time - self.battle_start_time
-
-if actual_time < expected_time * 0.9:
-    return {
-        "success": False,
-        "reason": f"战斗结算异常：时间验证失败，实际用时{actual_time:.1f}秒，最小需要{expected_time * 0.9:.1f}秒"
-    }
+if index < 0:
+    # 首个事件前主动退出：仅清理战斗态，不做时间校验
+    return {"success": True, "reason_code": "LIANLI_FINISH_PARTIALLY_SETTLED"}
+else:
+    battle_time_at_index = battle_timeline[index]["time"]
+    expected_time = battle_time_at_index / speed
+    actual_time = current_time - self.battle_start_time
+    if actual_time < expected_time * 0.9:
+        return {"success": False, "reason_code": "LIANLI_FINISH_TIME_INVALID"}
 ```
 
 **验证逻辑**:
 - 记录战斗开始时间
-- 计算预期战斗时长（考虑倍速）
-- 实际时长不能少于预期时长的90%
+- 对 `index >= 0` 的结算请求计算预期战斗时长（考虑倍速）
+- `index = -1` 视为“首个事件前退出”，不进入时间校验
+- `index >= 0` 时，实际时长不能少于预期时长的90%
 - 防止客户端加速播放战斗
 
 ### 3.3 可疑操作记录

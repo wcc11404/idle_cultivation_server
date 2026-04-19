@@ -244,3 +244,41 @@ class SpellListResponse(BaseResponse):
     player_spells: dict
     equipped_spells: dict
     spells_config: dict
+
+
+class HerbPointsResponse(BaseResponse):
+    """采集点列表响应"""
+    points_config: dict
+    current_state: dict
+
+
+class HerbStartRequest(BaseRequest):
+    """开始采集请求"""
+    point_id: str
+
+
+class HerbStartResponse(BaseResponse):
+    """开始采集响应"""
+    pass
+
+
+class HerbReportRequest(BaseRequest):
+    """采集上报请求"""
+    pass
+
+
+class HerbReportResponse(BaseResponse):
+    """采集上报响应"""
+    point_id: str
+    success_roll: bool
+    drops_gained: dict
+
+
+class HerbStopRequest(BaseRequest):
+    """停止采集请求"""
+    pass
+
+
+class HerbStopResponse(BaseResponse):
+    """停止采集响应"""
+    pass

@@ -186,13 +186,13 @@ class AreasData:
     def get_tower_area_id(cls) -> str:
         """获取无尽塔区域ID"""
         tower_config = cls.get_tower_config()
-        return tower_config.get("id", "endless_tower")
+        return tower_config.get("id", "sourth_endless_tower")
     
     @classmethod
     def is_tower_area(cls, area_id: str) -> bool:
         """判断是否为无尽塔区域"""
         tower_config = cls.get_tower_config()
-        return area_id == tower_config.get("id", "endless_tower")
+        return area_id == tower_config.get("id", "sourth_endless_tower")
     
     @classmethod
     def get_tower_reward_floors(cls) -> List[int]:
@@ -222,7 +222,7 @@ class AreasData:
         """获取无尽塔随机敌人模板"""
         tower_config = cls.get_tower_config()
         config = tower_config.get("config", {})
-        templates = config.get("templates", ["wolf"])
+        templates = config.get("templates", ["qingwen_fox"])
         return random.choice(templates)
     
     @classmethod

@@ -87,7 +87,7 @@ def run_lianli_smoke(client: TestApiClient, verbose: bool = False) -> dict:
     _log(verbose, "\n=== 历练 smoke ===")
     assert_success(client.reset_account(), "reset_account")
     assert_success(client.apply_preset(PRESET_LIANLI_READY), "apply_preset lianli_ready")
-    battle_result = assert_success(client.lianli_simulate("qi_refining_outer"), "lianli_simulate")
+    battle_result = assert_success(client.lianli_simulate("area_1"), "lianli_simulate")
     set_battle_elapsed_seconds(client.account_id, float(battle_result.get("total_time", 0.0)) + 1.0)
     finish_result = assert_success(client.lianli_finish(1.0, 9999), "lianli_finish")
     assert finish_result.get("reason_code") in {

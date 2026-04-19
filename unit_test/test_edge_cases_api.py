@@ -178,7 +178,7 @@ def test_alchemy_error_edges(reset_client_state):
     assert cultivation_block["reason_code"] == "ALCHEMY_START_BLOCKED_BY_CULTIVATION"
 
     reset_client_state.reset_account()
-    reset_client_state.set_runtime_state(is_in_lianli=True, is_battling=True, current_area_id="qi_refining_outer")
+    reset_client_state.set_runtime_state(is_in_lianli=True, is_battling=True, current_area_id="area_1")
     battle_block = reset_client_state.alchemy_start()
     assert battle_block["success"] is False
     assert battle_block["reason_code"] == "ALCHEMY_START_BLOCKED_BY_BATTLE"
@@ -239,7 +239,16 @@ def test_lianli_error_edges(reset_client_state):
     assert finish_not_active["reason_code"] == "LIANLI_FINISH_NOT_ACTIVE"
 
     reset_client_state.apply_preset("lianli_ready")
-    simulate = reset_client_state.lianli_simulate("qi_refining_outer")
+    simulate = reset_client_state.lianli_simulate("area_1")
+    assert simulate["success"] is True
+
+    finish_cancel_before_action = reset_client_state.lianli_finish(1.0, -1)
+    assert finish_cancel_before_action["success"] is True
+    assert finish_cancel_before_action["reason_code"] == "LIANLI_FINISH_PARTIALLY_SETTLED"
+    assert int(finish_cancel_before_action["settled_index"]) == 0
+    assert bool(finish_cancel_before_action["reason_data"].get("cancel_before_action", False)) is True
+
+    simulate = reset_client_state.lianli_simulate("area_1")
     assert simulate["success"] is True
     finish_too_fast = reset_client_state.lianli_finish(1.0, 9999)
     assert finish_too_fast["success"] is False
@@ -258,7 +267,7 @@ def test_lianli_error_edges(reset_client_state):
     reset_client_state.reset_account()
 
     reset_client_state.set_player_state(health=0)
-    health_insufficient = reset_client_state.lianli_simulate("qi_refining_outer")
+    health_insufficient = reset_client_state.lianli_simulate("area_1")
     assert health_insufficient["success"] is False
     assert health_insufficient["reason_code"] == "LIANLI_SIMULATE_HEALTH_INSUFFICIENT"
 

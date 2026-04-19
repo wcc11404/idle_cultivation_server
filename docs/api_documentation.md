@@ -1822,6 +1822,11 @@
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
 | area_id      | string | 是   | 历练区域ID                    |
 
+> `area_id` 当前取值：
+> - 普通区：`area_1`、`area_2`、`area_3`、`area_4`
+> - 每日区：`foundation_herb_cave`
+> - 无尽塔：`sourth_endless_tower`
+
 #### 成功响应
 
 ```json
@@ -1831,7 +1836,7 @@
   "timestamp": 1234567890,
   "reason_code": "LIANLI_SIMULATE_SUCCEEDED",
   "reason_data": {
-    "area_id": "qi_refining_outer",
+    "area_id": "area_1",
     "victory": true
   },
   "battle_timeline": [
@@ -1893,7 +1898,7 @@
   "timestamp": 1234567890,
   "reason_code": "LIANLI_SIMULATE_HEALTH_INSUFFICIENT",
   "reason_data": {
-    "area_id": "qi_refining_outer",
+    "area_id": "area_1",
     "current_health": 0.0
   },
   "battle_timeline": [],
@@ -1931,7 +1936,12 @@
 | operation_id | string | 是   | 客户端生成的UUID                          |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）              |
 | speed        | number | 是   | 播放倍速（1.0/2.0等）                    |
-| index        | number | 否   | 战斗进度索引（不传则完整结算）            |
+| index        | number | 否   | 结算索引：不传=完整结算；-1=仅退出不结算；>=0=部分结算到该事件 |
+
+> `index` 语义约定：
+> - 不传 `index`：按完整时间轴结算（会执行时间合法性校验）
+> - `index = -1`：首个事件前主动退出，仅清理战斗态，不结算任何事件，不触发时间非法判定
+> - `index >= 0`：按已播放事件做部分结算（会执行时间合法性校验）
 
 #### 成功响应（完整结算）
 
@@ -1944,7 +1954,7 @@
   "reason_data": {
     "is_full_settlement": true,
     "victory": true,
-    "area_id": "qi_refining_outer"
+    "area_id": "area_1"
   },
   "settled_index": 11,
   "total_index": 11,
@@ -1967,11 +1977,33 @@
   "reason_data": {
     "is_full_settlement": false,
     "victory": true,
-    "area_id": "qi_refining_outer"
+    "area_id": "area_1"
   },
   "settled_index": 5,
   "total_index": 11,
   "player_health_after": 75.0,
+  "loot_gained": [],
+  "exp_gained": 0
+}
+```
+
+#### 成功响应（首个事件前退出，仅退出不结算）
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_PARTIALLY_SETTLED",
+  "reason_data": {
+    "is_full_settlement": false,
+    "victory": true,
+    "area_id": "area_1",
+    "cancel_before_action": true
+  },
+  "settled_index": 0,
+  "total_index": 11,
+  "player_health_after": 76.0,
   "loot_gained": [],
   "exp_gained": 0
 }
@@ -2489,3 +2521,106 @@
 - **服务地址**：http://127.0.0.1:8444
 - **API 文档**：http://127.0.0.1:8444/api/docs
 - **版本**：v1.0.0
+
+---
+
+## 13. 百草山采集系统 API
+
+### 13.1 采集点列表
+
+- **接口地址**：`GET /api/game/herb/points`
+- **功能**：获取采集点配置与当前采集运行态
+- **认证**：需要认证
+
+#### 成功响应示例
+
+```json
+{
+  "success": true,
+  "reason_code": "HERB_POINTS_SUCCEEDED",
+  "reason_data": {},
+  "points_config": {
+    "point_low_yield": {
+      "id": "point_low_yield",
+      "name": "山脚灵草坡",
+      "description": "地势平缓，灵草分布稀疏但稳定。",
+      "report_interval_seconds": 5.0,
+      "success_rate": 0.9,
+      "drops": [
+        { "item_id": "mat_herb", "min": 1, "max": 2, "chance": 1.0 },
+        { "item_id": "spirit_liquid", "min": 1, "max": 1, "chance": 0.08 }
+      ]
+    }
+  },
+  "current_state": {
+    "is_gathering": false,
+    "current_point_id": "",
+    "last_report_time": 0.0
+  }
+}
+```
+
+### 13.2 开始采集
+
+- **接口地址**：`POST /api/game/herb/start`
+- **请求参数**：`point_id`
+- **功能**：进入采集运行态并记录当前采集点
+
+#### `reason_code` 枚举
+
+- `HERB_START_SUCCEEDED`
+- `HERB_START_ALREADY_ACTIVE`
+- `HERB_START_POINT_NOT_FOUND`
+- `HERB_START_BLOCKED_BY_CULTIVATION`
+- `HERB_START_BLOCKED_BY_ALCHEMY`
+- `HERB_START_BLOCKED_BY_LIANLI`
+
+### 13.3 采集上报
+
+- **接口地址**：`POST /api/game/herb/report`
+- **功能**：按当前采集点结算单轮采集结果
+- **说明**：不使用体力，不支持 count 批量，单次请求只结算 1 轮
+
+#### 成功响应示例
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "HERB_REPORT_SUCCEEDED",
+  "reason_data": {
+    "point_id": "point_low_yield"
+  },
+  "point_id": "point_low_yield",
+  "success_roll": true,
+  "drops_gained": {
+    "mat_herb": 2,
+    "spirit_liquid": 1
+  }
+}
+```
+
+#### 失败 `reason_code` 枚举
+
+- `HERB_REPORT_NOT_ACTIVE`
+- `HERB_REPORT_POINT_NOT_FOUND`
+- `HERB_REPORT_TIME_INVALID`
+
+### 13.4 停止采集
+
+- **接口地址**：`POST /api/game/herb/stop`
+- **功能**：退出采集运行态并清理当前采集点
+
+#### `reason_code` 枚举
+
+- `HERB_STOP_SUCCEEDED`
+- `HERB_STOP_NOT_ACTIVE`
+
+### 13.5 互斥语义补充
+
+采集与修炼/炼丹/历练采用双向互斥。采集中尝试进入以下流程会返回对应失败码：
+
+- `CULTIVATION_START_BLOCKED_BY_HERB_GATHERING`
+- `ALCHEMY_START_BLOCKED_BY_HERB_GATHERING`
+- `LIANLI_SIMULATE_BLOCKED_BY_HERB_GATHERING`

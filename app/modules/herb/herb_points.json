@@ -1,0 +1,46 @@
+{
+  "points": {
+    "point_low_yield": {
+      "id": "point_low_yield",
+      "name": "山脚灵草坡",
+      "description": "地势平缓，灵草分布稀疏但稳定。",
+      "report_interval_seconds": 5.0,
+      "success_rate": 0.9,
+      "drops": [
+        {
+          "item_id": "mat_herb",
+          "min": 1,
+          "max": 2,
+          "chance": 1.0
+        },
+        {
+          "item_id": "spirit_liquid",
+          "min": 1,
+          "max": 1,
+          "chance": 0.08
+        }
+      ]
+    },
+    "point_high_yield": {
+      "id": "point_high_yield",
+      "name": "深谷灵潮地",
+      "description": "灵气汇聚之地，灵草产出更高。",
+      "report_interval_seconds": 6.0,
+      "success_rate": 0.86,
+      "drops": [
+        {
+          "item_id": "mat_herb",
+          "min": 2,
+          "max": 4,
+          "chance": 1.0
+        },
+        {
+          "item_id": "spirit_liquid",
+          "min": 1,
+          "max": 1,
+          "chance": 0.12
+        }
+      ]
+    }
+  }
+}

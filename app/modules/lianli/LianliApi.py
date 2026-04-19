@@ -73,6 +73,25 @@ async def simulate_battle(
         )
         logger.info(f"[OUT] POST /game/lianli/battle - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
         return response_data
+
+    if ctx.herb_system.is_gathering:
+        response_data = LianliBattleResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="LIANLI_SIMULATE_BLOCKED_BY_HERB_GATHERING",
+            reason_data={},
+            battle_timeline=[],
+            total_time=0.0,
+            player_health_before=0.0,
+            player_health_after=0.0,
+            enemy_health_after=0.0,
+            enemy_data={},
+            victory=False,
+            loot=[]
+        )
+        logger.info(f"[OUT] POST /game/lianli/battle - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
     
     result = ctx.lianli_system.start_battle_simulation(
         request.area_id, ctx.player, ctx.spell_system

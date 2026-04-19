@@ -392,6 +392,19 @@ class SpellSystem:
                 total_heal += heal_percent
         
         return total_heal
+
+    def get_herb_gather_efficiency_bonus(self) -> float:
+        """获取草药采集效率加成（0.0 表示无加成）。"""
+        spell_id = "herb_gathering"
+        spell_info = self.player_spells.get(spell_id, {})
+        if not spell_info.get("obtained", False):
+            return 0.0
+        level = int(spell_info.get("level", 0))
+        if level <= 0:
+            return 0.0
+        level_data = SpellData.get_spell_level_data(spell_id, level)
+        effect = level_data.get("effect", {})
+        return max(float(effect.get("efficiency_rate", 0.0)), 0.0)
     
     def trigger_opening_spell(self) -> List[Dict[str, Any]]:
         """

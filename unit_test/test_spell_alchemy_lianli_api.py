@@ -27,7 +27,7 @@ def test_spell_endpoints_and_battle_lock(reset_client_state):
     assert upgrade["success"] is True
 
     reset_client_state.apply_preset("lianli_ready")
-    simulate = reset_client_state.lianli_simulate("qi_refining_outer")
+    simulate = reset_client_state.lianli_simulate("area_1")
     assert simulate["success"] is True
 
     for result in [
@@ -93,24 +93,78 @@ def test_lianli_endpoints(reset_client_state):
     assert tower["highest_floor"] == 9
 
     reset_client_state.set_runtime_state(is_cultivating=True)
-    blocked_by_cultivation = reset_client_state.lianli_simulate("qi_refining_outer")
+    blocked_by_cultivation = reset_client_state.lianli_simulate("area_1")
     assert blocked_by_cultivation["success"] is False
     assert blocked_by_cultivation["reason_code"] == "LIANLI_SIMULATE_BLOCKED_BY_CULTIVATION"
 
     reset_client_state.reset_account()
     reset_client_state.set_runtime_state(is_alchemizing=True)
-    blocked_by_alchemy = reset_client_state.lianli_simulate("qi_refining_outer")
+    blocked_by_alchemy = reset_client_state.lianli_simulate("area_1")
     assert blocked_by_alchemy["success"] is False
     assert blocked_by_alchemy["reason_code"] == "LIANLI_SIMULATE_BLOCKED_BY_ALCHEMY"
 
     reset_client_state.apply_preset("lianli_ready")
-    simulate = reset_client_state.lianli_simulate("qi_refining_outer")
+    simulate = reset_client_state.lianli_simulate("area_1")
     assert simulate["success"] is True
     assert simulate["reason_code"] == "LIANLI_SIMULATE_SUCCEEDED"
     assert simulate["battle_timeline"]
+
+    cancel_before_action = reset_client_state.lianli_finish(1.0, -1)
+    assert cancel_before_action["success"] is True
+    assert cancel_before_action["reason_code"] == "LIANLI_FINISH_PARTIALLY_SETTLED"
+    assert int(cancel_before_action["settled_index"]) == 0
+    assert bool(cancel_before_action["reason_data"].get("cancel_before_action", False)) is True
+
+    simulate = reset_client_state.lianli_simulate("area_1")
+    assert simulate["success"] is True
 
     set_battle_elapsed_seconds(reset_client_state.account_id, float(simulate["total_time"]) + 1.0)
     finish = reset_client_state.lianli_finish(1.0, 9999)
     assert finish["success"] is True
     assert finish["reason_code"] == "LIANLI_FINISH_FULLY_SETTLED"
     assert finish["settled_index"] == finish["total_index"]
+
+
+def test_lianli_finish_keeps_runtime_heal_delta(reset_client_state):
+    reset_client_state.apply_preset("lianli_ready")
+    reset_client_state.set_player_state(health=40.0)
+    reset_client_state.set_inventory_items({"health_pill": 1})
+
+    simulate = reset_client_state.lianli_simulate("area_1")
+    assert simulate["success"] is True
+
+    heal_result = reset_client_state.inventory_use("health_pill")
+    assert heal_result["success"] is True
+
+    state_after_heal = reset_client_state.get_state_summary()
+    assert state_after_heal["success"] is True
+    realtime_health_after_heal = float(state_after_heal["state_summary"]["player"]["health"])
+    assert realtime_health_after_heal > 40.0
+
+    set_battle_elapsed_seconds(reset_client_state.account_id, float(simulate["total_time"]) + 1.0)
+    finish = reset_client_state.lianli_finish(1.0, 9999)
+    assert finish["success"] is True
+
+    simulated_delta = round(float(simulate["player_health_after"]) - float(simulate["player_health_before"]), 2)
+    expected_health = round(max(0.0, realtime_health_after_heal + simulated_delta), 2)
+    assert float(finish["player_health_after"]) == expected_health
+
+
+def test_lianli_finish_skips_health_delta_when_realm_changed(reset_client_state):
+    reset_client_state.apply_preset("lianli_ready")
+    simulate = reset_client_state.lianli_simulate("area_1")
+    assert simulate["success"] is True
+
+    # 战斗中突破/改境界后，结算不再应用该场战斗的扣血增量。
+    realm_changed = reset_client_state.set_player_state(realm="筑基期", realm_level=1, health=220.0)
+    assert realm_changed["success"] is True
+
+    state_after_realm_change = reset_client_state.get_state_summary()
+    assert state_after_realm_change["success"] is True
+    health_after_realm_change = float(state_after_realm_change["state_summary"]["player"]["health"])
+
+    set_battle_elapsed_seconds(reset_client_state.account_id, float(simulate["total_time"]) + 1.0)
+    finish = reset_client_state.lianli_finish(1.0, 9999)
+    assert finish["success"] is True
+    assert bool(finish.get("reason_data", {}).get("realm_changed_during_battle", False)) is True
+    assert float(finish["player_health_after"]) == health_after_realm_change

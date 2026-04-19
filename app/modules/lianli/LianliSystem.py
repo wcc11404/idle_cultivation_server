@@ -330,6 +330,8 @@ class LianliSystem:
             "total_time": battle_result["total_time"],
             "player_health_before": player_data.health,
             "player_health_after": battle_result["player_health_after"],
+            "player_realm_before": player_data.realm,
+            "player_realm_level_before": int(player_data.realm_level),
             "enemy_health_after": battle_result["enemy_health_after"],
             "victory": battle_result["victory"],
             "loot": loot
@@ -598,6 +600,28 @@ class LianliSystem:
         battle_timeline = battle_data["battle_timeline"]
         total_index = len(battle_timeline)
         
+        # index < 0 代表“未结算任何事件，仅退出历练”，不做反作弊时间校验。
+        if index is not None and index < 0:
+            player_data.set_health(player_data.health)
+            self.is_battling = False
+            self.battle_start_time = None
+            self.current_battle_data = None
+            return self._build_settlement_result(
+                True,
+                "LIANLI_FINISH_PARTIALLY_SETTLED",
+                {
+                    "is_full_settlement": False,
+                    "victory": battle_data["victory"],
+                    "area_id": battle_data["area_id"],
+                    "cancel_before_action": True
+                },
+                settled_index=0,
+                total_index=total_index,
+                player_health_after=player_data.health,
+                loot_gained=[],
+                exp_gained=0
+            )
+
         if index is None or index >= total_index:
             index = total_index - 1
         
@@ -652,15 +676,33 @@ class LianliSystem:
                 damage = info.get("damage", 0)
                 player_health_after = round(max(0, player_health_after - damage), 2)
         
-        # 结算战斗结果，更新玩家气血、术法、掉落、副本完成次数的变化
-        player_data.set_health(player_health_after)
+        is_full_settlement = (index >= total_index - 1)
+        # 结算战斗结果，更新玩家气血、术法、掉落、副本完成次数的变化。
+        # 若战斗开始后发生境界变化（realm/realm_level），则不再应用本场战斗的气血扣减增量。
+        battle_realm_before = str(battle_data.get("player_realm_before", player_data.realm))
+        battle_realm_level_before = int(battle_data.get("player_realm_level_before", player_data.realm_level))
+        realm_changed_during_battle = (
+            str(player_data.realm) != battle_realm_before
+            or int(player_data.realm_level) != battle_realm_level_before
+        )
+        if not realm_changed_during_battle:
+            # 方案A：完整结算时信 simulate 真值；部分结算时按已播放索引重算增量。
+            if is_full_settlement:
+                simulated_health_delta = round(
+                    battle_data["player_health_after"] - battle_data["player_health_before"], 2
+                )
+            else:
+                simulated_health_delta = round(player_health_after - battle_data["player_health_before"], 2)
+
+            final_player_health = round(max(0.0, player_data.health + simulated_health_delta), 2)
+            player_data.set_health(final_player_health)
+        player_health_after = player_data.health
         
         if spell_system:
             for spell_id in spells_used:
                 spell_system.add_spell_use_count(spell_id)
         
         loot_gained = []
-        is_full_settlement = (index >= total_index - 1)
         
         if is_full_settlement and battle_data["victory"]:
             loot_gained = battle_data["loot"]
@@ -687,7 +729,8 @@ class LianliSystem:
             {
                 "is_full_settlement": is_full_settlement,
                 "victory": battle_data["victory"],
-                "area_id": battle_data["area_id"]
+                "area_id": battle_data["area_id"],
+                "realm_changed_during_battle": realm_changed_during_battle,
             },
             settled_index=index + 1,
             total_index=total_index,
@@ -774,11 +817,11 @@ if __name__ == "__main__":
     
     lianli_system = LianliSystem()
     
-    print(f"\n开始挑战区域: qi_refining_outer")
+    print(f"\n开始挑战区域: area_1")
     print("-" * 60)
     
     result = lianli_system.start_battle_simulation(
-        area_id="qi_refining_outer",
+        area_id="area_1",
         player_data=player_data,
         spell_system=spell_system
     )
