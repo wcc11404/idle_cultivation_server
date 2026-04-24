@@ -1,4 +1,4 @@
-from unit_test.support.smoke_flows import (
+from unit_test.support.SmokeFlows import (
     run_alchemy_smoke,
     run_breakthrough_smoke,
     run_full_unlock_smoke,

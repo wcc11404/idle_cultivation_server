@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from unit_test.support.test_api_client import TestApiClient
+from unit_test.support.TestApiClient import TestApiClient
 
 
 DEFAULT_BASE_URL = "http://localhost:8444/api"

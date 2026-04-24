@@ -166,26 +166,26 @@
 			"id": "herb_gathering",
 			"name": "草药采集",
 			"type": "production",
-			"description": "采集效率提升{efficiency_percent}，每级提升5%的效率",
+			"description": "采集成功率提升{success_rate_percent}，采集效率提升{efficiency_percent}",
 			"max_level": 3,
 			"levels": {
 				"1": {
 					"spirit_cost": 50,
 					"use_count_required": 50,
 					"attribute_bonus": {"max_spirit": 1.02},
-					"effect": {"effect_type": "gathering", "efficiency_rate": 0.0, "efficiency_percent": 0.0}
+					"effect": {"effect_type": "gathering", "efficiency_rate": 0.05, "efficiency_percent": 0.05, "success_rate_bonus": 0.02, "success_rate_percent": 0.02}
 				},
 				"2": {
 					"spirit_cost": 200,
 					"use_count_required": 200,
 					"attribute_bonus": {"max_spirit": 1.04},
-					"effect": {"effect_type": "gathering", "efficiency_rate": 0.05, "efficiency_percent": 0.05}
+					"effect": {"effect_type": "gathering", "efficiency_rate": 0.10, "efficiency_percent": 0.10, "success_rate_bonus": 0.04, "success_rate_percent": 0.04}
 				},
 				"3": {
 					"spirit_cost": 500,
 					"use_count_required": 500,
 					"attribute_bonus": {"max_spirit": 1.06},
-					"effect": {"effect_type": "gathering", "efficiency_rate": 0.10, "efficiency_percent": 0.10}
+					"effect": {"effect_type": "gathering", "efficiency_rate": 0.15, "efficiency_percent": 0.15, "success_rate_bonus": 0.06, "success_rate_percent": 0.06}
 				}
 			}
 		},

@@ -37,7 +37,7 @@ class HerbGatherSystem:
         self.last_report_time = 0.0
 
     @staticmethod
-    def settle_once(point_id: str) -> Dict[str, Any]:
+    def settle_once(point_id: str, success_rate_bonus: float = 0.0) -> Dict[str, Any]:
         point = HerbPointData.get_point(point_id)
         if not point:
             return {
@@ -48,7 +48,8 @@ class HerbGatherSystem:
                 "point_id": point_id,
             }
 
-        success_rate = float(point.get("success_rate", 0.0))
+        base_success_rate = float(point.get("success_rate", 0.0))
+        success_rate = max(0.0, min(base_success_rate + max(success_rate_bonus, 0.0), 1.0))
         success_roll = random() <= success_rate
         drops_gained: Dict[str, int] = {}
         if success_roll:
@@ -71,4 +72,6 @@ class HerbGatherSystem:
             "drops_gained": drops_gained,
             "success_roll": success_roll,
             "point_id": point_id,
+            "base_success_rate": base_success_rate,
+            "effective_success_rate": success_rate,
         }

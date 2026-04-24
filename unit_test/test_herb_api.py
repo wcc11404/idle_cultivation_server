@@ -1,5 +1,6 @@
-from unit_test.support.db_support import (
+from unit_test.support.DbSupport import (
     set_herb_elapsed_seconds,
+    set_herb_spell_level,
 )
 
 
@@ -79,12 +80,75 @@ def test_herb_report_success_and_invalid(reset_client_state):
     assert points["success"] is True
     point_cfg = points.get("points_config", {}).get("point_low_yield", {})
     assert float(point_cfg.get("report_interval_seconds", 0.0)) <= float(point_cfg.get("base_report_interval_seconds", 0.0))
+    assert float(point_cfg.get("success_rate", 0.0)) >= float(point_cfg.get("base_success_rate", 0.0))
 
 
 def test_herb_report_not_active(reset_client_state):
     result = reset_client_state.herb_report()
     assert result["success"] is False
     assert result["reason_code"] == "HERB_REPORT_NOT_ACTIVE"
+
+
+def test_herb_points_and_report_include_spell_level_and_speed_effect(reset_client_state):
+    open_pack = reset_client_state.inventory_use("test_pack")
+    assert open_pack["success"] is True
+    unlock = reset_client_state.inventory_use("spell_herb_gathering")
+    assert unlock["success"] is True
+
+    # 先拉一次基线配置（1级，已有加速与成功率加成）
+    points_level_1 = reset_client_state.herb_points()
+    assert points_level_1["success"] is True
+    assert int(points_level_1.get("reason_data", {}).get("herb_gathering_level", 0)) == 1
+    assert float(points_level_1.get("reason_data", {}).get("efficiency_bonus_rate", 0.0)) > 0.0
+    assert float(points_level_1.get("reason_data", {}).get("success_rate_bonus", 0.0)) > 0.0
+    base_interval = float(
+        points_level_1.get("points_config", {})
+        .get("point_low_yield", {})
+        .get("base_report_interval_seconds", 0.0)
+    )
+    lvl1_interval = float(
+        points_level_1.get("points_config", {})
+        .get("point_low_yield", {})
+        .get("report_interval_seconds", 0.0)
+    )
+    base_success_rate = float(
+        points_level_1.get("points_config", {})
+        .get("point_low_yield", {})
+        .get("base_success_rate", 0.0)
+    )
+    lvl1_success_rate = float(
+        points_level_1.get("points_config", {})
+        .get("point_low_yield", {})
+        .get("success_rate", 0.0)
+    )
+    assert lvl1_interval < base_interval
+    assert lvl1_success_rate > base_success_rate
+
+    # 直接提升到3级，验证 points 返回的有效间隔变短
+    set_herb_spell_level(reset_client_state.account_id, 3)
+    points_level_3 = reset_client_state.herb_points()
+    assert points_level_3["success"] is True
+    assert int(points_level_3.get("reason_data", {}).get("herb_gathering_level", 0)) == 3
+    point_cfg = points_level_3.get("points_config", {}).get("point_low_yield", {})
+    assert int(point_cfg.get("herb_gathering_level", 0)) == 3
+    lvl3_interval = float(point_cfg.get("report_interval_seconds", 0.0))
+    lvl3_success_rate = float(point_cfg.get("success_rate", 0.0))
+    assert lvl3_interval < base_interval
+    assert lvl3_interval < lvl1_interval
+    assert lvl3_success_rate > lvl1_success_rate
+
+    start = reset_client_state.herb_start("point_low_yield")
+    assert start["success"] is True
+    assert int(start.get("reason_data", {}).get("herb_gathering_level", 0)) == 3
+    assert float(start.get("reason_data", {}).get("success_rate_bonus", 0.0)) > 0.0
+
+    set_herb_elapsed_seconds(reset_client_state.account_id, 8.0, "point_low_yield")
+    report = reset_client_state.herb_report()
+    assert report["success"] is True
+    assert report["reason_code"] == "HERB_REPORT_SUCCEEDED"
+    assert int(report.get("reason_data", {}).get("herb_gathering_level", 0)) == 3
+    assert float(report.get("reason_data", {}).get("effective_interval_seconds", 0.0)) == lvl3_interval
+    assert float(report.get("reason_data", {}).get("effective_success_rate", 0.0)) == lvl3_success_rate
 
 
 def test_double_side_mutual_exclusion_with_herb(reset_client_state):

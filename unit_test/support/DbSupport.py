@@ -65,6 +65,7 @@ def set_cultivation_elapsed_seconds(account_id: str, elapsed_seconds: float) -> 
         player = data.setdefault("player", {})
         player["is_cultivating"] = True
         player["last_cultivation_report_time"] = time.time() - float(elapsed_seconds)
+        player["cultivation_effect_carry_seconds"] = float(player.get("cultivation_effect_carry_seconds", 0.0))
 
     _run(_patch_player_data(account_id, _mutate))
 
@@ -93,5 +94,19 @@ def set_herb_elapsed_seconds(account_id: str, elapsed_seconds: float, point_id: 
         herb_system["is_gathering"] = True
         herb_system["current_point_id"] = point_id
         herb_system["last_report_time"] = time.time() - float(elapsed_seconds)
+
+    _run(_patch_player_data(account_id, _mutate))
+
+
+def set_herb_spell_level(account_id: str, level: int) -> None:
+    def _mutate(data: dict[str, Any]) -> None:
+        spell_system = data.setdefault("spell_system", {})
+        player_spells = spell_system.setdefault("player_spells", {})
+        herb_spell = player_spells.setdefault(
+            "herb_gathering",
+            {"obtained": True, "level": 1, "use_count": 0, "charged_spirit": 0},
+        )
+        herb_spell["obtained"] = True
+        herb_spell["level"] = max(1, int(level))
 
     _run(_patch_player_data(account_id, _mutate))

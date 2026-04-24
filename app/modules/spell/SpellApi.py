@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import EquipSpellRequest, UnequipSpellRequest, UpgradeSpellRequest, ChargeSpellRequest, SpellListResponse
+from app.schemas.Game import EquipSpellRequest, UnequipSpellRequest, UpgradeSpellRequest, ChargeSpellRequest, SpellListResponse
 from app.db.Models import PlayerData as DBPlayerData
 from app.core.Security import get_current_user, decode_token, security
 from app.core.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext

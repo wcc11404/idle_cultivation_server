@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from app.schemas.base import BaseRequest, BaseResponse
+from app.schemas.Base import BaseRequest, BaseResponse
 
 
 class RegisterRequest(BaseRequest):

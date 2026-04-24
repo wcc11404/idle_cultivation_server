@@ -36,6 +36,7 @@ class PlayerSystem:
         # 修炼状态，会存入数据库
         self.is_cultivating: bool = False
         self.last_cultivation_report_time: float = 0.0
+        self.cultivation_effect_carry_seconds: float = 0.0
         
         # 基础属性，只随境界变化而变化，不存数据库，每次境界变化都会重新计算
         self._load_attributes_from_realm()
@@ -121,6 +122,7 @@ class PlayerSystem:
         """重置修炼状态"""
         self.is_cultivating = False
         self.last_cultivation_report_time = 0.0
+        self.cultivation_effect_carry_seconds = 0.0
     
     def to_dict(self) -> dict:
         return {
@@ -129,7 +131,8 @@ class PlayerSystem:
             "realm": self.realm,
             "realm_level": self.realm_level,
             "is_cultivating": self.is_cultivating,
-            "last_cultivation_report_time": self.last_cultivation_report_time
+            "last_cultivation_report_time": self.last_cultivation_report_time,
+            "cultivation_effect_carry_seconds": self.cultivation_effect_carry_seconds
         }
     
     @classmethod
@@ -142,4 +145,5 @@ class PlayerSystem:
         )
         instance.is_cultivating = data.get("is_cultivating", False)
         instance.last_cultivation_report_time = data.get("last_cultivation_report_time", 0.0)
+        instance.cultivation_effect_carry_seconds = float(data.get("cultivation_effect_carry_seconds", 0.0))
         return instance

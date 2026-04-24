@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from app.schemas.base import BaseRequest, BaseResponse
+from app.schemas.Base import BaseRequest, BaseResponse
 
 
 class SaveGameRequest(BaseRequest):
@@ -88,7 +88,7 @@ class CultivationStartResponse(BaseResponse):
 
 class CultivationReportRequest(BaseRequest):
     """修炼上报请求"""
-    count: int
+    elapsed_seconds: float
 
 
 class CultivationReportResponse(BaseResponse):

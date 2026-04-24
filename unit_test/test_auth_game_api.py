@@ -1,4 +1,4 @@
-from unit_test.support.db_support import set_offline_seconds
+from unit_test.support.DbSupport import set_offline_seconds
 
 
 def test_login_test_account_success(client):
@@ -65,5 +65,5 @@ def test_claim_offline_reward_caps_to_four_hours(reset_client_state):
     assert result["success"] is True
     assert result["reason_code"] == "GAME_OFFLINE_REWARD_GRANTED"
     assert result["offline_seconds"] == 4 * 3600
-    assert result["offline_reward"]["spirit_stones"] == 240
+    assert result["offline_reward"]["spirit_stones"] == 48
     assert result["offline_reward"]["spirit_energy"] >= 0

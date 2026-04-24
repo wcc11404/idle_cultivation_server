@@ -9,6 +9,7 @@
 """
 
 from typing import Dict, Any, TYPE_CHECKING
+from math import floor
 
 from ..inventory.ItemData import ItemData
 from ..player.AttributeCalculator import AttributeCalculator
@@ -68,9 +69,17 @@ class CultivationSystem:
                 "health_gained": float
             }
         """
-        # 计算修炼tick内获得的气血和灵力
-        spirit_gained = player.static_spirit_gain_speed * delta_seconds
-        health_gained = CultivationSystem.calculate_health_regen_per_second(player, spell_system) * delta_seconds
+        effective_seconds = int(max(0, floor(float(delta_seconds))))
+        if effective_seconds <= 0:
+            return {
+                "spirit_gained": 0.0,
+                "health_gained": 0.0,
+                "used_count_gained": 0
+            }
+
+        # 修炼收益按整秒结算
+        spirit_gained = player.static_spirit_gain_speed * effective_seconds
+        health_gained = CultivationSystem.calculate_health_regen_per_second(player, spell_system) * effective_seconds
         
         actual_spirit = player.add_spirit_energy(spirit_gained)
         actual_health = player.add_health(health_gained)
@@ -79,7 +88,7 @@ class CultivationSystem:
         # 已装备的第一个吐纳术法，熟练度增加
         if len(spell_system.equipped_spells[SpellData.SPELL_TYPE_BREATHING]) > 0:
             spell_id = spell_system.equipped_spells[SpellData.SPELL_TYPE_BREATHING][0]
-            used_count_gained = spell_system.add_spell_use_count(spell_id, round(delta_seconds, 0))
+            used_count_gained = spell_system.add_spell_use_count(spell_id, effective_seconds)
         
         return {
             "spirit_gained": actual_spirit,
@@ -110,7 +119,8 @@ class CultivationSystem:
         spirit_theoretical = player.static_spirit_gain_speed * offline_seconds
         actual_spirit = player.add_spirit_energy(spirit_theoretical)
         
-        spirit_stones = int(offline_seconds / 60)
+        # 离线灵石：每 5 分钟结算 1 个
+        spirit_stones = int(offline_seconds / 300)
         if spirit_stones > 0:
             inventory_system.add_item("spirit_stone", spirit_stones)
         

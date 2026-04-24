@@ -1,5 +1,5 @@
-from unit_test.support.db_support import set_cultivation_elapsed_seconds
-from unit_test.support.smoke_flows import get_breakthrough_preset_items
+from unit_test.support.DbSupport import set_cultivation_elapsed_seconds
+from unit_test.support.SmokeFlows import get_breakthrough_preset_items
 
 
 def test_cultivation_success_and_caps(reset_client_state):
@@ -12,7 +12,7 @@ def test_cultivation_success_and_caps(reset_client_state):
     assert start["reason_code"] == "CULTIVATION_START_SUCCEEDED"
 
     set_cultivation_elapsed_seconds(reset_client_state.account_id, 3.0)
-    report = reset_client_state.cultivation_report(3)
+    report = reset_client_state.cultivation_report(3.0)
     assert report["success"] is True
     assert report["reason_code"] == "CULTIVATION_REPORT_SUCCEEDED"
 
@@ -43,7 +43,7 @@ def test_cultivation_blockers_and_anticheat(reset_client_state):
     assert alchemy_block["reason_code"] == "CULTIVATION_START_BLOCKED_BY_ALCHEMY"
 
     reset_client_state.reset_account()
-    report_not_active = reset_client_state.cultivation_report(1)
+    report_not_active = reset_client_state.cultivation_report(1.0)
     assert report_not_active["success"] is False
     assert report_not_active["reason_code"] == "CULTIVATION_REPORT_NOT_ACTIVE"
 
@@ -52,13 +52,13 @@ def test_cultivation_blockers_and_anticheat(reset_client_state):
     assert stop_not_active["reason_code"] == "CULTIVATION_STOP_NOT_ACTIVE"
 
     reset_client_state.cultivation_start()
-    invalid_report = reset_client_state.cultivation_report(5)
+    invalid_report = reset_client_state.cultivation_report(5.0)
     assert invalid_report["success"] is False
     assert invalid_report["reason_code"] == "CULTIVATION_REPORT_TIME_INVALID"
     assert int(invalid_report["reason_data"]["invalid_report_count"]) == 1
 
     for _ in range(9):
-        invalid_report = reset_client_state.cultivation_report(5)
+        invalid_report = reset_client_state.cultivation_report(5.0)
     assert invalid_report["success"] is False
     assert invalid_report["reason_code"] == "CULTIVATION_REPORT_TIME_INVALID"
     assert int(invalid_report["reason_data"]["invalid_report_count"]) == 10
@@ -66,6 +66,32 @@ def test_cultivation_blockers_and_anticheat(reset_client_state):
 
     kicked = reset_client_state.cultivation_stop()
     assert kicked.get("detail") == "KICKED_OUT"
+
+
+def test_cultivation_carry_seconds_accumulates_with_integer_effect_settlement(reset_client_state):
+    preset = reset_client_state.apply_preset("spell_ready")
+    assert preset["success"] is True
+
+    start = reset_client_state.cultivation_start()
+    assert start["success"] is True
+
+    set_cultivation_elapsed_seconds(reset_client_state.account_id, 1.5)
+    report_first = reset_client_state.cultivation_report(1.5)
+    assert report_first["success"] is True
+    assert report_first["reason_code"] == "CULTIVATION_REPORT_SUCCEEDED"
+    assert int(report_first["used_count_gained"]) == 1
+
+    state_first = reset_client_state.get_state_summary()["state_summary"]["player"]
+    assert abs(float(state_first.get("cultivation_effect_carry_seconds", 0.0)) - 0.5) < 1e-6
+
+    set_cultivation_elapsed_seconds(reset_client_state.account_id, 0.6)
+    report_second = reset_client_state.cultivation_report(0.6)
+    assert report_second["success"] is True
+    assert report_second["reason_code"] == "CULTIVATION_REPORT_SUCCEEDED"
+    assert int(report_second["used_count_gained"]) == 1
+
+    state_second = reset_client_state.get_state_summary()["state_summary"]["player"]
+    assert abs(float(state_second.get("cultivation_effect_carry_seconds", 0.0)) - 0.1) < 1e-6
 
 
 def test_breakthrough_success_and_missing_resources(reset_client_state):
@@ -100,6 +126,20 @@ def test_inventory_use_paths(reset_client_state):
     assert gift["success"] is True
     assert gift["reason_code"] == "INVENTORY_USE_GIFT_SUCCEEDED"
     assert gift["reason_data"]["contents"]
+
+    starter_gift = reset_client_state.inventory_use("starter_pack")
+    assert starter_gift["success"] is True
+    assert starter_gift["reason_code"] == "INVENTORY_USE_GIFT_SUCCEEDED"
+
+    starter_pack_2_locked = reset_client_state.inventory_use("starter_pack_2")
+    assert starter_pack_2_locked["success"] is False
+    assert starter_pack_2_locked["reason_code"] == "INVENTORY_USE_REQUIREMENT_NOT_MET"
+
+    promote = reset_client_state.set_player_state(realm="炼气期", realm_level=5)
+    assert promote["success"] is True
+    starter_pack_2_open = reset_client_state.inventory_use("starter_pack_2")
+    assert starter_pack_2_open["success"] is True
+    assert starter_pack_2_open["reason_code"] == "INVENTORY_USE_GIFT_SUCCEEDED"
 
     health = reset_client_state.inventory_use("health_pill")
     assert health["success"] is True
@@ -147,8 +187,6 @@ def test_inventory_misc_endpoints(reset_client_state):
     assert inventory_list["reason_code"] == "INVENTORY_LIST_SUCCEEDED"
     assert "inventory" in inventory_list
 
-    last_result = {}
-    for _ in range(16):
-        last_result = reset_client_state.inventory_expand()
+    last_result = reset_client_state.inventory_expand()
     assert last_result["success"] is False
     assert last_result["reason_code"] == "INVENTORY_EXPAND_CAPACITY_MAX"

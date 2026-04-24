@@ -21,7 +21,7 @@
 
 ### 通用响应格式
 
-#### 成功响应
+#### 成功响应（仅历史低容量存档可能触发）
 
 ```json
 {
@@ -196,11 +196,12 @@
       "health": 50.0,
       "spirit_energy": 0.0,
       "is_cultivating": false,
-      "last_cultivation_report_time": 0.0
+      "last_cultivation_report_time": 0.0,
+      "cultivation_effect_carry_seconds": 0.0
     },
     "inventory": {
       "slots": {},
-      "capacity": 50
+      "capacity": 40
     },
     "spell_system": {
       "slot_limits": {
@@ -527,11 +528,12 @@
       "health": 50.0,
       "spirit_energy": 0.0,
       "is_cultivating": false,
-      "last_cultivation_report_time": 0.0
+      "last_cultivation_report_time": 0.0,
+      "cultivation_effect_carry_seconds": 0.0
     },
     "inventory": {
       "slots": {},
-      "capacity": 50
+      "capacity": 40
     },
     "spell_system": {
       "slot_limits": {
@@ -645,6 +647,7 @@
 - **说明**：
   - 离线时间小于等于 60 秒时，不发放奖励
   - 离线时间大于 4 小时时，按 14400 秒（4 小时）结算奖励
+  - 灵石奖励按每 300 秒发放 1 个（即 5 分钟 1 个）
 
 #### 成功响应（有奖励）
 
@@ -839,7 +842,7 @@
 | ------------ | ------ | ---- | ----------------------------- |
 | operation_id | string | 是   | 客户端生成的UUID              |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| count        | number | 是   | 修炼次数（秒数）              |
+| elapsed_seconds | number | 是 | 本次累计上报的修炼秒数         |
 
 #### 成功响应
 
@@ -855,6 +858,12 @@
   "used_count_gained": 5
 }
 ```
+
+#### 结算规则
+
+- 客户端可上报小数秒（例如 `5.3`）。
+- 服务端按整秒结算修炼效果：`floor(carry + elapsed_seconds)`。
+- 未满 1 秒部分会累积到 `player.cultivation_effect_carry_seconds`，用于下一次 report 继续结算。
 
 #### 失败响应（未在修炼状态）
 
@@ -880,9 +889,9 @@
   "timestamp": 1234567890,
   "reason_code": "CULTIVATION_REPORT_TIME_INVALID",
   "reason_data": {
-    "reported_count": 5,
-    "actual_interval": 0.2,
-    "max_acceptable_count": 0.22,
+    "reported_elapsed_seconds": 5.0,
+    "actual_interval_seconds": 0.2,
+    "max_acceptable_elapsed_seconds": 0.22,
     "invalid_report_count": 3,
     "kicked_out": false,
     "kick_threshold": 10
@@ -1086,6 +1095,7 @@
 - `INVENTORY_USE_ITEM_NOT_FOUND`
 - `INVENTORY_USE_ITEM_NOT_ENOUGH`
 - `INVENTORY_USE_ITEM_NOT_USABLE`
+- `INVENTORY_USE_REQUIREMENT_NOT_MET`
 - `INVENTORY_USE_EFFECT_INVALID`
 - `INVENTORY_USE_UNLOCK_SPELL_INVALID`
 - `INVENTORY_USE_UNLOCK_RECIPE_INVALID`
@@ -1098,10 +1108,12 @@
 - `used_count`：本次实际消耗数量
 - `effect`：结构化效果对象，客户端据此生成提示文案
 - `contents`：礼包/开包奖励内容，结构为 `{item_id: count}`
+- `requirement`：条件不足时返回的结构化门槛信息（如 `realm_min`）
 
 #### 特殊失败语义
 
 - `INVENTORY_USE_ALREADY_USED`：一次性解锁类物品已被消耗过，客户端应基于 `item_id` 输出统一提示，例如“xx已经使用过了，无法重复使用”
+- `INVENTORY_USE_REQUIREMENT_NOT_MET`：物品使用条件不足（例如新手礼包等级门槛），客户端应基于 `requirement` 生成提示
 - `INVENTORY_USE_SYSTEM_ERROR`：服务端依赖缺失或物品配置异常导致的内部错误，客户端应输出通用失败提示，不应暴露服务端内部细节
 
 #### `effect.type` 枚举
@@ -1226,7 +1238,7 @@
   "timestamp": 1234567890,
   "reason_code": "INVENTORY_EXPAND_SUCCEEDED",
   "reason_data": {
-    "new_capacity": 60
+    "new_capacity": 40
   }
 }
 ```
@@ -1240,15 +1252,15 @@
   "timestamp": 1234567890,
   "reason_code": "INVENTORY_EXPAND_CAPACITY_MAX",
   "reason_data": {
-    "new_capacity": 200
+    "new_capacity": 40
   }
 }
 ```
 
 **说明**：
-- 每次扩容增加10格容量
-- 最大容量为200格
-- 达到最大容量时返回失败
+- 当前配置：初始容量40格，最大容量40格
+- 因此常规情况下调用会返回 `INVENTORY_EXPAND_CAPACITY_MAX`
+- 若存在历史低容量存档，扩容会按步长补到40格
 
 #### `reason_code` 枚举
 
@@ -1277,7 +1289,7 @@
       "0": {"id": "health_pill", "count": 5},
       "1": {"id": "spirit_pill", "count": 3}
     },
-    "capacity": 50
+    "capacity": 40
   }
 }
 ```
@@ -2320,6 +2332,7 @@
 | spirit_energy                | number  | 灵气值             |
 | is_cultivating               | boolean | 是否在修炼状态     |
 | last_cultivation_report_time | number  | 上次上报修炼时间戳 |
+| cultivation_effect_carry_seconds | number  | 修炼效果未满整秒余量 |
 
 ### 9.3 inventory 字段
 
@@ -2502,9 +2515,9 @@
 
 ### 10.5 测试礼包规则
 
-- `test_pack` 只对测试账号发放
-- 普通账号初始化不再自动获得测试礼包
-- 测试账号首次初始化、`reset_account`、`grant_test_pack` 时会获得测试礼包
+- 所有账号初始化都会自动获得 `test_pack`
+- `reset_account` 默认会补发 1 个测试礼包
+- `grant_test_pack` 可用于额外补发测试礼包
 - 测试礼包主要用于人工验收，不作为自动化测试的基础前置
 
 ---
@@ -2538,14 +2551,25 @@
 {
   "success": true,
   "reason_code": "HERB_POINTS_SUCCEEDED",
-  "reason_data": {},
+  "reason_data": {
+    "herb_gathering_level": 2,
+    "efficiency_bonus_rate": 0.1,
+    "success_rate_bonus": 0.04
+  },
   "points_config": {
     "point_low_yield": {
       "id": "point_low_yield",
       "name": "山脚灵草坡",
       "description": "地势平缓，灵草分布稀疏但稳定。",
-      "report_interval_seconds": 5.0,
-      "success_rate": 0.9,
+      "base_report_interval_seconds": 5.0,
+      "report_interval_seconds": 4.55,
+      "effective_report_interval_seconds": 4.55,
+      "base_success_rate": 0.9,
+      "success_rate": 0.94,
+      "effective_success_rate": 0.94,
+      "herb_gathering_level": 2,
+      "efficiency_bonus_rate": 0.1,
+      "success_rate_bonus": 0.04,
       "drops": [
         { "item_id": "mat_herb", "min": 1, "max": 2, "chance": 1.0 },
         { "item_id": "spirit_liquid", "min": 1, "max": 1, "chance": 0.08 }
@@ -2590,7 +2614,12 @@
   "timestamp": 1234567890,
   "reason_code": "HERB_REPORT_SUCCEEDED",
   "reason_data": {
-    "point_id": "point_low_yield"
+    "point_id": "point_low_yield",
+    "herb_gathering_level": 2,
+    "efficiency_bonus_rate": 0.1,
+    "success_rate_bonus": 0.04,
+    "effective_interval_seconds": 4.55,
+    "effective_success_rate": 0.94
   },
   "point_id": "point_low_yield",
   "success_roll": true,

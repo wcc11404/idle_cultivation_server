@@ -22,8 +22,8 @@ from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.spell.SpellData import SpellData
 from app.modules.spell.SpellSystem import SpellSystem
 
-from unit_test.presets.test_presets import build_preset
-from unit_test.support.test_support_config import TEST_PACK_ITEM_ID, TEST_USERNAME
+from unit_test.presets.TestPresets import build_preset
+from unit_test.support.TestSupportConfig import TEST_PACK_ITEM_ID, TEST_USERNAME
 
 
 def is_test_account(ctx: GameContext) -> bool:
@@ -49,6 +49,7 @@ def hydrate_context_from_data(ctx: GameContext, db_data: Dict[str, Any]) -> None
     )
     ctx.player.is_cultivating = bool(player_data.get("is_cultivating", False))
     ctx.player.last_cultivation_report_time = float(player_data.get("last_cultivation_report_time", 0.0))
+    ctx.player.cultivation_effect_carry_seconds = float(player_data.get("cultivation_effect_carry_seconds", 0.0))
 
 
 def build_state_summary(ctx: GameContext) -> Dict[str, Any]:
@@ -219,6 +220,8 @@ def set_runtime_state(
     if is_cultivating is not None:
         ctx.player.is_cultivating = bool(is_cultivating)
         ctx.player.last_cultivation_report_time = time.time() if ctx.player.is_cultivating else 0.0
+        if not ctx.player.is_cultivating:
+            ctx.player.cultivation_effect_carry_seconds = 0.0
 
     if is_alchemizing is not None:
         ctx.alchemy_system.is_alchemizing = bool(is_alchemizing)

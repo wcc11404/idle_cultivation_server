@@ -16,16 +16,13 @@ from app.modules.herb.HerbGatherSystem import HerbGatherSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.cultivation.RealmData import RealmData
 from app.modules.account.AccountSystem import AccountSystem
-from unit_test.support.test_support_config import (
-    HUMAN_TEST_HERB_UNLOCK_ITEM_ID,
-    HUMAN_TEST_USERNAME,
+from unit_test.support.TestSupportConfig import (
     TEST_PACK_ITEM_ID,
-    TEST_USERNAMES,
 )
 
 
 def should_grant_test_pack(username: str) -> bool:
-    return str(username) in TEST_USERNAMES
+    return True
 
 
 def get_initial_player_data(account_id: str, username: str = "", include_test_pack: Optional[bool] = None) -> dict:
@@ -65,9 +62,6 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
     inventory_system.add_item("starter_pack", 1)
     if include_test_pack:
         inventory_system.add_item(TEST_PACK_ITEM_ID, 1)
-    if str(username) == HUMAN_TEST_USERNAME:
-        inventory_system.add_item(HUMAN_TEST_HERB_UNLOCK_ITEM_ID, 1)
-    
     return {
         "account_info": account_system.to_dict(),
         "player": player_data.to_dict(),

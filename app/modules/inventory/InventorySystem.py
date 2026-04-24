@@ -7,6 +7,7 @@
 from typing import Dict, Any, List, TYPE_CHECKING
 
 from .ItemData import ItemData
+from ..cultivation.RealmData import RealmData
 
 if TYPE_CHECKING:
     from .player_data import PlayerSystem
@@ -17,8 +18,8 @@ if TYPE_CHECKING:
 class InventorySystem:
     """背包系统"""
     
-    DEFAULT_SIZE = 50
-    MAX_SIZE = 200
+    DEFAULT_SIZE = 40
+    MAX_SIZE = 40
     EXPAND_STEP = 10
     
     def __init__(self):
@@ -302,6 +303,20 @@ class InventorySystem:
         
         # 宝箱/礼包类型
         elif item_type == ItemData.ITEM_TYPE_GIFT:
+            requirement_check = self._check_item_requirement(item_id, player_data)
+            if not requirement_check.get("ok", True):
+                return self._build_use_item_result(
+                    False,
+                    "INVENTORY_USE_REQUIREMENT_NOT_MET",
+                    item_id,
+                    0,
+                    {
+                        "type": "requirement_not_met",
+                        "requirement": requirement_check.get("requirement", {}),
+                        "current_realm": str(player_data.realm),
+                        "current_level": int(player_data.realm_level),
+                    },
+                )
             return self._use_gift(item_id)
         
         # 解锁术法类型
@@ -469,6 +484,19 @@ class InventorySystem:
             "type": "unlock_furnace",
             "furnace_id": item_id
         })
+
+    def _check_item_requirement(self, item_id: str, player_data: 'PlayerSystem') -> Dict[str, Any]:
+        requirement = ItemData.get_item_requirement(item_id)
+        if not requirement:
+            return {"ok": True, "requirement": {}}
+
+        realm_min = int(requirement.get("realm_min", 0))
+        if realm_min > 0:
+            total_realm_level = RealmData.get_total_realm_level(str(player_data.realm), int(player_data.realm_level))
+            if total_realm_level < realm_min:
+                return {"ok": False, "requirement": requirement}
+
+        return {"ok": True, "requirement": requirement}
     
     def check_items_enough(self, items: Dict[str, int]) -> bool:
         """

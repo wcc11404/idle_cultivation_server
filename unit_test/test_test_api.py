@@ -54,7 +54,7 @@ def test_set_inventory_items_exact_and_remove_zero(reset_client_state):
 
 def test_set_inventory_items_rejects_capacity_overflow(reset_client_state):
     max_stack = ItemData.get_max_stack("spell_basic_breathing")
-    result = reset_client_state.set_inventory_items({"spell_basic_breathing": max_stack * 51})
+    result = reset_client_state.set_inventory_items({"spell_basic_breathing": max_stack * 41})
     assert result["success"] is False
     assert result["reason_code"] == "TEST_SET_INVENTORY_ITEMS_CAPACITY_EXCEEDED"
 

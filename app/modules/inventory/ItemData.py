@@ -86,6 +86,13 @@ class ItemData:
         """获取物品内容（宝箱/礼包）"""
         item_info = cls.get_item_info(item_id)
         return item_info.get("content", {})
+
+    @classmethod
+    def get_item_requirement(cls, item_id: str) -> dict:
+        """获取物品使用需求配置"""
+        item_info = cls.get_item_info(item_id)
+        requirement = item_info.get("requirement", {})
+        return requirement if isinstance(requirement, dict) else {}
     
     @classmethod
     def get_item_icon(cls, item_id: str) -> str:

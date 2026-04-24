@@ -2,7 +2,7 @@ from app.modules.lianli.AreasData import AreasData
 from app.modules.cultivation.RealmData import RealmData
 from app.modules.inventory.InventorySystem import InventorySystem
 from app.modules.player.PlayerSystem import PlayerSystem
-from unit_test.support.db_support import set_alchemy_elapsed_seconds, set_offline_seconds
+from unit_test.support.DbSupport import set_alchemy_elapsed_seconds, set_offline_seconds
 
 
 def test_test_api_validation_edges(reset_client_state):

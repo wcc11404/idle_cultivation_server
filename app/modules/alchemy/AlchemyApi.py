@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import (
+from app.schemas.Game import (
     AlchemyRecipesResponse,
     AlchemyStartRequest, AlchemyStartResponse,
     AlchemyReportRequest, AlchemyReportResponse,

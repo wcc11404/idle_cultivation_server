@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import json
 
-from unit_test.support.db_support import (
+from unit_test.support.DbSupport import (
     set_alchemy_elapsed_seconds,
     set_battle_elapsed_seconds,
     set_cultivation_elapsed_seconds,
 )
-from unit_test.support.test_api_client import TestApiClient
+from unit_test.support.TestApiClient import TestApiClient
 
 
 TARGET_REALM = "筑基期"
@@ -195,7 +195,7 @@ def main() -> int:
     print_step("开始修炼并测试防作弊")
     expect_success(client.cultivation_start(), "cultivation_start", "CULTIVATION_START_SUCCEEDED")
     expect_failure(
-        client.cultivation_report(5),
+        client.cultivation_report(5.0),
         "cultivation_report immediate",
         "CULTIVATION_REPORT_TIME_INVALID",
     )
@@ -214,7 +214,7 @@ def main() -> int:
     print_step("修炼 5 秒后上报")
     set_cultivation_elapsed_seconds(client.account_id, 5.0)
     report_result = expect_success(
-        client.cultivation_report(5),
+        client.cultivation_report(5.0),
         "cultivation_report valid",
         "CULTIVATION_REPORT_SUCCEEDED",
     )

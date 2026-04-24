@@ -62,6 +62,7 @@ def _build_game_context(account: Account, player_data: PlayerData) -> GameContex
     )
     player.is_cultivating = player_data_dict.get("is_cultivating", False)
     player.last_cultivation_report_time = player_data_dict.get("last_cultivation_report_time", 0.0)
+    player.cultivation_effect_carry_seconds = float(player_data_dict.get("cultivation_effect_carry_seconds", 0.0))
 
     return GameContext(
         account=account,

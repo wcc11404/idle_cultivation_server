@@ -405,6 +405,19 @@ class SpellSystem:
         level_data = SpellData.get_spell_level_data(spell_id, level)
         effect = level_data.get("effect", {})
         return max(float(effect.get("efficiency_rate", 0.0)), 0.0)
+
+    def get_herb_gather_success_rate_bonus(self) -> float:
+        """获取草药采集成功率加成（0.0 表示无加成）。"""
+        spell_id = "herb_gathering"
+        spell_info = self.player_spells.get(spell_id, {})
+        if not spell_info.get("obtained", False):
+            return 0.0
+        level = int(spell_info.get("level", 0))
+        if level <= 0:
+            return 0.0
+        level_data = SpellData.get_spell_level_data(spell_id, level)
+        effect = level_data.get("effect", {})
+        return max(float(effect.get("success_rate_bonus", 0.0)), 0.0)
     
     def trigger_opening_spell(self) -> List[Dict[str, Any]]:
         """

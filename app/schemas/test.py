@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from app.schemas.base import BaseRequest, BaseResponse
+from app.schemas.Base import BaseRequest, BaseResponse
 
 
 class TestActionResponse(BaseResponse):

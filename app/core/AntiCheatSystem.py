@@ -18,20 +18,20 @@ class AntiCheatSystem:
     def validate_cultivation_report(
         current_time: float,
         last_report_time: float,
-        reported_count: int,
+        reported_elapsed_seconds: float,
         tolerance: float = 0.1
     ) -> Tuple[bool, str]:
         """
         验证修炼上报是否合理
         
         规则：
-        - 如果上报次数 < 实际时间差：合理（不管小多少）
-        - 如果上报次数 > 实际时间差 * (1 + tolerance)：不合理（超过容差）
+        - 如果上报秒数 <= 实际时间差 * (1 + tolerance)：合理
+        - 如果上报秒数 > 实际时间差 * (1 + tolerance)：不合理（超过容差）
         
         Args:
             current_time: 当前时间戳（秒）
             last_report_time: 上次上报时间戳（秒）
-            reported_count: 本次上报的修炼次数
+            reported_elapsed_seconds: 本次上报的修炼累计秒数
             tolerance: 容差比例（默认 0.1 即 10%）
         
         Returns:
@@ -43,8 +43,8 @@ class AntiCheatSystem:
         actual_interval = current_time - last_report_time
         max_acceptable = actual_interval * (1 + tolerance)
         
-        if reported_count > max_acceptable:
-            reason = f"上报次数异常：上报{reported_count}次，实际间隔{actual_interval:.1f}秒，最大允许{max_acceptable:.1f}次"
+        if reported_elapsed_seconds > max_acceptable:
+            reason = f"上报秒数异常：上报{reported_elapsed_seconds:.2f}秒，实际间隔{actual_interval:.2f}秒，最大允许{max_acceptable:.2f}秒"
             return False, reason
         
         return True, "验证通过"

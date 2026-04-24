@@ -10,7 +10,7 @@ import asyncpg
 import requests
 
 from app.core.ServerConfig import settings
-from unit_test.support.test_support_config import (
+from unit_test.support.TestSupportConfig import (
     HUMAN_TEST_USERNAME,
     TEST_PASSWORD,
     TEST_USERNAME,

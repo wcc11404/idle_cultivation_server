@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.InitPlayerInfo import reset_player_data_record
 from app.core.Dependencies import GameContext, get_game_context, get_write_game_context, get_token_info
 from app.core.Logger import logger
-from app.schemas.test import (
+from app.schemas.Test import (
     ApplyPresetRequest,
     GrantTestPackRequest,
     ResetTestAccountRequest,
@@ -23,8 +23,8 @@ from app.schemas.test import (
     TestActionResponse,
     UnlockContentRequest,
 )
-from unit_test.presets.test_presets import get_supported_presets
-from unit_test.support.test_state_support import (
+from unit_test.presets.TestPresets import get_supported_presets
+from unit_test.support.TestStateSupport import (
     apply_preset,
     build_state_summary,
     grant_test_pack,

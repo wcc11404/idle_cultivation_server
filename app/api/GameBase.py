@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import (
+from app.schemas.Game import (
     SaveGameRequest, SaveGameResponse, LoadGameResponse,
     ClaimOfflineRewardRequest, ClaimOfflineRewardResponse,
     RankResponse, RankItem
@@ -166,8 +166,8 @@ async def claim_offline_reward(
     spirit_gain_speed = ctx.player.static_spirit_gain_speed if ctx.player else 1.0
     total_spirit = spirit_gain_speed * offline_seconds
     
-    stone_per_minute = 1.0
-    total_stone = int(stone_per_minute * (offline_seconds / 60))
+    # 离线灵石：每 5 分钟结算 1 个
+    total_stone = int(offline_seconds / 300)
     
     total_spirit = round(float(total_spirit), 2)
     if total_spirit.is_integer():

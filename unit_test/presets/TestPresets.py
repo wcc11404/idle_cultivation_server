@@ -9,7 +9,7 @@ from app.modules.alchemy.RecipeData import RecipeData
 from app.modules.lianli.AreasData import AreasData
 from app.modules.spell.SpellData import SpellData
 
-from unit_test.support.test_support_config import (
+from unit_test.support.TestSupportConfig import (
     PRESET_ALCHEMY_READY,
     PRESET_BREAKTHROUGH_READY,
     PRESET_FULL_UNLOCK,

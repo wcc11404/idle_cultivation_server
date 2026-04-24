@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.game import (
+from app.schemas.Game import (
     BreakthroughRequest, BreakthroughResponse,
     CultivationStartRequest, CultivationStartResponse,
     CultivationReportRequest, CultivationReportResponse,
@@ -21,6 +21,7 @@ from app.modules import PlayerSystem, CultivationSystem, InventorySystem, SpellS
 from datetime import datetime, timezone
 import time
 import json
+from math import floor
 
 router = APIRouter()
 
@@ -174,7 +175,7 @@ async def report_cultivation(
     is_valid, reason = AntiCheatSystem.validate_cultivation_report(
         current_time=current_time,
         last_report_time=ctx.player.last_cultivation_report_time,
-        reported_count=request.count,
+        reported_elapsed_seconds=request.elapsed_seconds,
         tolerance=tolerance
     )
     
@@ -194,9 +195,9 @@ async def report_cultivation(
             timestamp=request.timestamp,
             reason_code="CULTIVATION_REPORT_TIME_INVALID",
             reason_data={
-                "reported_count": request.count,
-                "actual_interval": round(current_time - ctx.player.last_cultivation_report_time, 2),
-                "max_acceptable_count": round((current_time - ctx.player.last_cultivation_report_time) * (1 + tolerance), 2),
+                "reported_elapsed_seconds": round(float(request.elapsed_seconds), 3),
+                "actual_interval_seconds": round(current_time - ctx.player.last_cultivation_report_time, 3),
+                "max_acceptable_elapsed_seconds": round((current_time - ctx.player.last_cultivation_report_time) * (1 + tolerance), 3),
                 "invalid_report_count": anti_cheat_result.get("invalid_count", 0),
                 "kicked_out": bool(anti_cheat_result.get("kicked_out", False)),
                 "kick_threshold": anti_cheat_result.get("threshold", 10),
@@ -206,18 +207,24 @@ async def report_cultivation(
             used_count_gained=0
         )
     else:
+        carry_before = float(getattr(ctx.player, "cultivation_effect_carry_seconds", 0.0))
+        total_elapsed_for_effect = carry_before + float(request.elapsed_seconds)
+        whole_seconds = int(floor(total_elapsed_for_effect))
+        carry_after = round(max(0.0, total_elapsed_for_effect - whole_seconds), 6)
         logger.info(
             f"[DEBUG] cultivation_report before - account_id: {ctx.account.id} "
             f"health={ctx.player.health} static_max_health={ctx.player.static_max_health} "
             f"spirit={ctx.player.spirit_energy} static_max_spirit={ctx.player.static_max_spirit_energy} "
             f"spell_bonuses={ctx.spell_system.get_attribute_bonuses() if ctx.spell_system else {}} "
-            f"reported_count={request.count}"
+            f"reported_elapsed_seconds={request.elapsed_seconds} "
+            f"carry_before={carry_before} whole_seconds={whole_seconds}"
         )
         result = CultivationSystem.process_cultivation_tick(
             player=ctx.player,
-            delta_seconds=float(request.count),
+            delta_seconds=float(whole_seconds),
             spell_system=ctx.spell_system
         )
+        ctx.player.cultivation_effect_carry_seconds = carry_after
         await AntiCheatSystem.reset_suspicious_operations(
             account_id=str(ctx.account.id),
             account_system=ctx.account_system,
@@ -227,7 +234,8 @@ async def report_cultivation(
             f"[DEBUG] cultivation_report after - account_id: {ctx.account.id} "
             f"health={ctx.player.health} static_max_health={ctx.player.static_max_health} "
             f"spirit={ctx.player.spirit_energy} static_max_spirit={ctx.player.static_max_spirit_energy} "
-            f"spirit_gained={result['spirit_gained']} health_gained={result['health_gained']}"
+            f"spirit_gained={result['spirit_gained']} health_gained={result['health_gained']} "
+            f"carry_after={carry_after}"
         )
         
         ctx.player.last_cultivation_report_time = current_time

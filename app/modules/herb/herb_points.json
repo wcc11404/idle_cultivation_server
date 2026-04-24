@@ -25,7 +25,7 @@
       "id": "point_high_yield",
       "name": "深谷灵潮地",
       "description": "灵气汇聚之地，灵草产出更高。",
-      "report_interval_seconds": 6.0,
+      "report_interval_seconds": 8.0,
       "success_rate": 0.86,
       "drops": [
         {

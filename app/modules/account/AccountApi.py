@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.schemas.auth import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse, RefreshResponse, ChangePasswordRequest, ChangePasswordResponse, ChangeNicknameRequest, ChangeNicknameResponse, ChangeAvatarRequest, ChangeAvatarResponse, LogoutResponse
+from app.schemas.Auth import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse, RefreshResponse, ChangePasswordRequest, ChangePasswordResponse, ChangeNicknameRequest, ChangeNicknameResponse, ChangeAvatarRequest, ChangeAvatarResponse, LogoutResponse
 from app.db.Models import Account, PlayerData
 from app.core.Security import verify_password, get_password_hash, create_access_token, decode_token, security
 from app.core.ServerConfig import settings
@@ -279,6 +279,7 @@ async def login(request: LoginRequest):
         )
         login_player.is_cultivating = bool(player_dict.get("is_cultivating", False))
         login_player.last_cultivation_report_time = float(player_dict.get("last_cultivation_report_time", 0.0))
+        login_player.cultivation_effect_carry_seconds = float(player_dict.get("cultivation_effect_carry_seconds", 0.0))
         login_alchemy = AlchemySystem.from_dict(player_data.data.get("alchemy_system", {}))
         login_lianli = LianliSystem.from_dict(player_data.data.get("lianli_system", {}))
         login_herb = HerbGatherSystem.from_dict(player_data.data.get("herb_system", {}))

@@ -4,7 +4,7 @@ from typing import Dict, List
 from app.core.InitPlayerInfo import create_initial_player_data_record
 from app.core.Security import get_password_hash, verify_password
 from app.db.Models import Account, PlayerData
-from unit_test.support.test_support_config import (
+from unit_test.support.TestSupportConfig import (
     HUMAN_TEST_USERNAME,
     TEST_PASSWORD,
     TEST_USERNAME,

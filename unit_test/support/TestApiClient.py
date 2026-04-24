@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import requests
 
-from unit_test.support.test_support_config import TEST_PASSWORD, TEST_USERNAME
+from unit_test.support.TestSupportConfig import TEST_PASSWORD, TEST_USERNAME
 
 BASE_URL = "http://localhost:8444/api"
 
@@ -146,8 +146,8 @@ class TestApiClient:
     def cultivation_start(self) -> Dict[str, Any]:
         return self._post("/game/player/cultivation/start", self._request_params())
 
-    def cultivation_report(self, count: int) -> Dict[str, Any]:
-        payload = {"count": count, **self._request_params()}
+    def cultivation_report(self, elapsed_seconds: float) -> Dict[str, Any]:
+        payload = {"elapsed_seconds": float(elapsed_seconds), **self._request_params()}
         return self._post("/game/player/cultivation/report", payload)
 
     def cultivation_stop(self) -> Dict[str, Any]:

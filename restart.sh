@@ -3,8 +3,15 @@
 # 启动服务端脚本
 echo "启动 Idle Cultivation Server..."
 
-# 激活虚拟环境
-source venv/bin/activate
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
+if [ ! -x "$VENV_PYTHON" ]; then
+    echo "未找到可执行解释器: $VENV_PYTHON"
+    echo "请先执行: bash setup_ubuntu.sh"
+    exit 1
+fi
 
 # 检查并启动 PostgreSQL 服务
 echo "检查 PostgreSQL 服务状态..."
@@ -57,9 +64,9 @@ if [ -n "$PID" ]; then
     echo "进程已终止"
 fi
 
-# 直接使用 uvicorn 命令启动，指定主机地址
+# 使用 venv 中的 Python 启动 uvicorn，避免 PATH/激活问题
 echo "启动 FastAPI 服务..."
-nohup uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload > server.log 2>&1 &
+nohup "$VENV_PYTHON" -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload > server.log 2>&1 &
 echo "服务已后台启动，日志输出到 server.log"
 echo "服务地址: http://0.0.0.0:$PORT"
 echo "API 文档: http://0.0.0.0:$PORT/api/docs"
