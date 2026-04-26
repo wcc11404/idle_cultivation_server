@@ -242,6 +242,11 @@ def test_lianli_error_edges(reset_client_state):
     simulate = reset_client_state.lianli_simulate("area_1")
     assert simulate["success"] is True
 
+    invalid_speed = reset_client_state.lianli_finish(1.5, 0)
+    assert invalid_speed["success"] is False
+    assert invalid_speed["reason_code"] == "LIANLI_FINISH_SPEED_INVALID"
+    assert invalid_speed["reason_data"]["available_speeds"] == [1.0]
+
     finish_cancel_before_action = reset_client_state.lianli_finish(1.0, -1)
     assert finish_cancel_before_action["success"] is True
     assert finish_cancel_before_action["reason_code"] == "LIANLI_FINISH_PARTIALLY_SETTLED"

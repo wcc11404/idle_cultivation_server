@@ -10,7 +10,7 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from app.core.Security import get_current_user, decode_token, security
 from app.db.Models import PlayerData, Account
-from app.modules import PlayerSystem, SpellSystem, InventorySystem, AlchemySystem, LianliSystem, HerbGatherSystem, AccountSystem
+from app.modules import PlayerSystem, SpellSystem, InventorySystem, AlchemySystem, LianliSystem, HerbGatherSystem, AccountSystem, TaskSystem
 from app.core.Logger import logger
 from app.core.WriteLock import begin_write_lock_by_account_id
 from dataclasses import dataclass
@@ -28,6 +28,7 @@ class GameContext:
     alchemy_system: AlchemySystem
     lianli_system: LianliSystem
     herb_system: HerbGatherSystem
+    task_system: TaskSystem
     account_system: AccountSystem
     
     def save(self):
@@ -38,6 +39,7 @@ class GameContext:
         self.db_data["alchemy_system"] = self.alchemy_system.to_dict()
         self.db_data["lianli_system"] = self.lianli_system.to_dict()
         self.db_data["herb_system"] = self.herb_system.to_dict()
+        self.db_data["task_system"] = self.task_system.to_dict()
         self.db_data["account_info"] = self.account_system.to_dict()
         self.player_data.data = copy.deepcopy(self.db_data)
 
@@ -50,6 +52,7 @@ def _build_game_context(account: Account, player_data: PlayerData) -> GameContex
     alchemy_system = AlchemySystem.from_dict(db_data.get("alchemy_system", {}))
     lianli_system = LianliSystem.from_dict(db_data.get("lianli_system", {}))
     herb_system = HerbGatherSystem.from_dict(db_data.get("herb_system", {}))
+    task_system = TaskSystem.from_dict(db_data.get("task_system", {}))
     account_system = AccountSystem.from_dict(db_data.get("account_info", {}))
 
     player_data_dict = db_data.get("player", {})
@@ -74,6 +77,7 @@ def _build_game_context(account: Account, player_data: PlayerData) -> GameContex
         alchemy_system=alchemy_system,
         lianli_system=lianli_system,
         herb_system=herb_system,
+        task_system=task_system,
         account_system=account_system
     )
 

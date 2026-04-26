@@ -38,10 +38,17 @@ async def use_item(
     result = ctx.inventory_system.use_item(request.item_id, ctx.player, ctx.spell_system, ctx.alchemy_system)
     
     if result["success"]:
+        if request.item_id in ("starter_pack", "starter_pack_1"):
+            ctx.task_system.add_progress("newbie_open_starter_pack_1", 1)
+        elif request.item_id == "starter_pack_2":
+            ctx.task_system.add_progress("newbie_open_starter_pack_2", 1)
+        elif request.item_id == "starter_pack_3":
+            ctx.task_system.add_progress("newbie_open_starter_pack_3", 1)
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
         ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
+        ctx.db_data["task_system"] = ctx.task_system.to_dict()
         
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)

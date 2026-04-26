@@ -196,6 +196,13 @@ class TestApiClient:
     def herb_stop(self) -> Dict[str, Any]:
         return self._post("/game/herb/stop", self._request_params())
 
+    def task_list(self) -> Dict[str, Any]:
+        return self._get("/game/task/list")
+
+    def task_claim(self, task_id: str) -> Dict[str, Any]:
+        payload = {"task_id": task_id, **self._request_params()}
+        return self._post("/game/task/claim", payload)
+
     def spell_equip(self, spell_id: str) -> Dict[str, Any]:
         payload = {"spell_id": spell_id, **self._request_params()}
         return self._post("/game/spell/equip", payload)
@@ -218,6 +225,9 @@ class TestApiClient:
     def lianli_simulate(self, area_id: str) -> Dict[str, Any]:
         payload = {"area_id": area_id, **self._request_params()}
         return self._post("/game/lianli/simulate", payload)
+
+    def lianli_speed_options(self) -> Dict[str, Any]:
+        return self._get("/game/lianli/speed_options")
 
     def lianli_finish(self, speed: float = 1.0, index: int | None = 9999) -> Dict[str, Any]:
         payload = {"speed": speed, "index": index, **self._request_params()}

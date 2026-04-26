@@ -311,6 +311,9 @@ async def herb_report(
 
     if ctx.spell_system:
         ctx.spell_system.add_spell_use_count("herb_gathering")
+    ctx.task_system.add_progress("daily_herb_count", 1)
+    ctx.task_system.add_progress("newbie_herb_gather_10", 1)
+    ctx.task_system.add_progress("newbie_herb_gather_20", 1)
 
     ctx.herb_system.last_report_time = current_time
     await AntiCheatSystem.reset_suspicious_operations(
@@ -321,6 +324,7 @@ async def herb_report(
     ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
     ctx.db_data["herb_system"] = ctx.herb_system.to_dict()
     ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+    ctx.db_data["task_system"] = ctx.task_system.to_dict()
     ctx.db_data["account_info"] = ctx.account_system.to_dict()
     ctx.player_data.data = ctx.db_data
     ctx.player_data.last_online_at = datetime.now(timezone.utc)

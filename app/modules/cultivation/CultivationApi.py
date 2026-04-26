@@ -239,9 +239,12 @@ async def report_cultivation(
         )
         
         ctx.player.last_cultivation_report_time = current_time
+        if whole_seconds > 0:
+            ctx.task_system.add_progress("daily_cultivation_seconds", int(whole_seconds))
         
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+        ctx.db_data["task_system"] = ctx.task_system.to_dict()
         ctx.db_data["account_info"] = ctx.account_system.to_dict()
         
         ctx.player_data.data = ctx.db_data

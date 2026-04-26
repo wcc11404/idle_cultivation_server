@@ -1,6 +1,7 @@
 from unit_test.support.DbSupport import (
     set_alchemy_elapsed_seconds,
     set_battle_elapsed_seconds,
+    set_account_vip_days,
 )
 
 
@@ -76,6 +77,23 @@ def test_alchemy_endpoints(reset_client_state):
 
 
 def test_lianli_endpoints(reset_client_state):
+    speed_options = reset_client_state.lianli_speed_options()
+    assert speed_options["success"] is True
+    assert speed_options["reason_code"] == "LIANLI_SPEED_OPTIONS_SUCCEEDED"
+    assert speed_options["available_speeds"] == [1.0]
+
+    reset_client_state.set_player_state(realm="金丹期", realm_level=1, health=1200.0, spirit_energy=1200.0)
+    golden_core_options = reset_client_state.lianli_speed_options()
+    assert golden_core_options["success"] is True
+    assert golden_core_options["available_speeds"] == [1.0, 1.5]
+
+    reset_client_state.reset_account()
+    set_account_vip_days(reset_client_state.account_id, 7)
+    vip_options = reset_client_state.lianli_speed_options()
+    assert vip_options["success"] is True
+    assert vip_options["available_speeds"] == [1.0, 1.5, 2.0]
+
+    reset_client_state.reset_account()
     progress = reset_client_state.set_progress_state(
         tower_highest_floor=9,
         daily_dungeon_remaining_counts={"foundation_herb_cave": 2},

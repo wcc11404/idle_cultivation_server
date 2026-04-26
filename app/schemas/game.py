@@ -212,6 +212,12 @@ class LianliBattleResponse(BaseResponse):
     loot: list
 
 
+class LianliSpeedOptionsResponse(BaseResponse):
+    """历练倍速选项响应"""
+    available_speeds: list[float]
+    default_speed: float
+
+
 class LianliSettleRequest(BaseRequest):
     """历练战斗结算请求"""
     speed: float
@@ -282,3 +288,19 @@ class HerbStopRequest(BaseRequest):
 class HerbStopResponse(BaseResponse):
     """停止采集响应"""
     pass
+
+
+class TaskListResponse(BaseResponse):
+    """任务列表响应"""
+    daily_tasks: list[dict]
+    newbie_tasks: list[dict]
+
+
+class TaskClaimRequest(BaseRequest):
+    """领取任务奖励请求"""
+    task_id: str
+
+
+class TaskClaimResponse(BaseResponse):
+    """领取任务奖励响应"""
+    rewards_granted: dict

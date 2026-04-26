@@ -218,6 +218,13 @@ async def report_alchemy(
     )
     
     if result["success"]:
+        ctx.task_system.add_progress("daily_alchemy_count", 1)
+        if request.recipe_id == "foundation_pill" and int(result.get("success_count", 0)) > 0:
+            ctx.task_system.add_progress("newbie_craft_foundation_pill_once", 1)
+        if request.recipe_id == "health_pill":
+            health_pill_success_count = max(0, int(result.get("success_count", 0)))
+            if health_pill_success_count > 0:
+                ctx.task_system.add_progress("newbie_craft_health_pill_20", health_pill_success_count)
         await AntiCheatSystem.reset_suspicious_operations(
             account_id=str(ctx.account.id),
             account_system=ctx.account_system,
@@ -228,6 +235,7 @@ async def report_alchemy(
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         ctx.db_data["alchemy_system"] = ctx.alchemy_system.to_dict()
+        ctx.db_data["task_system"] = ctx.task_system.to_dict()
         ctx.db_data["account_info"] = ctx.account_system.to_dict()
         
         ctx.player_data.data = ctx.db_data

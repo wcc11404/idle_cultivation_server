@@ -14,6 +14,7 @@ from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.lianli.LianliSystem import LianliSystem
 from app.modules.herb.HerbGatherSystem import HerbGatherSystem
+from app.modules.task.TaskSystem import TaskSystem
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
@@ -267,6 +268,10 @@ async def login(request: LoginRequest):
             lianli_system = LianliSystem.from_dict(lianli_system_data)
             lianli_system.reset_daily_dungeons()
             player_data.data["lianli_system"] = lianli_system.to_dict()
+            task_system_data = player_data.data.get("task_system", {})
+            task_system = TaskSystem.from_dict(task_system_data)
+            task_system.reset_daily_state()
+            player_data.data["task_system"] = task_system.to_dict()
 
         player_dict = player_data.data.get("player", {})
         login_spell = SpellSystem.from_dict(player_data.data.get("spell_system", {}))

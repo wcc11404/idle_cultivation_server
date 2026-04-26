@@ -1935,7 +1935,40 @@
 
 ---
 
-### 7.2 战斗结算
+### 7.2 获取历练倍速选项
+
+- **接口地址**：`GET /api/game/lianli/speed_options`
+- **功能**：获取当前账号可用的历练倍速集合
+- **认证**：需要认证
+
+#### 成功响应
+
+```json
+{
+  "success": true,
+  "operation_id": "",
+  "timestamp": 1234567890,
+  "reason_code": "LIANLI_SPEED_OPTIONS_SUCCEEDED",
+  "reason_data": {},
+  "available_speeds": [1.0, 1.5],
+  "default_speed": 1.0
+}
+```
+
+#### `reason_code` 枚举
+
+- `LIANLI_SPEED_OPTIONS_SUCCEEDED`
+
+#### 说明
+
+- 默认可用倍速永远包含 `1.0`
+- 达到金丹境界后可用 `1.5`
+- VIP 可用 `1.0 / 1.5 / 2.0`
+- 服务端不记录客户端当前选中倍速，只在本接口和 `finish` 校验时动态判定
+
+---
+
+### 7.3 战斗结算
 
 - **接口地址**：`POST /api/game/lianli/finish`
 - **功能**：结算战斗（更新数据库）
@@ -1947,7 +1980,7 @@
 | ------------ | ------ | ---- | ----------------------------------------- |
 | operation_id | string | 是   | 客户端生成的UUID                          |
 | timestamp    | number | 是   | 客户端触发操作的时间戳（秒）              |
-| speed        | number | 是   | 播放倍速（1.0/2.0等）                    |
+| speed        | number | 是   | 播放倍速（必须属于当前账号可用倍速集合） |
 | index        | number | 否   | 结算索引：不传=完整结算；-1=仅退出不结算；>=0=部分结算到该事件 |
 
 > `index` 语义约定：
@@ -2046,11 +2079,32 @@
 }
 ```
 
+#### 失败响应（倍速非法）
+
+```json
+{
+  "success": false,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "LIANLI_FINISH_SPEED_INVALID",
+  "reason_data": {
+    "requested_speed": 2.0,
+    "available_speeds": [1.0]
+  },
+  "settled_index": 0,
+  "total_index": 0,
+  "player_health_after": 76.0,
+  "loot_gained": [],
+  "exp_gained": 0
+}
+```
+
 #### `reason_code` 枚举
 
 - `LIANLI_FINISH_FULLY_SETTLED`
 - `LIANLI_FINISH_PARTIALLY_SETTLED`
 - `LIANLI_FINISH_NOT_ACTIVE`
+- `LIANLI_FINISH_SPEED_INVALID`
 - `LIANLI_FINISH_TIME_INVALID`
 
 #### 失败响应（未在战斗状态）
@@ -2072,7 +2126,7 @@
 
 ---
 
-### 7.3 获取破镜草洞穴信息
+### 7.4 获取破镜草洞穴信息
 
 - **接口地址**：`GET /api/game/dungeon/foundation_herb_cave`
 - **功能**：获取破镜草洞穴剩余次数和总次数
@@ -2121,7 +2175,7 @@
 
 ---
 
-### 7.4 获取无尽塔信息
+### 7.5 获取无尽塔信息
 
 - **接口地址**：`GET /api/game/tower/highest_floor`
 - **功能**：获取无尽塔最高层数
@@ -2653,3 +2707,98 @@
 - `CULTIVATION_START_BLOCKED_BY_HERB_GATHERING`
 - `ALCHEMY_START_BLOCKED_BY_HERB_GATHERING`
 - `LIANLI_SIMULATE_BLOCKED_BY_HERB_GATHERING`
+
+---
+
+## 14. 任务系统 API
+
+### 14.1 查询任务列表
+
+- **接口地址**：`GET /api/game/task/list`
+- **功能**：返回每日任务与新手任务的当前状态（服务端权威）
+- **认证**：需要认证
+
+#### 成功响应示例
+
+```json
+{
+  "success": true,
+  "operation_id": "",
+  "timestamp": 1234567890.0,
+  "reason_code": "TASK_LIST_SUCCEEDED",
+  "reason_data": {},
+  "daily_tasks": [
+    {
+      "task_id": "daily_cultivation_seconds",
+      "name": "修炼60秒",
+      "description": "完成60秒修炼",
+      "task_type": "daily",
+      "progress": 12,
+      "target": 60,
+      "completed": false,
+      "claimed": false,
+      "sort_order": 1,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    }
+  ],
+  "newbie_tasks": [
+    {
+      "task_id": "newbie_open_starter_pack_1",
+      "name": "打开新手礼包Ⅰ",
+      "description": "成功打开新手礼包Ⅰ",
+      "task_type": "newbie",
+      "progress": 1,
+      "target": 1,
+      "completed": true,
+      "claimed": false,
+      "sort_order": 1,
+      "rewards": {
+        "spirit_stone": 1
+      }
+    }
+  ]
+}
+```
+
+### 14.2 领取任务奖励
+
+- **接口地址**：`POST /api/game/task/claim`
+- **请求参数**：`task_id`
+- **功能**：领取已完成且未领取任务的奖励并落库
+
+#### 成功响应示例
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890.0,
+  "reason_code": "TASK_CLAIM_SUCCEEDED",
+  "reason_data": {
+    "task_id": "newbie_open_starter_pack_1"
+  },
+  "rewards_granted": {
+    "spirit_stone": 1
+  }
+}
+```
+
+#### 失败 `reason_code` 枚举
+
+- `TASK_CLAIM_TASK_NOT_FOUND`
+- `TASK_CLAIM_NOT_COMPLETED`
+- `TASK_CLAIM_ALREADY_CLAIMED`
+
+### 14.3 任务进度推进规则（服务端）
+
+- 任务进度只在对应业务接口“成功分支”推进：
+  - 修炼：`/game/player/cultivation/report`（按整秒结算秒数推进）
+  - 战斗：`/game/lianli/finish`（按成功结算次数推进）
+  - 炼丹：`/game/alchemy/report`（按请求成功次数推进）
+  - 采集：`/game/herb/report`（按请求成功次数推进）
+  - 充灵：`/game/spell/charge`（按请求成功次数推进）
+  - 新手礼包：`/game/inventory/use` 使用 `starter_pack_1/2/3`
+- `progress` 达到 `target` 后封顶，不再增长。
+- 每日任务参与跨天重置；新手任务不重置。

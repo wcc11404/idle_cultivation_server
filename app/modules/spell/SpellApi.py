@@ -171,8 +171,10 @@ async def charge_spell(
         result = ctx.spell_system.charge_spell_spirit(request.spell_id, request.amount, ctx.player)
     
     if result["success"]:
+        ctx.task_system.add_progress("daily_spell_charge_count", 1)
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["spell_system"] = ctx.spell_system.to_dict()
+        ctx.db_data["task_system"] = ctx.task_system.to_dict()
         
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)

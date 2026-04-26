@@ -110,3 +110,17 @@ def set_herb_spell_level(account_id: str, level: int) -> None:
         herb_spell["level"] = max(1, int(level))
 
     _run(_patch_player_data(account_id, _mutate))
+
+
+def set_account_vip_days(account_id: str, days: int) -> None:
+    def _mutate(data: dict[str, Any]) -> None:
+        account_info = data.setdefault("account_info", {})
+        if days > 0:
+            expire_at = datetime.now() + timedelta(days=int(days))
+            account_info["is_vip"] = True
+            account_info["vip_expire_time"] = expire_at.isoformat()
+        else:
+            account_info["is_vip"] = False
+            account_info["vip_expire_time"] = None
+
+    _run(_patch_player_data(account_id, _mutate))

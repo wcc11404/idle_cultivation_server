@@ -190,3 +190,25 @@ def test_inventory_misc_endpoints(reset_client_state):
     last_result = reset_client_state.inventory_expand()
     assert last_result["success"] is False
     assert last_result["reason_code"] == "INVENTORY_EXPAND_CAPACITY_MAX"
+
+
+def test_inventory_organize_sorts_by_type_then_rarity_then_id(reset_client_state):
+    reset_client_state.set_inventory_items({
+        "health_pill": 1,    # type=2, quality=1
+        "test_pack": 1,      # type=3, quality=4
+        "spirit_stone": 1,   # type=0, quality=0
+        "bug_pill": 1,       # type=2, quality=4
+    })
+
+    organize = reset_client_state.inventory_organize()
+    assert organize["success"] is True
+    assert organize["reason_code"] == "INVENTORY_ORGANIZE_SUCCEEDED"
+
+    inventory_list = reset_client_state.inventory_list()
+    assert inventory_list["success"] is True
+    slots = inventory_list["inventory"]["slots"]
+
+    assert slots["0"]["id"] == "spirit_stone"
+    assert slots["1"]["id"] == "bug_pill"
+    assert slots["2"]["id"] == "health_pill"
+    assert slots["3"]["id"] == "test_pack"

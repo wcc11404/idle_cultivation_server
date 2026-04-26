@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from app.schemas.Game import (
     LianliBattleRequest, LianliBattleResponse,
+    LianliSpeedOptionsResponse,
     LianliSettleRequest, LianliSettleResponse,
     DungeonInfoQueryResponse, TowerHighestFloorResponse
 )
@@ -17,13 +18,29 @@ from app.core.Dependencies import get_game_context, get_write_game_context, get_
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.modules import (
-    PlayerSystem, LianliSystem, SpellSystem, InventorySystem, AlchemySystem, AccountSystem
+    PlayerSystem, LianliSystem, SpellSystem, InventorySystem, AlchemySystem, AccountSystem, RealmData
 )
 from datetime import datetime, timezone
 import time
 import json
 
 router = APIRouter()
+
+DEFAULT_LIANLI_SPEED = 1.0
+FAST_LIANLI_SPEED = 1.5
+VIP_LIANLI_SPEED = 2.0
+
+
+def _get_available_lianli_speeds(player: PlayerSystem, account_system: AccountSystem) -> list[float]:
+    if account_system.check_vip_status():
+        return [DEFAULT_LIANLI_SPEED, FAST_LIANLI_SPEED, VIP_LIANLI_SPEED]
+
+    golden_core_total_level = RealmData.get_total_realm_level("金丹期", 1)
+    current_total_level = RealmData.get_total_realm_level(str(player.realm), int(player.realm_level))
+    if current_total_level >= golden_core_total_level:
+        return [DEFAULT_LIANLI_SPEED, FAST_LIANLI_SPEED]
+
+    return [DEFAULT_LIANLI_SPEED]
 
 
 @router.post("/lianli/simulate", response_model=LianliBattleResponse)
@@ -130,6 +147,32 @@ async def simulate_battle(
     return response_data
 
 
+@router.get("/lianli/speed_options", response_model=LianliSpeedOptionsResponse)
+async def get_lianli_speed_options(
+    ctx: GameContext = Depends(get_game_context),
+    token_info: dict = Depends(get_token_info)
+):
+    """获取当前账号可用的历练倍速选项"""
+    start_time = time.time()
+    logger.info(
+        f"[IN] GET /game/lianli/speed_options - token: {token_info['token']} - "
+        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+    )
+
+    available_speeds = _get_available_lianli_speeds(ctx.player, ctx.account_system)
+    response_data = LianliSpeedOptionsResponse(
+        success=True,
+        operation_id="",
+        timestamp=time.time(),
+        reason_code="LIANLI_SPEED_OPTIONS_SUCCEEDED",
+        reason_data={},
+        available_speeds=available_speeds,
+        default_speed=DEFAULT_LIANLI_SPEED,
+    )
+    logger.info(f"[OUT] GET /game/lianli/speed_options - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+    return response_data
+
+
 @router.post("/lianli/finish", response_model=LianliSettleResponse)
 async def finish_battle(
     request: LianliSettleRequest,
@@ -139,7 +182,29 @@ async def finish_battle(
     """历练战斗结算"""
     start_time = time.time()
     logger.info(f"[IN] POST /game/lianli/finish - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
-    
+
+    available_speeds = _get_available_lianli_speeds(ctx.player, ctx.account_system)
+    requested_speed = round(float(request.speed), 2)
+    normalized_available_speeds = [round(float(speed), 2) for speed in available_speeds]
+    if ctx.lianli_system.is_battling and ctx.lianli_system.current_battle_data and requested_speed not in normalized_available_speeds:
+        response_data = LianliSettleResponse(
+            success=False,
+            operation_id=request.operation_id,
+            timestamp=request.timestamp,
+            reason_code="LIANLI_FINISH_SPEED_INVALID",
+            reason_data={
+                "requested_speed": requested_speed,
+                "available_speeds": normalized_available_speeds,
+            },
+            settled_index=0,
+            total_index=0,
+            player_health_after=ctx.player.health,
+            loot_gained=[],
+            exp_gained=0,
+        )
+        logger.info(f"[OUT] POST /game/lianli/finish - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
+        return response_data
+
     result = ctx.lianli_system.finish_battle(
         request.speed, request.index, ctx.player, ctx.spell_system, ctx.inventory_system, ctx.account_system
     )
@@ -164,11 +229,13 @@ async def finish_battle(
         result["reason_data"] = reason_data
     
     if result["success"]:
+        ctx.task_system.add_progress("daily_battle_count", 1)
         await AntiCheatSystem.reset_suspicious_operations(
             account_id=str(ctx.account.id),
             account_system=ctx.account_system,
             db_player_data=ctx.player_data
         )
+        ctx.db_data["task_system"] = ctx.task_system.to_dict()
         ctx.save()
         ctx.player_data.data = ctx.db_data
         ctx.player_data.last_online_at = datetime.now(timezone.utc)

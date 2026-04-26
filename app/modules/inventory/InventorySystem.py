@@ -232,8 +232,12 @@ class InventorySystem:
                     "id": self.slots[i]["id"],
                     "count": self.slots[i]["count"]
                 })
-        
-        items.sort(key=lambda x: x["id"])
+
+        items.sort(key=lambda x: (
+            ItemData.get_item_type(x["id"]),
+            -int(ItemData.get_item_quality(x["id"])),
+            x["id"],
+        ))
         
         self._init_slots()
         

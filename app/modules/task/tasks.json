@@ -1,0 +1,126 @@
+{
+  "daily_tasks": [
+    {
+      "task_id": "daily_cultivation_seconds",
+      "name": "修炼60秒",
+      "description": "完成60秒修炼",
+      "target": 60,
+      "sort_order": 1,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    },
+    {
+      "task_id": "daily_battle_count",
+      "name": "战斗10次",
+      "description": "完成10次历练战斗",
+      "target": 10,
+      "sort_order": 2,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    },
+    {
+      "task_id": "daily_alchemy_count",
+      "name": "炼丹1次",
+      "description": "完成1次丹药炼制",
+      "target": 1,
+      "sort_order": 3,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    },
+    {
+      "task_id": "daily_herb_count",
+      "name": "采集5次",
+      "description": "完成5次草药采集",
+      "target": 5,
+      "sort_order": 4,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    },
+    {
+      "task_id": "daily_spell_charge_count",
+      "name": "术法充灵5次",
+      "description": "完成5次术法充灵",
+      "target": 5,
+      "sort_order": 5,
+      "rewards": {
+        "immortal_crystal": 1
+      }
+    }
+  ],
+  "newbie_tasks": [
+    {
+      "task_id": "newbie_open_starter_pack_1",
+      "name": "打开新手礼包Ⅰ",
+      "description": "成功打开新手礼包Ⅰ",
+      "target": 1,
+      "sort_order": 1,
+      "rewards": {
+        "spirit_stone": 1
+      }
+    },
+    {
+      "task_id": "newbie_open_starter_pack_2",
+      "name": "打开新手礼包Ⅱ",
+      "description": "成功打开新手礼包Ⅱ",
+      "target": 1,
+      "sort_order": 2,
+      "rewards": {
+        "spirit_stone": 1
+      }
+    },
+    {
+      "task_id": "newbie_open_starter_pack_3",
+      "name": "打开新手礼包Ⅲ",
+      "description": "成功打开新手礼包Ⅲ",
+      "target": 1,
+      "sort_order": 3,
+      "rewards": {
+        "spirit_stone": 1
+      }
+    },
+    {
+      "task_id": "newbie_herb_gather_10",
+      "name": "采集10次",
+      "description": "成功采集10次草药",
+      "target": 10,
+      "sort_order": 4,
+      "rewards": {
+        "recipe_health_pill": 1
+      }
+    },
+    {
+      "task_id": "newbie_herb_gather_20",
+      "name": "采集20次",
+      "description": "成功采集20次草药",
+      "target": 20,
+      "sort_order": 5,
+      "rewards": {
+        "spell_alchemy": 1
+      }
+    },
+    {
+      "task_id": "newbie_craft_health_pill_20",
+      "name": "炼成20颗补血丹",
+      "description": "成功炼制20颗补血丹",
+      "target": 20,
+      "sort_order": 6,
+      "rewards": {
+        "recipe_spirit_pill": 1
+      }
+    },
+    {
+      "task_id": "newbie_craft_foundation_pill_once",
+      "name": "炼成1颗筑基丹",
+      "description": "成功炼制1颗筑基丹",
+      "target": 1,
+      "sort_order": 7,
+      "rewards": {
+        "alchemy_furnace": 1
+      }
+    }
+  ]
+}

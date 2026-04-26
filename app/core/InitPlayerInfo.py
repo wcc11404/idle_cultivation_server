@@ -16,6 +16,7 @@ from app.modules.herb.HerbGatherSystem import HerbGatherSystem
 from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.cultivation.RealmData import RealmData
 from app.modules.account.AccountSystem import AccountSystem
+from app.modules.task.TaskSystem import TaskSystem
 from unit_test.support.TestSupportConfig import (
     TEST_PACK_ITEM_ID,
 )
@@ -46,6 +47,7 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
     alchemy_system = AlchemySystem()
     lianli_system = LianliSystem()
     herb_system = HerbGatherSystem()
+    task_system = TaskSystem()
     account_system = AccountSystem.create_with_nickname(f"修仙者{str(account_id)[:6]}")
     
     # 创建PlayerSystem实例
@@ -70,6 +72,7 @@ def get_initial_player_data(account_id: str, username: str = "", include_test_pa
         "alchemy_system": alchemy_system.to_dict(),
         "lianli_system": lianli_system.to_dict(),
         "herb_system": herb_system.to_dict(),
+        "task_system": task_system.to_dict(),
         "version": "1.0"
     }
 
