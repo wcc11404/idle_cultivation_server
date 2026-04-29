@@ -6,6 +6,7 @@ from app.modules.alchemy import AlchemyApi
 from app.modules.lianli import LianliApi
 from app.modules.herb.HerbApi import router as herb_router
 from app.modules.task.TaskApi import router as task_router
+from app.modules.mail.MailApi import router as mail_router
 from app.modules.cultivation import CultivationApi
 from app.modules.account.AccountApi import router as account_router
 
@@ -20,5 +21,6 @@ api_router.include_router(AlchemyApi.router, prefix="/game", tags=["alchemy"])
 api_router.include_router(LianliApi.router, prefix="/game", tags=["lianli"])
 api_router.include_router(herb_router, prefix="/game", tags=["herb"])
 api_router.include_router(task_router, prefix="/game", tags=["task"])
+api_router.include_router(mail_router, prefix="/game", tags=["mail"])
 api_router.include_router(Admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(Test.router, prefix="/test", tags=["test"])

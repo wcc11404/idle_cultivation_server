@@ -203,6 +203,24 @@ class TestApiClient:
         payload = {"task_id": task_id, **self._request_params()}
         return self._post("/game/task/claim", payload)
 
+    def mail_list(self) -> Dict[str, Any]:
+        return self._get("/game/mail/list")
+
+    def mail_detail(self, mail_id: str) -> Dict[str, Any]:
+        return self._get("/game/mail/detail", {"mail_id": mail_id})
+
+    def mail_claim(self, mail_id: str) -> Dict[str, Any]:
+        payload = {"mail_id": mail_id, **self._request_params()}
+        return self._post("/game/mail/claim", payload)
+
+    def mail_delete(self, delete_mode: str, mail_ids: list[str] | None = None) -> Dict[str, Any]:
+        payload = {
+            "delete_mode": delete_mode,
+            "mail_ids": mail_ids or [],
+            **self._request_params(),
+        }
+        return self._post("/game/mail/delete", payload)
+
     def spell_equip(self, spell_id: str) -> Dict[str, Any]:
         payload = {"spell_id": spell_id, **self._request_params()}
         return self._post("/game/spell/equip", payload)

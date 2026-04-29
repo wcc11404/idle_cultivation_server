@@ -2802,3 +2802,94 @@
   - 新手礼包：`/game/inventory/use` 使用 `starter_pack_1/2/3`
 - `progress` 达到 `target` 后封顶，不再增长。
 - 每日任务参与跨天重置；新手任务不重置。
+
+## 15. 邮箱系统 API
+
+### 15.1 查询邮件列表
+
+- **接口地址**：`GET /api/game/mail/list`
+- **功能**：返回当前账号未软删邮件列表（时间倒序）。
+
+响应关键字段：
+- `mails`：缩略列表（标题、首行预览、发送时间、已读/已领取状态、首附件）
+- `count`：当前有效邮件数
+- `capacity`：邮箱容量上限（当前 100）
+- `unread_count`：未读邮件数
+
+---
+
+### 15.2 查询邮件详情（并标记已读）
+
+- **接口地址**：`GET /api/game/mail/detail?mail_id=...`
+- **功能**：返回单封邮件详情；若未读，调用后自动标记已读。
+
+---
+
+### 15.3 领取邮件附件
+
+- **接口地址**：`POST /api/game/mail/claim`
+- **功能**：整封领取附件；任一附件入包失败则整封回滚。
+
+请求体示例：
+
+```json
+{
+  "operation_id": "xxx",
+  "timestamp": 1777000000.0,
+  "mail_id": "abcd1234"
+}
+```
+
+---
+
+### 15.4 删除邮件（统一接口）
+
+- **接口地址**：`POST /api/game/mail/delete`
+- **功能**：
+  - `manual`：删除指定邮件；
+  - `read_and_claimed`：一键删除所有“已读且已领取”邮件。
+
+请求体示例：
+
+```json
+{
+  "operation_id": "xxx",
+  "timestamp": 1777000000.0,
+  "delete_mode": "manual",
+  "mail_ids": ["abcd1234"]
+}
+```
+
+---
+
+### 15.5 管理员发信
+
+- **接口地址**：
+  - `POST /api/admin/mail/send`
+  - `POST /api/admin/mail/send_batch`
+- **功能**：运营后台发信（单发/批量）。
+
+---
+
+### 15.6 邮箱规则摘要
+
+- 邮箱容量上限：100（满则拒绝新邮件）。
+- 附件最多 10 种物品类型（同 `item_id` 会去重）。
+- 删除约束：不允许删除“未读且未领取附件”的邮件。
+- 删除为软删：`is_deleted=true`，列表默认过滤。
+
+---
+
+### 15.7 常用 reason_code
+
+- `MAIL_LIST_SUCCEEDED`
+- `MAIL_DETAIL_SUCCEEDED`
+- `MAIL_CLAIM_SUCCEEDED`
+- `MAIL_CLAIM_NO_ATTACHMENT`
+- `MAIL_CLAIM_ALREADY_CLAIMED`
+- `MAIL_CLAIM_INVENTORY_FULL`
+- `MAIL_DELETE_SUCCEEDED`
+- `MAIL_DELETE_BATCH_SUCCEEDED`
+- `MAIL_DELETE_FORBIDDEN_UNREAD_UNCLAIMED`
+- `MAIL_CAPACITY_REACHED`
+- `MAIL_NOT_FOUND`

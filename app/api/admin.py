@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field
 from app.db.Models import Account, PlayerData
 from app.core.Security import decode_token, verify_password, get_password_hash, create_access_token, security
 from app.core.ServerConfig import settings
@@ -8,6 +9,7 @@ from app.core.WriteLock import begin_write_lock_by_account_id
 from datetime import timedelta
 from typing import List
 import time
+from app.modules.mail.MailSystem import MailSystem
 
 router = APIRouter()
 
@@ -15,6 +17,26 @@ router = APIRouter()
 # 简化的管理员认证
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
+
+
+class AdminMailAttachment(BaseModel):
+    item_id: str
+    count: int = Field(default=1, ge=1)
+
+
+class AdminMailSendRequest(BaseModel):
+    account_id: str
+    title: str = Field(min_length=1, max_length=100)
+    content: str = Field(min_length=1)
+    attachments: list[AdminMailAttachment] = Field(default_factory=list)
+
+
+class AdminMailSendBatchRequest(BaseModel):
+    account_ids: list[str] = Field(default_factory=list)
+    all_accounts: bool = False
+    title: str = Field(min_length=1, max_length=100)
+    content: str = Field(min_length=1)
+    attachments: list[AdminMailAttachment] = Field(default_factory=list)
 
 
 @router.post("/login", response_model=dict)
@@ -137,3 +159,62 @@ async def ban_player(player_id: str, admin: bool = Depends(get_admin)):
     
     logger.info(f"[OUT] POST /admin/player/{player_id}/ban - 封号成功 - username: {account.username} - 耗时: {time.time() - start_time:.4f}s")
     return {"success": True, "message": "封号成功"}
+
+
+@router.post("/mail/send", response_model=dict)
+async def admin_send_mail(request: AdminMailSendRequest, admin: bool = Depends(get_admin)):
+    start_time = time.time()
+    logger.info(f"[IN] POST /admin/mail/send - account_id: {request.account_id} - title: {request.title}")
+    account = await Account.get_or_none(id=request.account_id)
+    if not account:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="玩家不存在")
+    result = await MailSystem.create_mail(
+        account_id=str(account.id),
+        title=request.title,
+        content=request.content,
+        attachments=[a.dict() for a in request.attachments],
+    )
+    if not result.get("success", False):
+        return result
+    logger.info(f"[OUT] POST /admin/mail/send - success - 耗时: {time.time() - start_time:.4f}s")
+    return result
+
+
+@router.post("/mail/send_batch", response_model=dict)
+async def admin_send_mail_batch(request: AdminMailSendBatchRequest, admin: bool = Depends(get_admin)):
+    start_time = time.time()
+    logger.info(
+        f"[IN] POST /admin/mail/send_batch - all_accounts: {request.all_accounts} - "
+        f"targets: {len(request.account_ids)} - title: {request.title}"
+    )
+    target_ids: list[str] = []
+    if request.all_accounts:
+        accounts = await Account.all()
+        target_ids = [str(a.id) for a in accounts]
+    else:
+        target_ids = [str(x) for x in request.account_ids if str(x).strip()]
+
+    sent_count = 0
+    skipped_capacity = 0
+    for account_id in target_ids:
+        result = await MailSystem.create_mail(
+            account_id=account_id,
+            title=request.title,
+            content=request.content,
+            attachments=[a.dict() for a in request.attachments],
+        )
+        if result.get("success", False):
+            sent_count += 1
+        elif result.get("reason_code") == "MAIL_CAPACITY_REACHED":
+            skipped_capacity += 1
+    response = {
+        "success": True,
+        "reason_code": "MAIL_SEND_BATCH_SUCCEEDED",
+        "reason_data": {
+            "target_count": len(target_ids),
+            "sent_count": sent_count,
+            "skipped_capacity": skipped_capacity,
+        },
+    }
+    logger.info(f"[OUT] POST /admin/mail/send_batch - {response} - 耗时: {time.time() - start_time:.4f}s")
+    return response

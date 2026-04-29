@@ -41,6 +41,27 @@ CREATE INDEX idx_player_data_last_daily_reset ON player_data(last_daily_reset_at
 CREATE INDEX idx_player_data_server ON player_data(server_id);
 CREATE INDEX idx_player_data_version ON player_data(game_version);
 
+-- 邮件数据表（软删）
+CREATE TABLE mail_data (
+    mail_id VARCHAR(64) PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    attachments JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expire_at TIMESTAMPTZ NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
+    claimed_at TIMESTAMPTZ NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMPTZ NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_mail_data_account_id ON mail_data(account_id);
+CREATE INDEX idx_mail_data_created_at ON mail_data(created_at DESC);
+CREATE INDEX idx_mail_data_is_deleted ON mail_data(is_deleted);
+
 -- 添加自动更新updated_at字段的函数
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -59,6 +80,11 @@ EXECUTE FUNCTION update_updated_at_column();
 -- 为player_data表添加触发器
 CREATE TRIGGER update_player_data_updated_at
 BEFORE UPDATE ON player_data
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_mail_data_updated_at
+BEFORE UPDATE ON mail_data
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 

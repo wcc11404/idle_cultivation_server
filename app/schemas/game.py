@@ -304,3 +304,37 @@ class TaskClaimRequest(BaseRequest):
 class TaskClaimResponse(BaseResponse):
     """领取任务奖励响应"""
     rewards_granted: dict
+
+
+class MailListResponse(BaseResponse):
+    """邮件列表响应"""
+    mails: list[dict]
+    count: int
+    capacity: int
+    unread_count: int
+
+
+class MailDetailResponse(BaseResponse):
+    """邮件详情响应"""
+    mail: dict
+
+
+class MailClaimRequest(BaseRequest):
+    """领取邮件请求"""
+    mail_id: str
+
+
+class MailClaimResponse(BaseResponse):
+    """领取邮件响应"""
+    rewards_granted: dict
+
+
+class MailDeleteRequest(BaseRequest):
+    """删除邮件请求"""
+    delete_mode: str
+    mail_ids: list[str] = Field(default_factory=list)
+
+
+class MailDeleteResponse(BaseResponse):
+    """删除邮件响应"""
+    deleted_count: int

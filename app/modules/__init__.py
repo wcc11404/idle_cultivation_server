@@ -10,6 +10,7 @@ from .alchemy import RecipeData, AlchemySystem
 from .lianli import AreasData, EnemiesData, LianliSystem
 from .herb import HerbPointData, HerbGatherSystem
 from .task import TaskData, TaskSystem
+from .mail import MailSystem
 from .cultivation import CultivationSystem, RealmData
 from .player import PlayerSystem, AttributeCalculator
 from .account import AccountSystem
@@ -21,6 +22,7 @@ __all__ = [
     'AreasData', 'EnemiesData', 'LianliSystem',
     'HerbPointData', 'HerbGatherSystem',
     'TaskData', 'TaskSystem',
+    'MailSystem',
     'CultivationSystem', 'RealmData',
     'PlayerSystem', 'AttributeCalculator',
     'AccountSystem'

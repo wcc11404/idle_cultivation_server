@@ -32,3 +32,26 @@ class PlayerData(models.Model):
 
     class Meta:
         table = "player_data"
+
+
+class MailData(models.Model):
+    """邮箱邮件模型（软删）"""
+    mail_id = fields.CharField(max_length=64, pk=True)
+    account_id = UUIDField(index=True)
+    title = fields.CharField(max_length=100, null=False)
+    content = fields.TextField(null=False)
+    attachments = fields.JSONField(default=list)
+    created_at = fields.DatetimeField(timezone=True, auto_now_add=True)
+    expire_at = fields.DatetimeField(timezone=True, null=True)
+
+    is_read = fields.BooleanField(default=False)
+    is_claimed = fields.BooleanField(default=False)
+    claimed_at = fields.DatetimeField(timezone=True, null=True)
+
+    is_deleted = fields.BooleanField(default=False, index=True)
+    deleted_at = fields.DatetimeField(timezone=True, null=True)
+
+    updated_at = fields.DatetimeField(auto_now=True, timezone=True)
+
+    class Meta:
+        table = "mail_data"
