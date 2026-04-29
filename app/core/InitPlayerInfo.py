@@ -86,7 +86,8 @@ async def create_initial_player_data_record(
     return await PlayerData.create(
         account_id=account.id,
         data=initial_data,
-        last_online_at=last_online_at
+        last_online_at=last_online_at,
+        last_daily_reset_at=last_online_at,
     )
 
 
@@ -98,5 +99,6 @@ async def reset_player_data_record(
 ) -> PlayerData:
     player_data.data = get_initial_player_data(str(account.id), account.username, include_test_pack=include_test_pack)
     player_data.last_online_at = last_online_at
+    player_data.last_daily_reset_at = last_online_at
     await player_data.save()
     return player_data

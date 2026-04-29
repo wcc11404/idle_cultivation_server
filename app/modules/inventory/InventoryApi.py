@@ -35,15 +35,23 @@ async def use_item(
     start_time = time.time()
     logger.info(f"[IN] POST /game/inventory/use - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
     
-    result = ctx.inventory_system.use_item(request.item_id, ctx.player, ctx.spell_system, ctx.alchemy_system)
+    use_count = max(1, int(request.count))
+    result = ctx.inventory_system.use_item(
+        request.item_id,
+        ctx.player,
+        ctx.spell_system,
+        ctx.alchemy_system,
+        use_count
+    )
     
     if result["success"]:
+        used_count = int(result.get("reason_data", {}).get("used_count", 1))
         if request.item_id in ("starter_pack", "starter_pack_1"):
-            ctx.task_system.add_progress("newbie_open_starter_pack_1", 1)
+            ctx.task_system.add_progress("newbie_open_starter_pack_1", used_count)
         elif request.item_id == "starter_pack_2":
-            ctx.task_system.add_progress("newbie_open_starter_pack_2", 1)
+            ctx.task_system.add_progress("newbie_open_starter_pack_2", used_count)
         elif request.item_id == "starter_pack_3":
-            ctx.task_system.add_progress("newbie_open_starter_pack_3", 1)
+            ctx.task_system.add_progress("newbie_open_starter_pack_3", used_count)
         ctx.db_data["player"] = ctx.player.to_dict()
         ctx.db_data["inventory"] = ctx.inventory_system.to_dict()
         ctx.db_data["spell_system"] = ctx.spell_system.to_dict()

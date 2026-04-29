@@ -153,8 +153,8 @@ class TestApiClient:
     def cultivation_stop(self) -> Dict[str, Any]:
         return self._post("/game/player/cultivation/stop", self._request_params())
 
-    def inventory_use(self, item_id: str) -> Dict[str, Any]:
-        payload = {"item_id": item_id, **self._request_params()}
+    def inventory_use(self, item_id: str, count: int = 1) -> Dict[str, Any]:
+        payload = {"item_id": item_id, "count": int(count), **self._request_params()}
         return self._post("/game/inventory/use", payload)
 
     def inventory_organize(self) -> Dict[str, Any]:

@@ -26,6 +26,7 @@ logs/
 build/
 dist/
 *.egg-info/
+idle_cultivation_server.tar
 
 # Database
 *.db

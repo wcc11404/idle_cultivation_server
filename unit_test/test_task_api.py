@@ -5,6 +5,7 @@ from unit_test.support.DbSupport import (
     set_alchemy_elapsed_seconds,
     set_cultivation_elapsed_seconds,
     set_herb_elapsed_seconds,
+    set_last_daily_reset_seconds_ago,
     set_offline_seconds,
 )
 
@@ -104,6 +105,7 @@ def test_task_daily_reset_only_resets_daily(reset_client_state: TestApiClient, b
 
     assert reset_client_state.logout().get("success") is True
     set_offline_seconds(reset_client_state.account_id, 90000)
+    set_last_daily_reset_seconds_ago(reset_client_state.account_id, 90000)
 
     login_client = TestApiClient(base_url)
     login_result = login_client.login_test_account()
@@ -115,6 +117,28 @@ def test_task_daily_reset_only_resets_daily(reset_client_state: TestApiClient, b
     assert int(after_daily.get("progress", 0)) == 0
     assert bool(after_daily.get("claimed", False)) is False
     assert int(after_newbie.get("progress", 0)) == 1
+
+
+def test_task_daily_reset_triggers_on_write_after_cross_day_while_online(reset_client_state: TestApiClient):
+    reset_client_state.set_player_state(realm="金丹期", realm_level=1, spirit_energy=0.0, health=99999.0)
+    assert reset_client_state.cultivation_start()["success"] is True
+    set_cultivation_elapsed_seconds(reset_client_state.account_id, 70.0)
+    assert reset_client_state.cultivation_report(70.0)["success"] is True
+
+    before_reset = reset_client_state.task_list()
+    before_daily = _find_task(before_reset.get("daily_tasks", []), "daily_cultivation_seconds")
+    assert int(before_daily.get("progress", 0)) > 0
+
+    set_last_daily_reset_seconds_ago(reset_client_state.account_id, 90000)
+
+    # 不重新登录，直接写接口触发公共写上下文中的每日重置
+    sort_result = reset_client_state.inventory_organize()
+    assert sort_result.get("success") is True
+
+    after_reset = reset_client_state.task_list()
+    after_daily = _find_task(after_reset.get("daily_tasks", []), "daily_cultivation_seconds")
+    assert int(after_daily.get("progress", 0)) == 0
+    assert bool(after_daily.get("claimed", False)) is False
 
 
 def test_task_newbie_herb_gather_10_and_20_claim_rewards(reset_client_state: TestApiClient):

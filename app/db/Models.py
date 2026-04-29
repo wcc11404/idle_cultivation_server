@@ -27,6 +27,7 @@ class PlayerData(models.Model):
     game_version = fields.CharField(max_length=20, default="v1.0.0")
     data = fields.JSONField(null=False)
     last_online_at = fields.DatetimeField(timezone=True)
+    last_daily_reset_at = fields.DatetimeField(timezone=True)
     updated_at = fields.DatetimeField(auto_now=True, timezone=True)
 
     class Meta:

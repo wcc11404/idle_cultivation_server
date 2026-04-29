@@ -162,6 +162,27 @@ def test_inventory_use_paths(reset_client_state):
     assert unlock_furnace["reason_data"]["effect"]["type"] == "unlock_furnace"
 
 
+def test_inventory_use_supports_batch_count(reset_client_state):
+    reset_client_state.set_inventory_items({"health_pill": 5})
+    reset_client_state.set_player_state(health=1.0)
+
+    batch_use = reset_client_state.inventory_use("health_pill", 3)
+    assert batch_use["success"] is True
+    assert int(batch_use["reason_data"]["used_count"]) == 3
+    assert int(batch_use["reason_data"]["completed_count"]) == 3
+    assert int(batch_use["reason_data"]["requested_count"]) == 3
+    assert bool(batch_use["reason_data"]["is_partial"]) is False
+    assert int(batch_use["reason_data"]["effect"]["health_added"]) == 150
+
+    inventory_list = reset_client_state.inventory_list()
+    slots = inventory_list["inventory"]["slots"]
+    remaining_count = 0
+    for slot in slots.values():
+        if slot.get("id") == "health_pill":
+            remaining_count += int(slot.get("count", 0))
+    assert remaining_count == 2
+
+
 def test_inventory_misc_endpoints(reset_client_state):
     reset_client_state.set_inventory_items({"spirit_stone": 1})
     not_usable = reset_client_state.inventory_use("spirit_stone")

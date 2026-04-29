@@ -7,6 +7,7 @@ from app.core.InitPlayerInfo import create_initial_player_data_record
 from app.core.Logger import logger
 from app.core.AntiCheatSystem import AntiCheatSystem
 from app.core.Validator import Validator
+from app.core.DailyReset import run_daily_reset_if_needed
 from app.core.Dependencies import get_write_game_context, get_token_info, GameContext
 from app.core.WriteLock import begin_write_lock_by_username
 from app.modules import PlayerSystem as GamePlayerData, AccountSystem, SpellSystem
@@ -14,7 +15,6 @@ from app.modules.player.PlayerSystem import PlayerSystem
 from app.modules.alchemy.AlchemySystem import AlchemySystem
 from app.modules.lianli.LianliSystem import LianliSystem
 from app.modules.herb.HerbGatherSystem import HerbGatherSystem
-from app.modules.task.TaskSystem import TaskSystem
 from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
@@ -246,32 +246,7 @@ async def login(request: LoginRequest):
         if not player_data:
             player_data = await create_initial_player_data_record(account, EPOCH_TIME)
     
-        # 检查是否需要每日重置
-        current_time = datetime.now(timezone.utc)
-        last_login = player_data.last_online_at
-
-        def get_reset_date(t):
-            if t.tzinfo is None:
-                t = t.replace(tzinfo=timezone.utc)
-            else:
-                t = t.astimezone(timezone.utc)
-            reset_time = t.replace(hour=settings.DAILY_RESET_HOUR, minute=0, second=0, microsecond=0)
-            if t < reset_time:
-                return reset_time - timedelta(days=1)
-            return reset_time
-
-        last_reset_date = get_reset_date(last_login)
-        current_reset_date = get_reset_date(current_time)
-        if last_reset_date != current_reset_date:
-            logger.info(f"[GAME] 执行每日重置 - account_id: {account.id}")
-            lianli_system_data = player_data.data.get("lianli_system", {})
-            lianli_system = LianliSystem.from_dict(lianli_system_data)
-            lianli_system.reset_daily_dungeons()
-            player_data.data["lianli_system"] = lianli_system.to_dict()
-            task_system_data = player_data.data.get("task_system", {})
-            task_system = TaskSystem.from_dict(task_system_data)
-            task_system.reset_daily_state()
-            player_data.data["task_system"] = task_system.to_dict()
+        run_daily_reset_if_needed(player_data, datetime.now(timezone.utc))
 
         player_dict = player_data.data.get("player", {})
         login_spell = SpellSystem.from_dict(player_data.data.get("spell_system", {}))

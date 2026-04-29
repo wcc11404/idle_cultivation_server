@@ -274,9 +274,10 @@ class InventorySystem:
                 "discarded_count": 0
             })
     
-    def use_item(self, item_id: str, player_data: 'PlayerSystem', 
+    def use_item(self, item_id: str, player_data: 'PlayerSystem',
                  spell_system: 'SpellSystem' = None,
-                 alchemy_system: 'AlchemySystem' = None) -> Dict[str, Any]:
+                 alchemy_system: 'AlchemySystem' = None,
+                 count: int = 1) -> Dict[str, Any]:
         """
         使用物品
         
@@ -293,18 +294,87 @@ class InventorySystem:
                 "reason_data": dict
             }
         """
+        use_count = max(1, int(count))
+
         if not ItemData.item_exists(item_id):
             return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_FOUND", item_id)
-        
+
         if not self.has_item(item_id, 1):
             return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_ENOUGH", item_id)
-        
+
+        success_count = 0
+        merged_contents: Dict[str, int] = {}
+        merged_effect: Dict[str, Any] = {}
+        total_health_added = 0
+        total_spirit_added = 0
+        first_success_reason_code = ""
+        last_error_result: Dict[str, Any] = {}
+
+        for _ in range(use_count):
+            if not self.has_item(item_id, 1):
+                last_error_result = self._build_use_item_result(
+                    False,
+                    "INVENTORY_USE_ITEM_NOT_ENOUGH",
+                    item_id
+                )
+                break
+            single_result = self._use_item_single(item_id, player_data, spell_system, alchemy_system)
+            if not single_result.get("success", False):
+                last_error_result = single_result
+                break
+
+            success_count += int(single_result.get("reason_data", {}).get("used_count", 1))
+            if not first_success_reason_code:
+                first_success_reason_code = str(single_result.get("reason_code", "INVENTORY_USE_SUCCEEDED"))
+
+            single_effect = single_result.get("reason_data", {}).get("effect", {})
+            if isinstance(single_effect, dict) and single_effect:
+                merged_effect["type"] = str(single_effect.get("type", merged_effect.get("type", "")))
+                total_health_added += int(single_effect.get("health_added", 0))
+                total_spirit_added += int(single_effect.get("spirit_energy_added", 0))
+
+            single_contents = single_result.get("reason_data", {}).get("contents", {})
+            if isinstance(single_contents, dict):
+                for content_item_id, content_count in single_contents.items():
+                    merged_contents[content_item_id] = int(merged_contents.get(content_item_id, 0)) + int(content_count)
+
+        if success_count <= 0:
+            return last_error_result if last_error_result else self._build_use_item_result(
+                False, "INVENTORY_USE_SYSTEM_ERROR", item_id
+            )
+
+        if merged_effect:
+            if total_health_added > 0:
+                merged_effect["health_added"] = total_health_added
+            if total_spirit_added > 0:
+                merged_effect["spirit_energy_added"] = total_spirit_added
+
+        reason_data = {
+            "item_id": item_id,
+            "used_count": success_count,
+            "effect": merged_effect,
+            "contents": merged_contents,
+            "requested_count": use_count,
+            "completed_count": success_count,
+            "is_partial": success_count < use_count,
+        }
+        if last_error_result:
+            reason_data["partial_stop_reason_code"] = str(last_error_result.get("reason_code", ""))
+            reason_data["partial_stop_reason_data"] = last_error_result.get("reason_data", {})
+
+        if success_count == use_count:
+            return self._build_result(True, first_success_reason_code, reason_data)
+        return self._build_result(True, "INVENTORY_USE_PARTIAL_SUCCEEDED", reason_data)
+
+    def _use_item_single(self, item_id: str, player_data: 'PlayerSystem',
+                         spell_system: 'SpellSystem' = None,
+                         alchemy_system: 'AlchemySystem' = None) -> Dict[str, Any]:
         item_type = ItemData.get_item_type(item_id)
-        
+
         # 消耗品类型（丹药等）
         if item_type == ItemData.ITEM_TYPE_CONSUMABLE:
             return self._use_consumable(item_id, player_data)
-        
+
         # 宝箱/礼包类型
         elif item_type == ItemData.ITEM_TYPE_GIFT:
             requirement_check = self._check_item_requirement(item_id, player_data)
@@ -322,19 +392,19 @@ class InventorySystem:
                     },
                 )
             return self._use_gift(item_id)
-        
+
         # 解锁术法类型
         elif item_type == ItemData.ITEM_TYPE_UNLOCK_SPELL:
             return self._use_unlock_spell(item_id, spell_system)
-        
+
         # 解锁丹方类型
         elif item_type == ItemData.ITEM_TYPE_UNLOCK_RECIPE:
             return self._use_unlock_recipe(item_id, alchemy_system)
-        
+
         # 解锁炼丹炉类型
         elif item_type == ItemData.ITEM_TYPE_UNLOCK_FURNACE:
             return self._use_unlock_furnace(item_id, alchemy_system)
-        
+
         else:
             return self._build_use_item_result(False, "INVENTORY_USE_ITEM_NOT_USABLE", item_id)
     

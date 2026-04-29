@@ -27,6 +27,7 @@ CREATE TABLE player_data (
     game_version VARCHAR(20) DEFAULT 'v1.0.0', -- 游戏版本号，记录玩家上次保存的版本
     data JSONB NOT NULL,                      -- 所有游戏数据
     last_online_at TIMESTAMPTZ NOT NULL,      -- 玩家最后在线时间，仅在主动赋值后保存时更新
+    last_daily_reset_at TIMESTAMPTZ NOT NULL, -- 玩家上次执行每日重置时间
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -36,6 +37,7 @@ CREATE UNIQUE INDEX idx_accounts_phone ON accounts(phone) WHERE phone IS NOT NUL
 CREATE INDEX idx_accounts_server ON accounts(server_id);
 CREATE INDEX idx_player_data_updated ON player_data(updated_at);
 CREATE INDEX idx_player_data_last_online ON player_data(last_online_at);
+CREATE INDEX idx_player_data_last_daily_reset ON player_data(last_daily_reset_at);
 CREATE INDEX idx_player_data_server ON player_data(server_id);
 CREATE INDEX idx_player_data_version ON player_data(game_version);
 

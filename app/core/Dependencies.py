@@ -12,6 +12,7 @@ from app.core.Security import get_current_user, decode_token, security
 from app.db.Models import PlayerData, Account
 from app.modules import PlayerSystem, SpellSystem, InventorySystem, AlchemySystem, LianliSystem, HerbGatherSystem, AccountSystem, TaskSystem
 from app.core.Logger import logger
+from app.core.DailyReset import run_daily_reset_if_needed
 from app.core.WriteLock import begin_write_lock_by_account_id
 from dataclasses import dataclass
 
@@ -136,6 +137,7 @@ async def get_write_game_context(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="玩家数据不存在"
             )
+        run_daily_reset_if_needed(locked.player_data)
         yield _build_game_context(locked.account, locked.player_data)
 
 

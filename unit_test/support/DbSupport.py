@@ -22,10 +22,15 @@ async def _with_connection(callback: Callable[[asyncpg.Connection], Any]) -> Any
         await conn.close()
 
 
-async def _patch_player_data(account_id: str, mutator: JsonMutator, last_online_at: datetime | None = None) -> None:
+async def _patch_player_data(
+    account_id: str,
+    mutator: JsonMutator,
+    last_online_at: datetime | None = None,
+    last_daily_reset_at: datetime | None = None,
+) -> None:
     async def _callback(conn: asyncpg.Connection) -> None:
         row = await conn.fetchrow(
-            "SELECT data, last_online_at FROM player_data WHERE account_id = $1",
+            "SELECT data, last_online_at, last_daily_reset_at FROM player_data WHERE account_id = $1",
             account_id,
         )
         if row is None:
@@ -40,12 +45,14 @@ async def _patch_player_data(account_id: str, mutator: JsonMutator, last_online_
             """
             UPDATE player_data
             SET data = $2::jsonb,
-                last_online_at = COALESCE($3, last_online_at)
+                last_online_at = COALESCE($3, last_online_at),
+                last_daily_reset_at = COALESCE($4, last_daily_reset_at)
             WHERE account_id = $1
             """,
             account_id,
             json.dumps(data, ensure_ascii=False),
             last_online_at,
+            last_daily_reset_at,
         )
 
     await _with_connection(_callback)
@@ -58,6 +65,11 @@ def _run(coro: Any) -> Any:
 def set_offline_seconds(account_id: str, offline_seconds: int) -> None:
     last_online_at = datetime.now(timezone.utc) - timedelta(seconds=int(offline_seconds))
     _run(_patch_player_data(account_id, lambda data: None, last_online_at=last_online_at))
+
+
+def set_last_daily_reset_seconds_ago(account_id: str, seconds_ago: int) -> None:
+    last_daily_reset_at = datetime.now(timezone.utc) - timedelta(seconds=int(seconds_ago))
+    _run(_patch_player_data(account_id, lambda data: None, last_daily_reset_at=last_daily_reset_at))
 
 
 def set_cultivation_elapsed_seconds(account_id: str, elapsed_seconds: float) -> None:

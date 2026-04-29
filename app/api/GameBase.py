@@ -91,7 +91,8 @@ async def save_game(
         player_data = await PlayerData.create(
             account_id=ctx.account.id,
             data=game_data,
-            last_online_at=EPOCH_TIME
+            last_online_at=EPOCH_TIME,
+            last_daily_reset_at=EPOCH_TIME,
         )
     else:
         existing_data = player_data.data
