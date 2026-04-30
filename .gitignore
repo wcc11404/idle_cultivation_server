@@ -35,6 +35,7 @@ idle_cultivation_server.tar
 # Testing
 .pytest_cache/
 .tox/
+unit_test/.test_account_locks/
 
 # Coverage
 coverage/

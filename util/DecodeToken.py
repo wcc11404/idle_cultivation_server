@@ -4,7 +4,7 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.Security import decode_token
+from app.core.security.Security import decode_token
 
 def main(token):
     """解析token并提取account_id和token_version"""

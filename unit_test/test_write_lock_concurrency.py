@@ -9,7 +9,7 @@ from typing import Any
 import asyncpg
 import requests
 
-from app.core.ServerConfig import settings
+from app.core.config.ServerConfig import settings
 from unit_test.support.TestSupportConfig import (
     HUMAN_TEST_USERNAME,
     TEST_PASSWORD,

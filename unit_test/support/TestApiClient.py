@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
+from json import JSONDecodeError
 from typing import Any, Dict
 
 import requests
@@ -12,13 +14,30 @@ import requests
 from unit_test.support.TestSupportConfig import TEST_PASSWORD, TEST_USERNAME
 
 BASE_URL = "http://localhost:8444/api"
+REQUEST_RETRY_ATTEMPTS = 8
+REQUEST_RETRY_DELAY_SECONDS = 0.25
+
+
+def _resolve_base_url(base_url: str | None = None) -> str:
+    if base_url:
+        return base_url.rstrip("/")
+    return os.getenv("IDLE_TEST_BASE_URL", BASE_URL).rstrip("/")
+
+
+def _resolve_test_username(username: str | None = None) -> str:
+    if username:
+        return username
+    override = os.getenv("IDLE_TEST_USERNAME", "").strip()
+    if override:
+        return override
+    return TEST_USERNAME
 
 
 class TestApiClient:
     __test__ = False
 
-    def __init__(self, base_url: str = BASE_URL):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url: str | None = None):
+        self.base_url = _resolve_base_url(base_url)
         self.token: str | None = None
         self.account_id: str = ""
         self.username: str = ""
@@ -32,21 +51,56 @@ class TestApiClient:
     def _headers(self) -> Dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"} if self.token else {}
 
+    def _request_with_retry(self, method: str, path: str, **kwargs: Any) -> Dict[str, Any]:
+        last_response: requests.Response | None = None
+        last_error: Exception | None = None
+
+        for attempt in range(REQUEST_RETRY_ATTEMPTS):
+            try:
+                response = requests.request(method, f"{self.base_url}{path}", **kwargs)
+                last_response = response
+            except requests.RequestException as error:
+                last_error = error
+                if attempt < REQUEST_RETRY_ATTEMPTS - 1:
+                    time.sleep(REQUEST_RETRY_DELAY_SECONDS)
+                    continue
+                raise
+
+            if response.status_code in {502, 503, 504}:
+                if attempt < REQUEST_RETRY_ATTEMPTS - 1:
+                    time.sleep(REQUEST_RETRY_DELAY_SECONDS)
+                    continue
+
+            try:
+                return response.json()
+            except (requests.exceptions.JSONDecodeError, JSONDecodeError) as error:
+                last_error = error
+                if response.status_code in {502, 503, 504} and attempt < REQUEST_RETRY_ATTEMPTS - 1:
+                    time.sleep(REQUEST_RETRY_DELAY_SECONDS)
+                    continue
+                raise
+
+        if last_response is not None:
+            return last_response.json()
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError(f"request failed without response: {method} {path}")
+
     def _post(self, path: str, payload: Dict[str, Any] | None = None, auth: bool = True) -> Dict[str, Any]:
-        response = requests.post(
-            f"{self.base_url}{path}",
+        return self._request_with_retry(
+            "POST",
+            path,
             json=payload or {},
             headers=self._headers() if auth else {},
         )
-        return response.json()
 
     def _get(self, path: str, params: Dict[str, Any] | None = None, auth: bool = True) -> Dict[str, Any]:
-        response = requests.get(
-            f"{self.base_url}{path}",
+        return self._request_with_retry(
+            "GET",
+            path,
             params=params or {},
             headers=self._headers() if auth else {},
         )
-        return response.json()
 
     def register_user(self, username: str, password: str) -> Dict[str, Any]:
         payload = {
@@ -73,8 +127,20 @@ class TestApiClient:
             self.username = username
         return result
 
-    def login_test_account(self) -> Dict[str, Any]:
-        return self.login_user(TEST_USERNAME, TEST_PASSWORD)
+    def login_test_account(self, username: str | None = None) -> Dict[str, Any]:
+        resolved_username = _resolve_test_username(username)
+        result = self.login_user(resolved_username, TEST_PASSWORD)
+        if result.get("success"):
+            return result
+
+        if result.get("reason_code") != "ACCOUNT_LOGIN_USERNAME_NOT_FOUND":
+            return result
+
+        register_result = self.register_user(resolved_username, TEST_PASSWORD)
+        if not register_result.get("success"):
+            return register_result
+
+        return self.login_user(resolved_username, TEST_PASSWORD)
 
     def get_game_data(self) -> Dict[str, Any]:
         return self._get("/game/data")

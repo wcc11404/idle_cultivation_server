@@ -1,12 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api import api_router
-from app.core.ServerConfig import settings
-from app.core.TestAccountSeeder import ensure_test_account_exists
-from app.db.Database import init_db, close_db
-from app.core.WriteLock import WriteConflictError, build_write_conflict_payload
-from app.core.SensitiveWordFilter import init_sensitive_word_filter
+from app.bootstrap.ApiRouter import api_router
+from app.core.config.ServerConfig import settings
+from app.test_support.bootstrap.TestAccountSeeder import ensure_test_account_exists
+from app.core.db.Database import init_db, close_db
+from app.core.locks.WriteLock import WriteConflictError, build_write_conflict_payload
+from app.core.security.SensitiveWordFilter import init_sensitive_word_filter
 from contextlib import asynccontextmanager
 
 

@@ -1,4 +1,4 @@
-from app.modules.inventory.ItemData import ItemData
+from app.game.domain import ItemData
 
 
 def _inventory_counts(state_summary: dict) -> dict[str, int]:

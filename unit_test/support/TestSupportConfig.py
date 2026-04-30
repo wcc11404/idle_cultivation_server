@@ -2,6 +2,7 @@
 
 TEST_USERNAME = "test"
 HUMAN_TEST_USERNAME = "test2"
+TEST_USERNAME_PREFIX = "test_"
 TEST_PASSWORD = "test123"
 TEST_PACK_ITEM_ID = "test_pack"
 HUMAN_TEST_HERB_UNLOCK_ITEM_ID = "spell_herb_gathering"

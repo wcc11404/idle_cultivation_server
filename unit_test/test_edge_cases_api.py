@@ -1,7 +1,4 @@
-from app.modules.lianli.AreasData import AreasData
-from app.modules.cultivation.RealmData import RealmData
-from app.modules.inventory.InventorySystem import InventorySystem
-from app.modules.player.PlayerSystem import PlayerSystem
+from app.game.domain import AreasData, InventorySystem, PlayerSystem, RealmData
 from unit_test.support.DbSupport import set_alchemy_elapsed_seconds, set_offline_seconds
 
 

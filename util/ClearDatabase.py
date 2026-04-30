@@ -13,13 +13,13 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from tortoise import Tortoise
-from app.core.ServerConfig import settings
+from app.core.config.ServerConfig import settings
 
 async def init_db():
     """初始化数据库连接"""
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
-        modules={"models": ["app.db.Models"]},
+        modules={"models": ["app.core.db.Models"]},
         use_tz=True,
         timezone="Asia/Shanghai"
     )
@@ -33,7 +33,7 @@ async def clear_database():
         print("正在清空数据库...")
         
         # 获取所有模型
-        from app.db.Models import Account, PlayerData
+        from app.core.db.Models import Account, PlayerData
         
         # 清空每个模型的数据（先删除 player_data，再删除 account，避免外键约束错误）
         models = [PlayerData, Account]
@@ -55,7 +55,7 @@ async def drop_and_recreate_tables():
         # 初始化数据库连接
         await Tortoise.init(
             db_url=settings.DATABASE_URL,
-            modules={"models": ["app.db.Models"]}
+            modules={"models": ["app.core.db.Models"]}
         )
         
         print("正在删除并重新创建表结构...")

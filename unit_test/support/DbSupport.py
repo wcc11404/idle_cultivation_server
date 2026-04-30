@@ -8,7 +8,7 @@ from typing import Any, Callable
 
 import asyncpg
 
-from app.core.ServerConfig import settings
+from app.core.config.ServerConfig import settings
 
 
 JsonMutator = Callable[[dict[str, Any]], None]

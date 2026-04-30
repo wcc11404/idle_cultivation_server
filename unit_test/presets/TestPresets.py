@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from app.modules.cultivation.RealmData import RealmData
-from app.modules.alchemy.RecipeData import RecipeData
-from app.modules.lianli.AreasData import AreasData
-from app.modules.spell.SpellData import SpellData
+from app.game.domain import AreasData, RealmData, RecipeData, SpellData
 
 from unit_test.support.TestSupportConfig import (
     PRESET_ALCHEMY_READY,

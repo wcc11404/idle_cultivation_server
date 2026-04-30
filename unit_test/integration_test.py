@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from unit_test.support.DbSupport import (
     set_alchemy_elapsed_seconds,
@@ -11,10 +12,15 @@ from unit_test.support.DbSupport import (
     set_cultivation_elapsed_seconds,
 )
 from unit_test.support.TestApiClient import TestApiClient
-
-
 TARGET_REALM = "筑基期"
 TARGET_LEVEL = 1
+
+
+def _integration_test_username() -> str:
+    override = os.getenv("IDLE_INTEGRATION_TEST_USERNAME", "").strip()
+    if override:
+        return override
+    return f"test_{os.getpid()}_it"
 
 
 def expect_success(result: dict, label: str, reason_code: str | None = None) -> dict:
@@ -169,7 +175,11 @@ def main() -> int:
     client = TestApiClient()
 
     print_step("登录测试账号")
-    login_result = expect_success(client.login_test_account(), "login_test_account", "ACCOUNT_LOGIN_SUCCEEDED")
+    login_result = expect_success(
+        client.login_test_account(_integration_test_username()),
+        "login_test_account",
+        "ACCOUNT_LOGIN_SUCCEEDED",
+    )
     player = login_result.get("data", {}).get("player", {})
     print(f"登录成功，当前境界: {player.get('realm')} {player.get('realm_level')}层, 灵气: {player.get('spirit_energy')}")
 

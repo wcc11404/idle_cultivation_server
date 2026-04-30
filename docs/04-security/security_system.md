@@ -15,7 +15,7 @@
 
 ### 1.1 用户名验证
 
-**位置**: `app/core/Validator.py`
+**位置**: `app/core/security/Validator.py`
 
 **规则**:
 - 长度限制：4-20个字符
@@ -43,7 +43,7 @@ def validate_username(username: str) -> Tuple[bool, str]:
 
 ### 1.2 密码验证
 
-**位置**: `app/core/Validator.py`
+**位置**: `app/core/security/Validator.py`
 
 **规则**:
 - 长度限制：6-20个字符
@@ -69,7 +69,7 @@ def validate_password(password: str) -> Tuple[bool, str]:
 
 ### 1.3 密码加密存储
 
-**位置**: `app/core/Security.py`
+**位置**: `app/core/security/Security.py`
 
 **算法**: bcrypt
 
@@ -97,7 +97,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 ### 2.1 Token认证机制
 
-**位置**: `app/core/Security.py`
+**位置**: `app/core/security/Security.py`
 
 **算法**: JWT (JSON Web Token)
 
@@ -125,7 +125,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 ### 2.2 Token版本控制
 
-**位置**: `app/core/Security.py`
+**位置**: `app/core/security/Security.py`
 
 **机制**: 每次登录更新token_version，强制旧token失效
 
@@ -170,7 +170,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 ### 3.1 修炼系统防加速
 
-**位置**: `app/core/AntiCheatSystem.py`
+**位置**: `app/game/application/AntiCheatSystem.py`
 
 **机制**: 验证上报次数与时间间隔是否匹配
 
@@ -207,7 +207,7 @@ def validate_cultivation_report(
 
 ### 3.2 历练系统防加速
 
-**位置**: `app/modules/lianli/LianliSystem.py`
+**位置**: `app/game/domain/lianli/LianliSystem.py`
 
 **机制**: 验证战斗结算时间是否合理
 
@@ -233,7 +233,7 @@ else:
 
 ### 3.3 可疑操作记录
 
-**位置**: `app/core/AntiCheatSystem.py`
+**位置**: `app/game/application/AntiCheatSystem.py`
 
 **机制**: 记录所有可疑操作，达到阈值可封号
 
@@ -317,7 +317,7 @@ async def record_suspicious_operation(
 
 ### 5.1 昵称验证
 
-**位置**: `app/core/Validator.py`
+**位置**: `app/core/security/Validator.py`
 
 **规则**:
 - 长度限制：4-10个字符
@@ -372,7 +372,7 @@ pip install pyahocorasick
 
 **使用**:
 ```python
-from app.core.SensitiveWordFilter import get_sensitive_word_filter
+from app.core.security.SensitiveWordFilter import get_sensitive_word_filter
 
 sensitive_filter = get_sensitive_word_filter()
 if sensitive_filter.check(nickname):
@@ -382,8 +382,8 @@ if sensitive_filter.check(nickname):
 **特点**:
 - Aho-Corasick 多模式高性能匹配
 - 仓库内置词库，支持版本化管理
-- 中文词表：`app/resources/sensitive_words_zh.txt`
-- 英文词表：`app/resources/sensitive_words_en.txt`
+- 中文词表：`app/core/resources/sensitive_words_zh.txt`
+- 英文词表：`app/core/resources/sensitive_words_en.txt`
 
 ---
 
@@ -445,9 +445,9 @@ class SensitiveWordFilter:
         }
         self.words.update(base_words)
         
-        # 从文件加载自定义敏感词（示例可读取 app/resources/sensitive_words_zh.txt 与 sensitive_words_en.txt）
+        # 从文件加载自定义敏感词（示例可读取 app/core/resources/sensitive_words_zh.txt 与 sensitive_words_en.txt）
         try:
-            with open("app/resources/sensitive_words_zh.txt", 'r', encoding='utf-8') as f:
+            with open("app/core/resources/sensitive_words_zh.txt", 'r', encoding='utf-8') as f:
                 for line in f:
                     word = line.strip()
                     if word:
@@ -693,10 +693,10 @@ async def ip_filter(request: Request, call_next):
 
 ## 9. 相关文件
 
-- `app/core/Security.py` - 身份认证与密码加密
-- `app/core/Validator.py` - 数据验证
-- `app/core/AntiCheatSystem.py` - 防作弊系统
-- `app/modules/account/AccountApi.py` - 账号相关API
+- `app/core/security/Security.py` - 身份认证与密码加密
+- `app/core/security/Validator.py` - 数据验证
+- `app/game/application/AntiCheatSystem.py` - 防作弊系统
+- `app/game/api/AuthApi.py` - 账号相关API
 - `requirements.txt` - 依赖配置
 
 ---

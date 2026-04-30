@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import app.core.Validator as validator_mod
-from app.core.SensitiveWordFilter import SensitiveWordFilter
-from app.core.Validator import Validator
+import app.core.security.Validator as validator_mod
+from app.core.security.SensitiveWordFilter import SensitiveWordFilter
+from app.core.security.Validator import Validator
 
 
 def test_nickname_sensitive_word_blocked_in_chinese() -> None:

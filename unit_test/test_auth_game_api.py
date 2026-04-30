@@ -15,6 +15,12 @@ def test_login_wrong_password_returns_reason_code(client):
     assert result["reason_code"] == "ACCOUNT_LOGIN_PASSWORD_INCORRECT"
 
 
+def test_login_overlong_username_returns_reason_code_instead_of_500(client):
+    result = client.login_user("test_username_over_twenty", "test123")
+    assert result["success"] is False
+    assert result["reason_code"] == "ACCOUNT_LOGIN_USERNAME_NOT_FOUND"
+
+
 def test_non_test_account_cannot_access_test_api(normal_logged_in_client):
     result = normal_logged_in_client.reset_account()
     assert result["detail"] == "仅测试账号可调用测试接口"

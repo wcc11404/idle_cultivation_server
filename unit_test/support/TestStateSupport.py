@@ -6,28 +6,31 @@ import copy
 import time
 from typing import Any, Dict, Optional
 
-from app.core.Dependencies import GameContext
-from app.core.InitPlayerInfo import get_initial_player_data
-from app.modules.alchemy.AlchemySystem import AlchemySystem
-from app.modules.account.AccountSystem import AccountSystem
-from app.modules.alchemy.RecipeData import RecipeData
-from app.modules.cultivation.RealmData import RealmData
-from app.modules.herb.HerbGatherSystem import HerbGatherSystem
-from app.modules.herb.HerbPointData import HerbPointData
-from app.modules.inventory.InventorySystem import InventorySystem
-from app.modules.inventory.ItemData import ItemData
-from app.modules.lianli.AreasData import AreasData
-from app.modules.lianli.LianliSystem import LianliSystem
-from app.modules.player.PlayerSystem import PlayerSystem
-from app.modules.spell.SpellData import SpellData
-from app.modules.spell.SpellSystem import SpellSystem
+from app.game.application.GameContext import GameContext
+from app.game.application.InitPlayerInfo import get_initial_player_data
+from app.game.domain import (
+    AccountSystem,
+    AlchemySystem,
+    AreasData,
+    HerbGatherSystem,
+    HerbPointData,
+    InventorySystem,
+    ItemData,
+    LianliSystem,
+    PlayerSystem,
+    RealmData,
+    RecipeData,
+    SpellData,
+    SpellSystem,
+)
 
 from unit_test.presets.TestPresets import build_preset
-from unit_test.support.TestSupportConfig import TEST_PACK_ITEM_ID, TEST_USERNAME
+from unit_test.support.TestSupportConfig import TEST_PACK_ITEM_ID, TEST_USERNAMES, TEST_USERNAME_PREFIX
 
 
 def is_test_account(ctx: GameContext) -> bool:
-    return str(ctx.account.username) == TEST_USERNAME
+    username = str(ctx.account.username)
+    return username in TEST_USERNAMES or username.startswith(TEST_USERNAME_PREFIX)
 
 
 def hydrate_context_from_data(ctx: GameContext, db_data: Dict[str, Any]) -> None:
