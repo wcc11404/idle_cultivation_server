@@ -45,7 +45,7 @@ class GameContext:
         self.player_data.data = copy.deepcopy(self.db_data)
 
 
-def _build_game_context(account: Account, player_data: PlayerData) -> GameContext:
+def build_game_context(account: Account, player_data: PlayerData) -> GameContext:
     db_data = copy.deepcopy(player_data.data)
 
     spell_system = SpellSystem.from_dict(db_data.get("spell_system", {}))
@@ -106,7 +106,7 @@ async def get_game_context(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="玩家数据不存在"
         )
     
-    return _build_game_context(current_user, player_data)
+    return build_game_context(current_user, player_data)
 
 
 async def get_write_game_context(
@@ -138,7 +138,7 @@ async def get_write_game_context(
                 detail="玩家数据不存在"
             )
         run_daily_reset_if_needed(locked.player_data)
-        yield _build_game_context(locked.account, locked.player_data)
+        yield build_game_context(locked.account, locked.player_data)
 
 
 async def get_token_info(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:

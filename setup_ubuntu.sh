@@ -13,6 +13,8 @@ set -euo pipefail
 #   bash setup_ubuntu.sh --start
 #   bash setup_ubuntu.sh --skip-apt
 #   bash setup_ubuntu.sh --recreate-venv   # 可选：强制重建
+#   bash setup_ubuntu.sh --with-ops-web    # 安装 Node/npm 并构建 ops_web
+#   bash setup_ubuntu.sh --init-ops-db     # 初始化运维相关表与引导账号
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
@@ -24,6 +26,9 @@ DB_PASS="postgres"
 SKIP_APT=0
 START_AFTER_SETUP=0
 RECREATE_VENV=0
+WITH_OPS_WEB=0
+INIT_OPS_DB=0
+SKIP_OPS_WEB_BUILD=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -36,9 +41,18 @@ for arg in "$@"; do
     --recreate-venv)
       RECREATE_VENV=1
       ;;
+    --with-ops-web)
+      WITH_OPS_WEB=1
+      ;;
+    --init-ops-db)
+      INIT_OPS_DB=1
+      ;;
+    --skip-ops-web-build)
+      SKIP_OPS_WEB_BUILD=1
+      ;;
     *)
       echo "未知参数: $arg"
-      echo "支持参数: --skip-apt --start --recreate-venv"
+      echo "支持参数: --skip-apt --start --recreate-venv --with-ops-web --init-ops-db --skip-ops-web-build"
       exit 1
       ;;
   esac
@@ -85,6 +99,9 @@ if [[ "$SKIP_APT" -eq 0 ]]; then
     build-essential \
     lsof \
     curl
+  if [[ "$WITH_OPS_WEB" -eq 1 ]]; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs npm
+  fi
 else
   log "跳过 apt 安装（--skip-apt）"
 fi
@@ -139,12 +156,49 @@ source venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
+if [[ "$INIT_OPS_DB" -eq 1 || "$WITH_OPS_WEB" -eq 1 ]]; then
+  log "初始化运维表与引导账号..."
+  python - <<'PY'
+import asyncio
+from app.core.db.Database import close_db, init_db
+from app.ops.auth.Service import OpsAuthService
+
+async def main():
+    await init_db()
+    await OpsAuthService.ensure_bootstrap_data()
+    await close_db()
+
+asyncio.run(main())
+PY
+fi
+
+if [[ "$WITH_OPS_WEB" -eq 1 ]]; then
+  if [[ -d "ops_web" ]]; then
+    log "安装 ops_web 前端依赖..."
+    (
+      cd ops_web
+      npm install
+      if [[ "$SKIP_OPS_WEB_BUILD" -eq 0 ]]; then
+        log "构建 ops_web..."
+        npm run build
+      else
+        log "跳过 ops_web 构建（--skip-ops-web-build）"
+      fi
+    )
+  else
+    log "未找到 ops_web 目录，跳过运维前端安装"
+  fi
+fi
+
 log "环境安装完成"
 echo ""
 echo "下一步："
 echo "1) 启动服务: bash restart.sh"
 echo "2) 查看日志: tail -f server.log"
 echo "3) 访问文档: http://<你的服务器IP>:8444/api/docs"
+if [[ "$WITH_OPS_WEB" -eq 1 ]]; then
+  echo "4) 访问运维页: http://<你的服务器IP>:8444/ops"
+fi
 echo ""
 
 if [[ "$START_AFTER_SETUP" -eq 1 ]]; then

@@ -27,6 +27,9 @@ build/
 dist/
 *.egg-info/
 idle_cultivation_server.tar
+node_modules/
+*.tsbuildinfo
+.npm-cache/
 
 # Database
 *.db

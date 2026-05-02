@@ -300,6 +300,7 @@ def main() -> int:
 
     print_step("测试排行榜")
     rank_result = expect_success(client.get_rank(), "get_rank", "GAME_RANK_SUCCEEDED")
+    assert len(rank_result.get("ranks", [])) <= 30, f"排行榜返回条目不应超过30: {len(rank_result.get('ranks', []))}"
     print(f"排行榜条目数: {len(rank_result.get('ranks', []))}")
 
     print_step("打印最终游戏状态")

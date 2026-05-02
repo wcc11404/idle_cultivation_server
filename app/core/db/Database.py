@@ -6,7 +6,7 @@ async def init_db():
     """初始化数据库连接"""
     await Tortoise.init(
         db_url=settings.DATABASE_URL,
-        modules={"models": ["app.core.db.Models"]},
+        modules={"models": ["app.core.db.Models", "app.ops.models"]},
         use_tz=True,
         timezone="Asia/Shanghai"
     )

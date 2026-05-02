@@ -3,10 +3,17 @@
 # 初始化数据库脚本
 echo "开始初始化数据库..."
 
+PG_BIN_PREFIX=""
+
 # 检查 PostgreSQL 服务状态
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
     echo "检测到 macOS 系统"
+    if [ -d "/usr/local/opt/postgresql@16/bin" ]; then
+        PG_BIN_PREFIX="/usr/local/opt/postgresql@16/bin/"
+    elif [ -d "/opt/homebrew/opt/postgresql@16/bin" ]; then
+        PG_BIN_PREFIX="/opt/homebrew/opt/postgresql@16/bin/"
+    fi
     PG_STATUS=$(brew services list | grep postgresql)
     
     if echo "$PG_STATUS" | grep -q "started"; then
@@ -44,7 +51,7 @@ fi
 echo "删除现有数据库 idle_cultivation_game..."
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
-    dropdb --if-exists idle_cultivation_game
+    "${PG_BIN_PREFIX}dropdb" --if-exists idle_cultivation_game
 else
     # Linux 系统
     sudo -u postgres dropdb --if-exists idle_cultivation_game
@@ -59,7 +66,7 @@ fi
 echo "创建数据库 idle_cultivation_game..."
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
-    createdb idle_cultivation_game
+    "${PG_BIN_PREFIX}createdb" idle_cultivation_game
 else
     # Linux 系统
     sudo -u postgres createdb idle_cultivation_game
@@ -75,7 +82,7 @@ fi
 echo "初始化表结构..."
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
-    psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
+    "${PG_BIN_PREFIX}psql" -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
 else
     # Linux 系统
     sudo -u postgres psql -d idle_cultivation_game -f "$(dirname "$0")/init.sql"
@@ -91,7 +98,7 @@ fi
 echo "验证数据库..."
 if [ "$(uname)" = "Darwin" ]; then
     # macOS 系统
-    psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
+    "${PG_BIN_PREFIX}psql" -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"
 else
     # Linux 系统
     sudo -u postgres psql -d idle_cultivation_game -c "SELECT COUNT(*) FROM accounts;"

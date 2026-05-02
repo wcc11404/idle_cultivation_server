@@ -27,6 +27,7 @@ router = APIRouter()
 
 
 EPOCH_TIME = datetime.fromtimestamp(0, timezone.utc)
+RANK_MAX_ENTRIES = 30
 
 
 @router.get("/data", response_model=LoadGameResponse)
@@ -282,7 +283,7 @@ async def get_rank(server_id: str = "default"):
     ))
     
     rank_items = []
-    for index, item in enumerate(rank_list[:100], start=1):
+    for index, item in enumerate(rank_list[:RANK_MAX_ENTRIES], start=1):
         rank_items.append(RankItem(
             rank=index,
             nickname=item["nickname"],

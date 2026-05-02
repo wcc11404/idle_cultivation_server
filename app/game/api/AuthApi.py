@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.security import HTTPAuthorizationCredentials
 import time
 import json
+from app.ops.models import OpsLoginWhitelist, OpsSystemState
 
 router = APIRouter()
 
@@ -53,7 +54,9 @@ USERNAME_PASSWORD_REASON_CODE_MAP = {
 LOGIN_REASON_CODE_MAP = {
     "username_not_found": "ACCOUNT_LOGIN_USERNAME_NOT_FOUND",
     "password_incorrect": "ACCOUNT_LOGIN_PASSWORD_INCORRECT",
-    "account_banned": "ACCOUNT_LOGIN_ACCOUNT_BANNED"
+    "account_banned": "ACCOUNT_LOGIN_ACCOUNT_BANNED",
+    "login_disabled": "LOGIN_DISABLED",
+    "login_disabled_not_in_whitelist": "LOGIN_DISABLED_NOT_IN_WHITELIST",
 }
 
 CHANGE_PASSWORD_REASON_CODE_MAP = {
@@ -248,6 +251,23 @@ async def login(request: LoginRequest):
                 account_info={"id": "00000000-0000-0000-0000-000000000000", "username": "", "server_id": ""},
                 data={}
             )
+
+        ops_state = await OpsSystemState.get_or_none(id=1)
+        if ops_state and ops_state.login_gate_enabled:
+            whitelist_hit = await OpsLoginWhitelist.filter(account_id=account.id).exists()
+            if not whitelist_hit:
+                logger.warning(f"[OUT] POST /auth/login - 登录闸门阻止登录 - username: {request.username} - 耗时: {time.time() - start_time:.4f}s")
+                return LoginResponse(
+                    success=False,
+                    operation_id=request.operation_id,
+                    timestamp=request.timestamp,
+                    reason_code=LOGIN_REASON_CODE_MAP["login_disabled_not_in_whitelist"],
+                    reason_data={"username": request.username},
+                    token="",
+                    expires_in=0,
+                    account_info={"id": "00000000-0000-0000-0000-000000000000", "username": "", "server_id": ""},
+                    data={}
+                )
 
         account.token_version += 1
         await account.save()

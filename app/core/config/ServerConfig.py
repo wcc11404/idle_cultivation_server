@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # 服务端配置
     SERVER_HOST: str = "0.0.0.0"
     SERVER_PORT: int = 8444
+
+    # 运维系统引导账号
+    OPS_BOOTSTRAP_USERNAME: str = "admin"
+    OPS_BOOTSTRAP_PASSWORD: str = "admin123"
     
     # 每日重置时间（小时）
     DAILY_RESET_HOUR: int = 4

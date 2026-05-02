@@ -261,6 +261,8 @@
 - `ACCOUNT_LOGIN_USERNAME_NOT_FOUND`
 - `ACCOUNT_LOGIN_PASSWORD_INCORRECT`
 - `ACCOUNT_LOGIN_ACCOUNT_BANNED`
+- `LOGIN_DISABLED`
+- `LOGIN_DISABLED_NOT_IN_WHITELIST`
 
 ---
 
@@ -771,7 +773,7 @@
 
 #### 说明
 
-- 返回前100名玩家数据
+- 最多返回前30名玩家数据
 - 不包含被封禁的账号
 - 不需要认证即可访问
 
@@ -2360,6 +2362,156 @@
   "detail": "Player not found"
 }
 ```
+
+---
+
+### 8.5 历史管理接口说明
+
+- `/api/admin/*` 当前仍可用，但定位已经调整为历史兼容入口。
+- 新增运维能力默认不再继续挂到 `/api/admin/*`。
+- 正式运维后台与浏览器端统一改走 `/ops/api/*`。
+
+---
+
+### 8.6 正式运维系统 API
+
+#### 8.6.1 运维登录
+
+- **接口地址**：`POST /ops/api/auth/login`
+- **功能**：使用 `ops_users` 中的运维账号登录，获取独立运维 token
+- **认证**：无需认证
+
+请求体示例：
+
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+成功响应示例：
+
+```json
+{
+  "success": true,
+  "token": "ops_jwt_token",
+  "user": {
+    "id": "uuid",
+    "username": "admin",
+    "role": "super_admin",
+    "display_name": "系统管理员"
+  }
+}
+```
+
+#### 8.6.2 当前运维身份
+
+- **接口地址**：`GET /ops/api/auth/me`
+- **功能**：返回当前运维账号信息
+- **认证**：需要运维 token
+
+#### 8.6.3 运维登出
+
+- **接口地址**：`POST /ops/api/auth/logout`
+- **功能**：撤销当前运维 token
+- **认证**：需要运维 token
+
+#### 8.6.4 系统概览与健康状态
+
+- **接口地址**：
+  - `GET /ops/api/system/summary`
+  - `GET /ops/api/system/health`
+- **功能**：
+  - `summary` 返回玩家总量、封禁数、邮件总量、登录闸门状态等摘要
+  - `health` 返回运维后台后端可用性检查结果
+
+#### 8.6.5 玩家管理
+
+- **接口地址**：
+  - `GET /ops/api/players`
+  - `GET /ops/api/players/{account_id}`
+  - `POST /ops/api/players/ban`
+  - `POST /ops/api/players/unban`
+  - `POST /ops/api/players/kick`
+  - `POST /ops/api/system/kick-all`
+- **功能**：
+  - 玩家分页查询
+  - 玩家详情查询
+  - 永久封禁
+  - 解除封禁
+  - 强制下线
+  - 全部踢下线
+
+说明：
+
+- 一期封禁策略为永久封禁，不提供定时封禁。
+- `kick` 与 `ban` 都会使玩家旧 token 失效。
+- 玩家列表当前支持：
+  - 按用户名搜索
+  - 按昵称搜索
+- 玩家管理页默认展示：
+  - 用户名
+  - 昵称
+  - 注册时间
+  - 境界
+  - 封禁状态
+- 页面展示时间统一按东八区显示，不使用 `T` 分隔格式。
+
+#### 8.6.6 发放中心
+
+- **接口地址**：
+  - `GET /ops/api/grant/item-options`
+  - `POST /ops/api/grant/mails/preview`
+  - `POST /ops/api/grant/mails/confirm`
+  - `POST /ops/api/grant/items/preview`
+  - `POST /ops/api/grant/items/confirm`
+- **功能**：
+  - 查询可选附件物品列表
+  - 邮件发放预览/确认
+  - 历史直发背包物品接口的禁用占位返回
+
+说明：
+
+- 一期高危发放统一采用 `preview -> confirm` 两段式。
+- 支持单账号、账号列表、全服所有玩家。
+- 发放中心当前只允许“发送带附件邮件”。
+- 同一封邮件支持多个附件。
+- 前端附件选择器直接显示物品中文名称。
+- 不提供“直接修改资源数值”接口。
+- 不允许直接把物品塞进玩家背包；`/ops/api/grant/items/*` 当前保留为禁用占位，统一返回 `OPS_DIRECT_ITEM_GRANT_DISABLED`。
+
+#### 8.6.7 审计日志
+
+- **接口地址**：`GET /ops/api/audit/list`
+- **功能**：查询运维操作审计日志
+- **认证**：需要运维 token
+
+说明：
+
+- 审计日志页面时间显示统一按东八区展示。
+- 前端展示格式不使用 ISO `T` 分隔。
+
+#### 8.6.8 登录闸门与白名单
+
+- **接口地址**：
+  - `POST /ops/api/system/login-gate`
+  - `GET /ops/api/system/whitelist`
+  - `POST /ops/api/system/whitelist`
+- **功能**：
+  - 开启/关闭登录闸门
+  - 查询白名单
+  - 添加/移除白名单账号
+
+说明：
+
+- 游戏登录接口会读取 `ops_system_state.login_gate_enabled`。
+- 当登录闸门开启时，只有 `ops_login_whitelist` 中的账号允许继续登录。
+- 白名单更新接口当前支持两种标识：
+  - `account_id`
+  - `username`
+- 不在白名单中的普通玩家会收到：
+  - `LOGIN_DISABLED_NOT_IN_WHITELIST`
 
 ---
 

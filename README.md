@@ -26,6 +26,8 @@ bash restart.sh
 
 服务默认运行在 `http://localhost:8444`，Swagger 文档地址为 `http://localhost:8444/api/docs`。
 
+如果已经接入并构建运维前端，运维网页入口为 `http://localhost:8444/ops`。
+
 ## 常用命令
 
 ```bash
@@ -55,19 +57,25 @@ python -m unit_test.integration_test
   [docs/05-api/api_documentation.md](/Users/hsams/Documents/idle_cultivation_project/idle_cultivation_server/docs/05-api/api_documentation.md)
 - 安全系统专项：
   [docs/04-security/security_system.md](/Users/hsams/Documents/idle_cultivation_project/idle_cultivation_server/docs/04-security/security_system.md)
+- 运维系统安装与启动：
+  [docs/03-operations/运维系统安装与启动手册.md](/Users/hsams/Documents/idle_cultivation_project/idle_cultivation_server/docs/03-operations/运维系统安装与启动手册.md)
+- 数据库与表结构说明：
+  [docs/03-operations/数据库与表结构说明.md](/Users/hsams/Documents/idle_cultivation_project/idle_cultivation_server/docs/03-operations/数据库与表结构说明.md)
 
 ## 当前结构
 
 ```text
 idle_cultivation_server/
 ├── app/
-│   ├── api/                # 基础路由与测试支持路由
-│   ├── core/               # 配置、安全、依赖、日志、初始化
-│   ├── db/                 # 数据库连接与模型
-│   ├── modules/            # 业务模块
-│   └── schemas/            # 请求/响应 schema
+│   ├── admin_support/      # 历史管理接口兼容层
+│   ├── bootstrap/          # 顶层路由装配
+│   ├── core/               # 配置、安全、数据库、日志、资源、写锁
+│   ├── game/               # 游戏正式主线
+│   ├── ops/                # 正式运维后台域
+│   └── test_support/       # 测试支持接口与引导逻辑
 ├── docs/                   # 开发文档（API 手册单独保留）
-├── sql/                    # 数据库初始化脚本
+├── ops_web/                # 运维前端（React + Vite）
+├── sql/                    # 数据库初始化总入口与 schema 子系统分片
 ├── unit_test/              # pytest 与 smoke 支持
 ├── util/                   # 手工运维/调试脚本
 ├── setup_ubuntu.sh         # 一键安装
