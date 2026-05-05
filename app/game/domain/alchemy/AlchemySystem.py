@@ -127,11 +127,11 @@ class AlchemySystem:
         
         if level > 0:
             from ..spell.SpellData import SpellData
-            level_data = SpellData.get_spell_level_data("alchemy", level)
-            effect = level_data.get("effect", {})
-            bonus["success_bonus"] = effect.get("success_bonus", 0)
-            bonus["speed_rate"] = effect.get("speed_rate", 0.0)
-        
+            effects = SpellData.get_spell_effects("alchemy", level)
+            for effect in effects:
+                bonus["success_bonus"] += int(effect.get("success_bonus", 0))
+                bonus["speed_rate"] += float(effect.get("speed_rate", 0.0))
+
         return bonus
     
     def get_furnace_bonus(self) -> Dict[str, Any]:

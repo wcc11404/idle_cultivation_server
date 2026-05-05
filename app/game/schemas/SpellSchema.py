@@ -18,6 +18,10 @@ class ChargeSpellRequest(BaseRequest):
     amount: int
 
 
+class StarUpSpellRequest(BaseRequest):
+    spell_id: str
+
+
 class SpellListResponse(BaseResponse):
     player_spells: dict
     equipped_spells: dict

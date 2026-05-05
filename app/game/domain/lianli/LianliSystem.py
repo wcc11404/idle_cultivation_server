@@ -389,7 +389,13 @@ class LianliSystem:
             "max_health": float(enemy_data.get("max_health", enemy_data.get("health", 100))),
             "speed": enemy_data.get("speed", 7),
             "attack": enemy_data.get("attack", 10),
-            "defense": enemy_data.get("defense", 5)
+            "defense": enemy_data.get("defense", 5),
+            "hit": 1.0,
+            "dodge": 0.0,
+            "crit": 0.0,
+            "anti_crit": 0.0,
+            "penetration": 0.0,
+            "crit_damage": 1.0,
         }
         enemy_name = enemy_data.get("name", "敌人")
      
@@ -419,9 +425,9 @@ class LianliSystem:
             # 如果都准备就绪，根据速度判断行动顺序
             if player_ready and enemy_ready:
                 if player_attributes["speed"] > enemy_attributes["speed"]:
-                    player_atb, battle_timeline = self._player_action(
+                    player_atb, enemy_atb, battle_timeline = self._player_action(
                         current_time, player_atb, player_attributes, enemy_attributes, 
-                        battle_timeline, spell_system
+                        enemy_atb, battle_timeline, spell_system
                     )
                     if enemy_attributes["health"] <= 0:
                         break
@@ -436,14 +442,14 @@ class LianliSystem:
                     if player_attributes["health"] <= 0:
                         break
                     
-                    player_atb, battle_timeline = self._player_action(
+                    player_atb, enemy_atb, battle_timeline = self._player_action(
                         current_time, player_atb, player_attributes, enemy_attributes, 
-                        battle_timeline, spell_system
+                        enemy_atb, battle_timeline, spell_system
                     )
             elif player_ready:
-                player_atb, battle_timeline = self._player_action(
+                player_atb, enemy_atb, battle_timeline = self._player_action(
                     current_time, player_atb, player_attributes, enemy_attributes, 
-                    battle_timeline, spell_system
+                    enemy_atb, battle_timeline, spell_system
                 )
             elif enemy_ready:
                 enemy_atb, battle_timeline = self._enemy_action(
@@ -497,7 +503,8 @@ class LianliSystem:
         return battle_timeline
     
     def _player_action(self, current_time: float, player_atb: float, 
-                       player_attributes: dict, enemy_attributes: dict, 
+                       player_attributes: dict, enemy_attributes: dict,
+                       enemy_atb: float,
                        battle_timeline: list,
                        spell_system: Optional['SpellSystem'] = None) -> tuple:
         """玩家攻击行动"""
@@ -511,6 +518,7 @@ class LianliSystem:
                 # 使用术法
                 spell_use_result = spell_system.use_spell(spell_id, player_attributes, enemy_attributes)
                 if spell_use_result.get("used", False):
+                    enemy_atb = max(0.0, enemy_atb + float(spell_use_result.get("turn_gauge_delta", 0.0)) * self.ATB_MAX)
                     battle_timeline.append({
                         "time": round(current_time, 2),
                         "type": "player_action",
@@ -522,32 +530,57 @@ class LianliSystem:
         
         if not spell_id:
             # 普通攻击
-            damage = AttributeCalculator.calculate_damage(
-                player_attributes["attack"], enemy_attributes["defense"]
+            damage_result = AttributeCalculator.resolve_damage(
+                float(player_attributes["attack"]),
+                float(enemy_attributes["defense"]),
+                float(player_attributes.get("hit", 1.0)),
+                float(enemy_attributes.get("dodge", 0.0)),
+                float(player_attributes.get("crit", 0.0)),
+                float(enemy_attributes.get("anti_crit", 0.0)),
+                float(player_attributes.get("crit_damage", 1.0)),
+                1.0,
+                float(player_attributes.get("penetration", 0.0))
             )
-            enemy_attributes["health"] = round(max(0.0, enemy_attributes["health"] - damage), 2)
+            is_hit = bool(damage_result.get("hit", False))
+            is_crit = bool(damage_result.get("crit", False))
+            damage = float(damage_result.get("damage", 0.0))
+            if is_hit:
+                enemy_attributes["health"] = round(max(0.0, enemy_attributes["health"] - damage), 2)
             battle_timeline.append({
                 "time": round(current_time, 2),
                 "type": "player_action",
                 "info": {
                     "spell_id": "norm_attack",
                     "effect_type": "instant_damage",
+                    "hit": is_hit,
+                    "crit": is_crit,
                     "damage": round(damage, 2),
                     "target_health_after": round(enemy_attributes["health"], 2)
                 }
             })
-        
-        return player_atb - self.ATB_MAX, battle_timeline
+
+        return player_atb - self.ATB_MAX, enemy_atb, battle_timeline
     
     def _enemy_action(self, current_time: float, enemy_atb: float,
                       player_attributes: dict, enemy_attributes: dict, 
                       battle_timeline: list, enemy_name: str = "敌人") -> tuple:
         """敌人攻击行动"""
-        attack = enemy_attributes["attack"]
-        defense = player_attributes["defense"]
-        
-        damage = AttributeCalculator.calculate_damage(attack, defense)
-        player_attributes["health"] = round(max(0.0, player_attributes["health"] - damage), 2)
+        damage_result = AttributeCalculator.resolve_damage(
+            float(enemy_attributes.get("attack", 0.0)),
+            float(player_attributes.get("defense", 0.0)),
+            float(enemy_attributes.get("hit", 1.0)),
+            float(player_attributes.get("dodge", 0.0)),
+            float(enemy_attributes.get("crit", 0.0)),
+            float(player_attributes.get("anti_crit", 0.0)),
+            float(enemy_attributes.get("crit_damage", 1.0)),
+            1.0,
+            float(enemy_attributes.get("penetration", 0.0))
+        )
+        is_hit = bool(damage_result.get("hit", False))
+        is_crit = bool(damage_result.get("crit", False))
+        damage = float(damage_result.get("damage", 0.0))
+        if is_hit:
+            player_attributes["health"] = round(max(0.0, player_attributes["health"] - damage), 2)
         
         battle_timeline.append({
             "time": round(current_time, 2),
@@ -555,6 +588,8 @@ class LianliSystem:
             "info": {
                 "spell_id": "norm_attack",
                 "effect_type": "instant_damage",
+                "hit": is_hit,
+                "crit": is_crit,
                 "damage": round(damage, 2),
                 "target_health_after": round(player_attributes["health"], 2)
             }

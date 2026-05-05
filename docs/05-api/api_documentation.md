@@ -201,7 +201,7 @@
     },
     "inventory": {
       "slots": {},
-      "capacity": 40
+      "capacity": 60
     },
     "spell_system": {
       "slot_limits": {
@@ -535,7 +535,7 @@
     },
     "inventory": {
       "slots": {},
-      "capacity": 40
+      "capacity": 60
     },
     "spell_system": {
       "slot_limits": {
@@ -1240,7 +1240,7 @@
   "timestamp": 1234567890,
   "reason_code": "INVENTORY_EXPAND_SUCCEEDED",
   "reason_data": {
-    "new_capacity": 40
+    "new_capacity": 60
   }
 }
 ```
@@ -1254,7 +1254,7 @@
   "timestamp": 1234567890,
   "reason_code": "INVENTORY_EXPAND_CAPACITY_MAX",
   "reason_data": {
-    "new_capacity": 40
+    "new_capacity": 60
   }
 }
 ```
@@ -1291,7 +1291,7 @@
       "0": {"id": "health_pill", "count": 5},
       "1": {"id": "spirit_pill", "count": 3}
     },
-    "capacity": 40
+    "capacity": 60
   }
 }
 ```
@@ -1316,47 +1316,11 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| spell_id     | string | 是   | 术法ID                        |
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_EQUIP_SUCCEEDED",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "slot_type": "active",
-    "spell_type": "active",
-    "action": ""
-  }
-}
-```
-
-#### 失败响应
-
-```json
-{
-  "success": false,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_SLOT_LIMIT_REACHED",
-  "reason_data": {
-    "spell_id": "thunder_strike",
-    "slot_type": "active",
-    "spell_type": "active",
-    "limit": 2,
-    "current_count": 2,
-    "action": ""
-  }
-}
-```
+| 字段         | 类型   | 必选 | 说明                         |
+| ------------ | ------ | ---- | ---------------------------- |
+| operation_id | string | 是   | 客户端生成的 UUID            |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒） |
+| spell_id     | string | 是   | 术法 ID                      |
 
 #### `reason_code` 枚举
 
@@ -1378,45 +1342,11 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| spell_id     | string | 是   | 术法ID                        |
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_UNEQUIP_SUCCEEDED",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "slot_type": "active",
-    "spell_type": "active",
-    "action": ""
-  }
-}
-```
-
-#### 失败响应
-
-```json
-{
-  "success": false,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_UNEQUIP_NOT_EQUIPPED",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "slot_type": "",
-    "spell_type": "",
-    "action": ""
-  }
-}
-```
+| 字段         | 类型   | 必选 | 说明                         |
+| ------------ | ------ | ---- | ---------------------------- |
+| operation_id | string | 是   | 客户端生成的 UUID            |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒） |
+| spell_id     | string | 是   | 术法 ID                      |
 
 #### `reason_code` 枚举
 
@@ -1435,45 +1365,11 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| spell_id     | string | 是   | 术法ID                        |
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_UPGRADE_SUCCEEDED",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "new_level": 2,
-    "action": ""
-  }
-}
-```
-
-#### 失败响应
-
-```json
-{
-  "success": false,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_UPGRADE_CHARGED_SPIRIT_INSUFFICIENT",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "current_level": 1,
-    "current_charged_spirit": 20,
-    "required_charged_spirit": 100,
-    "action": ""
-  }
-}
-```
+| 字段         | 类型   | 必选 | 说明                         |
+| ------------ | ------ | ---- | ---------------------------- |
+| operation_id | string | 是   | 客户端生成的 UUID            |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒） |
+| spell_id     | string | 是   | 术法 ID                      |
 
 #### `reason_code` 枚举
 
@@ -1494,44 +1390,12 @@
 
 #### 请求参数
 
-| 字段         | 类型   | 必选 | 说明                          |
-| ------------ | ------ | ---- | ----------------------------- |
-| operation_id | string | 是   | 客户端生成的UUID              |
-| timestamp    | number | 是   | 客户端触发操作的时间戳（秒）  |
-| spell_id     | string | 是   | 术法ID                        |
-| amount       | integer | 是   | 充灵气数量                    |
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_CHARGE_SUCCEEDED",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "charged_amount": 100,
-    "action": ""
-  }
-}
-```
-
-#### 失败响应
-
-```json
-{
-  "success": false,
-  "operation_id": "uuid",
-  "timestamp": 1234567890,
-  "reason_code": "SPELL_CHARGE_PLAYER_SPIRIT_INSUFFICIENT",
-  "reason_data": {
-    "spell_id": "basic_boxing_techniques",
-    "current_spirit": 0,
-    "action": ""
-  }
-}
-```
+| 字段         | 类型    | 必选 | 说明                         |
+| ------------ | ------- | ---- | ---------------------------- |
+| operation_id | string  | 是   | 客户端生成的 UUID            |
+| timestamp    | number  | 是   | 客户端触发操作的时间戳（秒） |
+| spell_id     | string  | 是   | 术法 ID                      |
+| amount       | integer | 是   | 充灵气数量                   |
 
 #### `reason_code` 枚举
 
@@ -1544,17 +1408,75 @@
 
 ---
 
-### 5.5 获取术法列表
+### 5.5 升星术法
 
-- **接口地址**：`GET /api/game/spell/list`
-- **功能**：获取玩家所有术法
+- **接口地址**：`POST /api/game/spell/star_up`
+- **功能**：提升术法星级
 - **认证**：需要认证
 
 #### 请求参数
 
-无（通过请求头传递token）
+| 字段         | 类型   | 必选 | 说明                         |
+| ------------ | ------ | ---- | ---------------------------- |
+| operation_id | string | 是   | 客户端生成的 UUID            |
+| timestamp    | number | 是   | 客户端触发操作的时间戳（秒） |
+| spell_id     | string | 是   | 术法 ID                      |
 
-#### 成功响应
+#### 成功响应示例
+
+```json
+{
+  "success": true,
+  "operation_id": "uuid",
+  "timestamp": 1234567890,
+  "reason_code": "SPELL_STAR_UP_SUCCEEDED",
+  "reason_data": {
+    "spell_id": "basic_boxing_techniques",
+    "new_star": 1,
+    "consumed_unlock_item_id": "spell_basic_boxing_techniques",
+    "consumed_unlock_item_count": 1,
+    "consumed_star_material_count": 0,
+    "action": ""
+  },
+  "new_star": 1
+}
+```
+
+#### `reason_code` 枚举
+
+- `SPELL_STAR_UP_SUCCEEDED`
+- `SPELL_STAR_UP_NOT_OWNED`
+- `SPELL_STAR_UP_AT_MAX_STAR`
+- `SPELL_STAR_UP_UNLOCK_ITEM_INSUFFICIENT`
+- `SPELL_STAR_UP_STAR_MATERIAL_INSUFFICIENT`
+- `SPELL_ACTION_BATTLE_LOCKED`
+
+---
+
+### 5.6 获取术法列表
+
+- **接口地址**：`GET /api/game/spell/list`
+- **功能**：获取玩家所有术法与当前服务端真值配置
+- **认证**：需要认证
+
+#### 请求参数
+
+无（通过请求头传递 token）
+
+#### 成功响应要点
+
+响应包含以下三部分：
+
+- `player_spells`
+  - 玩家持有术法状态
+  - 包含 `obtained / level / star / use_count / charged_spirit`
+- `equipped_spells`
+  - 当前装备槽位
+- `spells_config`
+  - 当前服务端下发的术法配置真值
+  - 客户端会用它覆盖本地 `SpellData`
+
+#### 成功响应示例
 
 ```json
 {
@@ -1566,12 +1488,7 @@
   "player_spells": {
     "basic_boxing_techniques": {
       "level": 1,
-      "obtained": true,
-      "use_count": 0,
-      "charged_spirit": 0
-    },
-    "thunder_strike": {
-      "level": 1,
+      "star": 0,
       "obtained": true,
       "use_count": 0,
       "charged_spirit": 0
@@ -1581,6 +1498,17 @@
     "active": ["basic_boxing_techniques"],
     "opening": [],
     "breathing": []
+  },
+  "spells_config": {
+    "basic_boxing_techniques": {
+      "id": "basic_boxing_techniques",
+      "type": "active",
+      "rarity": "fan",
+      "element": "none",
+      "max_level": 10,
+      "max_star": 5,
+      "description": "战斗中有概率造成{damage_text}伤害"
+    }
   }
 }
 ```
@@ -1592,8 +1520,6 @@
 #### 失败响应
 
 该接口当前无独立业务失败响应，失败通常表现为鉴权或网络异常。
-
----
 
 ## 6. 炼丹系统 API
 
@@ -1964,8 +1890,9 @@
 #### 说明
 
 - 默认可用倍速永远包含 `1.0`
-- 达到金丹境界后可用 `1.5`
-- VIP 可用 `1.0 / 1.5 / 2.0`
+- 达到金丹期后可用 `1.5`。
+- VIP 可用 `1.0 / 1.5 / 2.0`。
+- 客户端在仅有 `1.0` 可用时，切换倍速按钮提示统一为：`达到金丹期后可以切换1.5倍速`。
 - 服务端不记录客户端当前选中倍速，只在本接口和 `finish` 校验时动态判定
 
 ---

@@ -54,7 +54,7 @@ def test_set_inventory_items_exact_and_remove_zero(reset_client_state):
 
 def test_set_inventory_items_rejects_capacity_overflow(reset_client_state):
     max_stack = ItemData.get_max_stack("spell_basic_breathing")
-    result = reset_client_state.set_inventory_items({"spell_basic_breathing": max_stack * 41})
+    result = reset_client_state.set_inventory_items({"spell_basic_breathing": max_stack * 61})
     assert result["success"] is False
     assert result["reason_code"] == "TEST_SET_INVENTORY_ITEMS_CAPACITY_EXCEEDED"
 
@@ -65,7 +65,7 @@ def test_unlock_content_and_set_equipped_spells_validation(reset_client_state):
     assert not_owned["reason_code"] == "TEST_SET_EQUIPPED_SPELLS_NOT_OWNED"
 
     unlock = reset_client_state.unlock_content(
-        spell_ids=["basic_breathing", "basic_boxing_techniques", "thunder_strike", "basic_health", "basic_defense", "basic_steps"]
+        spell_ids=["basic_breathing", "basic_boxing_techniques", "gold_split_finger", "basic_health", "basic_defense", "basic_steps"]
     )
     assert unlock["success"] is True
 
@@ -83,7 +83,7 @@ def test_unlock_content_and_set_equipped_spells_validation(reset_client_state):
 
     success = reset_client_state.set_equipped_spells(
         breathing=["basic_breathing"],
-        active=["basic_boxing_techniques", "thunder_strike"],
+        active=["basic_boxing_techniques", "gold_split_finger"],
         opening=["basic_health", "basic_steps"],
     )
     assert success["success"] is True

@@ -54,6 +54,12 @@ class PlayerSystem:
         self.defense = attrs.get("defense", 5.0)
         self.health_regen_per_second = attrs.get("health_regen_per_second", 1.0)
         self.spirit_gain_speed = attrs.get("spirit_gain_speed", 1.0)
+        self.hit = 1.0
+        self.dodge = 0.0
+        self.crit = 0.0
+        self.anti_crit = 0.0
+        self.penetration = 0.0
+        self.crit_damage = 1.0
         
     def _load_static_attributes(self):
         """根据所有附属系统带来的增益，计算最终静态属性（内部方法）"""
@@ -64,6 +70,12 @@ class PlayerSystem:
         self.static_defense = AttributeCalculator.calculate_static_defense(self, self.spell_system)
         self.static_health_regen_per_second = self.health_regen_per_second
         self.static_spirit_gain_speed = AttributeCalculator.calculate_static_spirit_gain_speed(self, self.spell_system)
+        self.static_hit = AttributeCalculator.calculate_static_hit(self, self.spell_system)
+        self.static_dodge = AttributeCalculator.calculate_static_dodge(self, self.spell_system)
+        self.static_crit = AttributeCalculator.calculate_static_crit(self, self.spell_system)
+        self.static_anti_crit = AttributeCalculator.calculate_static_anti_crit(self, self.spell_system)
+        self.static_penetration = AttributeCalculator.calculate_static_penetration(self, self.spell_system)
+        self.static_crit_damage = AttributeCalculator.calculate_static_crit_damage(self, self.spell_system)
     
     def get_battle_attributes(self):
         """获取一个战斗属性字典，包含当前气血、最大气血、速度、攻击、防御"""
@@ -72,7 +84,13 @@ class PlayerSystem:
             "max_health": self.static_max_health,
             "speed": self.static_speed,
             "attack": self.static_attack,
-            "defense": self.static_defense
+            "defense": self.static_defense,
+            "hit": self.static_hit,
+            "dodge": self.static_dodge,
+            "crit": self.static_crit,
+            "anti_crit": self.static_anti_crit,
+            "penetration": self.static_penetration,
+            "crit_damage": self.static_crit_damage,
         }
         
     def reload_attributes(self):

@@ -61,6 +61,48 @@ class AttributeCalculator:
             bonus = spell_system.get_attribute_bonuses().get("speed", 0.0)
             return round(base + bonus, 2)
         return round(base, 2)
+
+    @staticmethod
+    def calculate_static_hit(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.hit)
+        if spell_system:
+            base += float(spell_system.get_attribute_bonuses().get("hit", 0.0)) / 100.0
+        return round(base, 4)
+
+    @staticmethod
+    def calculate_static_dodge(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.dodge)
+        if spell_system:
+            base += float(spell_system.get_attribute_bonuses().get("dodge", 0.0)) / 100.0
+        return round(base, 4)
+
+    @staticmethod
+    def calculate_static_crit(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.crit)
+        if spell_system:
+            base += float(spell_system.get_attribute_bonuses().get("crit", 0.0)) / 100.0
+        return round(base, 4)
+
+    @staticmethod
+    def calculate_static_anti_crit(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.anti_crit)
+        if spell_system:
+            base += float(spell_system.get_attribute_bonuses().get("anti_crit", 0.0)) / 100.0
+        return round(base, 4)
+
+    @staticmethod
+    def calculate_static_penetration(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.penetration)
+        if spell_system:
+            base *= float(spell_system.get_attribute_bonuses().get("penetration", 1.0))
+        return round(base, 2)
+
+    @staticmethod
+    def calculate_static_crit_damage(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
+        base = float(player.crit_damage)
+        if spell_system:
+            base *= float(spell_system.get_attribute_bonuses().get("crit_damage", 1.0))
+        return round(base, 4)
     
     @staticmethod
     def calculate_static_max_spirit_energy(player: 'PlayerSystem', spell_system: 'SpellSystem' = None) -> float:
@@ -128,19 +170,32 @@ class AttributeCalculator:
         """
         if not combat_buffs:
             return static_attributes.copy()
-        
-        health_bonus = combat_buffs.get("health_bonus", 0.0)
-        
-        return {
-            "health": static_attributes.get("health", static_attributes["max_health"]) + health_bonus,
-            "max_health": static_attributes["max_health"] + health_bonus,
-            "attack": static_attributes["attack"] * (1.0 + combat_buffs.get("attack_percent", 0.0)),
-            "defense": static_attributes["defense"] * (1.0 + combat_buffs.get("defense_percent", 0.0)),
-            "speed": static_attributes["speed"] + combat_buffs.get("speed_bonus", 0.0)
-        }
+
+        health_bonus = float(combat_buffs.get("health_bonus", 0.0))
+        max_health = float(static_attributes.get("max_health", 0.0)) + health_bonus
+        health = min(
+            max_health,
+            float(static_attributes.get("health", static_attributes.get("max_health", 0.0))) + health_bonus,
+        )
+
+        dynamic = static_attributes.copy()
+        dynamic.update({
+            "health": round(health, 2),
+            "max_health": round(max_health, 2),
+            "attack": round(float(static_attributes.get("attack", 0.0)) * (1.0 + float(combat_buffs.get("attack_percent", 0.0))), 2),
+            "defense": round(float(static_attributes.get("defense", 0.0)) * (1.0 + float(combat_buffs.get("defense_percent", 0.0))), 2),
+            "speed": round(float(static_attributes.get("speed", 0.0)) + float(combat_buffs.get("speed_bonus", 0.0)), 2),
+            "hit": round(float(static_attributes.get("hit", 1.0)) + float(combat_buffs.get("hit_bonus", 0.0)), 4),
+            "dodge": round(float(static_attributes.get("dodge", 0.0)) + float(combat_buffs.get("dodge_bonus", 0.0)), 4),
+            "crit": round(float(static_attributes.get("crit", 0.0)) + float(combat_buffs.get("crit_bonus", 0.0)), 4),
+            "anti_crit": round(float(static_attributes.get("anti_crit", 0.0)) + float(combat_buffs.get("anti_crit_bonus", 0.0)), 4),
+            "penetration": round(float(static_attributes.get("penetration", 0.0)) * (1.0 + float(combat_buffs.get("penetration_percent", 0.0))), 2),
+            "crit_damage": round(float(static_attributes.get("crit_damage", 1.0)) * (1.0 + float(combat_buffs.get("crit_damage_percent", 0.0))), 4),
+        })
+        return dynamic
     
     @staticmethod
-    def calculate_damage(attack: float, defense: float, damage_percent: float = 1.0) -> float:
+    def calculate_damage(attack: float, defense: float, damage_percent: float = 1.0, penetration: float = 0.0) -> float:
         """
         计算伤害
         
@@ -153,12 +208,37 @@ class AttributeCalculator:
             最终伤害值
         """
         k_value = 100.0
-        penetration = 0.0
         effective_defense = max(defense - penetration, 0.0)
         defense_ratio = effective_defense / max(effective_defense + k_value, k_value)
         base_damage = attack * (1.0 - defense_ratio)
         final_damage = max(base_damage, 1.0) * damage_percent
         return round(final_damage, 2)
+
+    @staticmethod
+    def resolve_damage(attack: float, defense: float, hit: float, dodge: float, crit: float, anti_crit: float,
+                       crit_damage: float, damage_percent: float = 1.0, penetration: float = 0.0) -> Dict[str, Any]:
+        is_hit = AttributeCalculator.calculate_hit_success(hit, dodge)
+        if not is_hit:
+            return {"hit": False, "crit": False, "damage": 0.0}
+        damage = AttributeCalculator.calculate_damage(attack, defense, damage_percent, penetration)
+        is_crit = AttributeCalculator.calculate_crit_success(crit, anti_crit)
+        if is_crit:
+            damage = round(damage * (1.0 + crit_damage), 2)
+        return {"hit": True, "crit": is_crit, "damage": damage}
+
+    @staticmethod
+    def calculate_hit_success(hit: float, dodge: float) -> bool:
+        """根据命中率与闪避率判定是否命中。"""
+        import random
+        chance = max(0.0, min(1.0, hit - dodge))
+        return random.random() <= chance
+
+    @staticmethod
+    def calculate_crit_success(crit: float, anti_crit: float) -> bool:
+        """根据暴击率与抗暴率判定是否暴击。"""
+        import random
+        chance = max(0.0, min(1.0, crit - anti_crit))
+        return random.random() <= chance
     
     @staticmethod
     def format_default(value: float) -> str:

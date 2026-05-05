@@ -115,7 +115,7 @@ def equip_spells(client: TestApiClient) -> None:
     print_step("装备法术")
     equip_plan = [
         ("basic_boxing_techniques", "SPELL_EQUIP_SUCCEEDED"),
-        ("thunder_strike", "SPELL_EQUIP_SUCCEEDED"),
+        ("gold_split_finger", "SPELL_EQUIP_SUCCEEDED"),
         ("basic_health", "SPELL_EQUIP_SUCCEEDED"),
         ("basic_defense", "SPELL_EQUIP_SUCCEEDED"),
         ("basic_breathing", "SPELL_EQUIP_SUCCEEDED"),
@@ -282,7 +282,7 @@ def main() -> int:
     for spell_item in [
         "spell_basic_breathing",
         "spell_basic_boxing_techniques",
-        "spell_thunder_strike",
+        "spell_gold_split_finger",
         "spell_basic_health",
         "spell_basic_defense",
         "spell_basic_steps",

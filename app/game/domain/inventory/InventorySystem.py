@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 class InventorySystem:
     """背包系统"""
     
-    DEFAULT_SIZE = 40
-    MAX_SIZE = 40
+    DEFAULT_SIZE = 60
+    MAX_SIZE = 60
     EXPAND_STEP = 10
     
     def __init__(self):

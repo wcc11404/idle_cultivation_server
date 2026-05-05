@@ -80,13 +80,13 @@ def _get_spell_ready_preset() -> Dict[str, Any]:
                 "basic_defense",
                 "basic_health",
                 "basic_steps",
-                "thunder_strike",
+                "gold_split_finger",
                 "alchemy",
             ]
         },
         "equipped_spells": {
             "breathing": ["basic_breathing"],
-            "active": ["basic_boxing_techniques", "thunder_strike"],
+            "active": ["basic_boxing_techniques", "gold_split_finger"],
             "opening": ["basic_health", "basic_steps"],
         },
         "spell_states": {
@@ -179,7 +179,7 @@ def _get_full_unlock_preset() -> Dict[str, Any]:
         },
         "equipped_spells": {
             "breathing": ["basic_breathing"] if "basic_breathing" in all_spell_ids else [],
-            "active": [spell_id for spell_id in ["basic_boxing_techniques", "thunder_strike"] if spell_id in all_spell_ids],
+            "active": [spell_id for spell_id in ["basic_boxing_techniques", "gold_split_finger"] if spell_id in all_spell_ids],
             "opening": [spell_id for spell_id in ["basic_health", "basic_defense"] if spell_id in all_spell_ids],
         },
         "progress_state": {

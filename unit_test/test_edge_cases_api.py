@@ -138,7 +138,7 @@ def test_spell_error_edges(reset_client_state):
     assert not_equipped_again["success"] is False
     assert not_equipped_again["reason_code"] == "SPELL_UNEQUIP_NOT_EQUIPPED"
 
-    upgrade_not_owned = reset_client_state.spell_upgrade("thunder_strike")
+    upgrade_not_owned = reset_client_state.spell_upgrade("gold_split_finger")
     assert upgrade_not_owned["success"] is False
     assert upgrade_not_owned["reason_code"] == "SPELL_UPGRADE_NOT_OWNED"
 
@@ -147,7 +147,7 @@ def test_spell_error_edges(reset_client_state):
     assert upgrade_use_count["success"] is False
     assert upgrade_use_count["reason_code"] == "SPELL_UPGRADE_USE_COUNT_INSUFFICIENT"
 
-    charge_not_owned = reset_client_state.spell_charge("thunder_strike", 10)
+    charge_not_owned = reset_client_state.spell_charge("gold_split_finger", 10)
     assert charge_not_owned["success"] is False
     assert charge_not_owned["reason_code"] == "SPELL_CHARGE_NOT_OWNED"
 
@@ -157,9 +157,9 @@ def test_spell_error_edges(reset_client_state):
     assert charge_no_spirit["reason_code"] == "SPELL_CHARGE_PLAYER_SPIRIT_INSUFFICIENT"
 
     reset_client_state.apply_preset("spell_ready")
-    first_charge = reset_client_state.spell_charge("thunder_strike", 9999)
+    first_charge = reset_client_state.spell_charge("gold_split_finger", 9999)
     assert first_charge["success"] is True
-    already_full = reset_client_state.spell_charge("thunder_strike", 1)
+    already_full = reset_client_state.spell_charge("gold_split_finger", 1)
     assert already_full["success"] is False
     assert already_full["reason_code"] == "SPELL_CHARGE_ALREADY_FULL"
 

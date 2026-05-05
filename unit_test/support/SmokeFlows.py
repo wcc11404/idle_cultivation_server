@@ -76,9 +76,9 @@ def run_spell_smoke(client: TestApiClient, verbose: bool = False) -> dict:
     assert_success(client.reset_account(), "reset_account")
     assert_success(client.apply_preset(PRESET_SPELL_READY), "apply_preset spell_ready")
     assert_success(client.spell_list(), "spell_list")
-    assert_success(client.spell_unequip("thunder_strike"), "spell_unequip")
-    assert_success(client.spell_equip("thunder_strike"), "spell_equip")
-    assert_success(client.spell_charge("thunder_strike", 10), "spell_charge")
+    assert_success(client.spell_unequip("gold_split_finger"), "spell_unequip")
+    assert_success(client.spell_equip("gold_split_finger"), "spell_equip")
+    assert_success(client.spell_charge("gold_split_finger", 10), "spell_charge")
     result = assert_success(client.spell_upgrade("basic_boxing_techniques"), "spell_upgrade")
     return result
 

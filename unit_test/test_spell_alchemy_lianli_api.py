@@ -13,15 +13,15 @@ def test_spell_endpoints_and_battle_lock(reset_client_state):
     assert spell_list["success"] is True
     assert spell_list["reason_code"] == "SPELL_LIST_SUCCEEDED"
 
-    unequip = reset_client_state.spell_unequip("thunder_strike")
+    unequip = reset_client_state.spell_unequip("gold_split_finger")
     assert unequip["success"] is True
     assert unequip["reason_code"] == "SPELL_UNEQUIP_SUCCEEDED"
 
-    equip = reset_client_state.spell_equip("thunder_strike")
+    equip = reset_client_state.spell_equip("gold_split_finger")
     assert equip["success"] is True
     assert equip["reason_code"] == "SPELL_EQUIP_SUCCEEDED"
 
-    charge = reset_client_state.spell_charge("thunder_strike", 10)
+    charge = reset_client_state.spell_charge("gold_split_finger", 10)
     assert charge["success"] is True
 
     upgrade = reset_client_state.spell_upgrade("basic_boxing_techniques")
