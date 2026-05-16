@@ -7,14 +7,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from app.game.schemas.CommonSchema import (
-    SaveGameRequest, SaveGameResponse, LoadGameResponse,
+    LoadGameResponse,
     ClaimOfflineRewardRequest, ClaimOfflineRewardResponse,
     RankResponse, RankItem
 )
 from app.core.db.Models import PlayerData, Account
 from app.core.security.Security import get_current_user, decode_token, security
 from app.game.application.InitPlayerInfo import create_initial_player_data_record
-from app.game.application.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_log_context, build_token_log_context, get_token_info, get_write_game_context, GameContext
 from app.core.logging.Logger import logger
 from app.game.domain.herb.HerbGatherSystem import HerbGatherSystem
 from app.game.domain.task.TaskSystem import TaskSystem
@@ -35,11 +35,11 @@ async def load_game(credentials: HTTPAuthorizationCredentials = Depends(security
     """加载游戏数据"""
     start_time = time.time()
     token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
+    payload = decode_token(token) or {}
+    account_id = payload.get("account_id", "")
+    token_version = payload.get("version", "")
     current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/data - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] GET /game/data - {build_log_context(account_id=account_id, token_version=token_version)}")
     
     player_data = await PlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
@@ -68,68 +68,6 @@ async def load_game(credentials: HTTPAuthorizationCredentials = Depends(security
     return response_data
 
 
-@router.post("/save", response_model=SaveGameResponse)
-async def save_game(
-    request: SaveGameRequest,
-    ctx: GameContext = Depends(get_write_game_context),
-    token_info: dict = Depends(get_token_info)
-):
-    """保存游戏数据"""
-    start_time = time.time()
-    token = token_info["token"]
-    account_id = token_info["account_id"]
-    token_version = token_info["token_version"]
-    logger.info(f"[IN] POST /game/save - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
-
-    player_data = ctx.player_data
-    
-    allowed_fields = ["account_info", "player", "inventory", "spell_system", "alchemy_system", "lianli_system", "herb_system", "task_system"]
-    
-    game_data = request.data
-    
-    if not player_data:
-        logger.info(f"[GAME] 首次保存，创建数据 - account_id: {ctx.account.id}")
-        player_data = await PlayerData.create(
-            account_id=ctx.account.id,
-            data=game_data,
-            last_online_at=EPOCH_TIME,
-            last_daily_reset_at=EPOCH_TIME,
-        )
-    else:
-        existing_data = player_data.data
-        
-        for field in allowed_fields:
-            if field in game_data:
-                if field == "lianli_system":
-                    if "lianli_system" not in existing_data:
-                        existing_data["lianli_system"] = {}
-                    
-                    original_daily_dungeon = existing_data["lianli_system"].get("daily_dungeon_data", {})
-                    
-                    for sub_field in game_data["lianli_system"]:
-                        if sub_field != "daily_dungeon_data":
-                            existing_data["lianli_system"][sub_field] = game_data["lianli_system"][sub_field]
-                    
-                    existing_data["lianli_system"]["daily_dungeon_data"] = original_daily_dungeon
-                else:
-                    existing_data[field] = game_data[field]
-        
-        player_data.data = existing_data
-        player_data.last_online_at = datetime.now(timezone.utc)
-        await player_data.save()
-    
-    response_data = SaveGameResponse(
-        success=True,
-        operation_id=request.operation_id,
-        timestamp=request.timestamp,
-        reason_code="GAME_SAVE_SUCCEEDED",
-        reason_data={},
-        last_online_at=int(player_data.last_online_at.timestamp())
-    )
-    logger.info(f"[OUT] POST /game/save - {json.dumps(response_data.dict(), ensure_ascii=False)} - 耗时：{time.time() - start_time:.4f}s")
-    return response_data
-
-
 @router.post("/claim_offline_reward", response_model=ClaimOfflineRewardResponse)
 async def claim_offline_reward(
     request: ClaimOfflineRewardRequest,
@@ -138,10 +76,11 @@ async def claim_offline_reward(
 ):
     """领取离线奖励"""
     start_time = time.time()
-    token = token_info["token"]
     account_id = token_info["account_id"]
-    token_version = token_info["token_version"]
-    logger.info(f"[IN] POST /game/claim_offline_reward - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(
+        f"[IN] POST /game/claim_offline_reward - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     current_time = datetime.now(timezone.utc)
     last_online_time = ctx.player_data.last_online_at

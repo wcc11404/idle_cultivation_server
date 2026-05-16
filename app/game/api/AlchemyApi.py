@@ -14,7 +14,7 @@ from app.game.schemas.AlchemySchema import (
 )
 from app.core.db.Models import PlayerData as DBPlayerData
 from app.core.security.Security import get_current_user, decode_token, security
-from app.game.application.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_token_log_context, get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.logging.Logger import logger
 from app.game.application.AntiCheatSystem import AntiCheatSystem
 from app.game.domain import PlayerSystem, AlchemySystem, RecipeData, SpellSystem, InventorySystem, LianliSystem
@@ -33,7 +33,7 @@ async def get_recipes(
 ):
     """获取丹方列表"""
     start_time = time.time()
-    logger.info(f"[IN] GET /game/alchemy/recipes - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(f"[IN] GET /game/alchemy/recipes - {build_token_log_context(token_info)}")
     
     learned_recipes = ctx.alchemy_system.get_learned_recipes()
     
@@ -58,7 +58,10 @@ async def start_alchemy(
 ):
     """开始炼丹"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/alchemy/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/alchemy/start - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyStartResponse(
@@ -139,7 +142,10 @@ async def report_alchemy(
 ):
     """炼丹上报"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/alchemy/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/alchemy/report - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if not ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyReportResponse(
@@ -265,7 +271,10 @@ async def stop_alchemy(
 ):
     """停止炼丹"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/alchemy/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/alchemy/stop - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if not ctx.alchemy_system.is_alchemizing:
         response_data = AlchemyStopResponse(

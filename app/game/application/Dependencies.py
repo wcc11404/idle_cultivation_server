@@ -151,7 +151,38 @@ async def get_token_info(credentials: HTTPAuthorizationCredentials = Depends(sec
     token = credentials.credentials
     payload = decode_token(token) or {}
     return {
-        "token": token,
         "account_id": payload.get("account_id"),
         "token_version": payload.get("version")
     }
+
+
+def build_log_context(
+    *,
+    account_id: Any = "",
+    token_version: Any = "",
+    operation_id: str | None = None,
+    extra: Dict[str, Any] | None = None,
+) -> str:
+    parts = [
+        f"account_id: {account_id}",
+        f"token_version: {token_version}",
+    ]
+    if operation_id:
+        parts.append(f"operation_id: {operation_id}")
+    if extra:
+        for key, value in extra.items():
+            parts.append(f"{key}: {value}")
+    return " - ".join(parts)
+
+
+def build_token_log_context(
+    token_info: Dict[str, Any],
+    operation_id: str | None = None,
+    extra: Dict[str, Any] | None = None,
+) -> str:
+    return build_log_context(
+        account_id=token_info.get("account_id", ""),
+        token_version=token_info.get("token_version", ""),
+        operation_id=operation_id,
+        extra=extra,
+    )

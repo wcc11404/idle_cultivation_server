@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.game.schemas.SpellSchema import EquipSpellRequest, UnequipSpellRequest, UpgradeSpellRequest, ChargeSpellRequest, StarUpSpellRequest, SpellListResponse
 from app.core.db.Models import PlayerData as DBPlayerData
 from app.core.security.Security import get_current_user, decode_token, security
-from app.game.application.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_token_log_context, get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.logging.Logger import logger
 from app.game.domain import PlayerSystem, SpellSystem, SpellData
 from datetime import datetime, timezone
@@ -37,7 +37,10 @@ async def equip_spell(
 ):
     """装备术法"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/spell/equip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/spell/equip - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     if ctx.lianli_system.is_battling:
         result = _battle_locked_result("equip")
@@ -78,7 +81,10 @@ async def unequip_spell(
 ):
     """卸下术法"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/spell/unequip - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/spell/unequip - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     if ctx.lianli_system.is_battling:
         result = _battle_locked_result("unequip")
@@ -119,7 +125,10 @@ async def upgrade_spell(
 ):
     """升级术法"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/spell/upgrade - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/spell/upgrade - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     if ctx.lianli_system.is_battling:
         result = _battle_locked_result("upgrade")
@@ -162,7 +171,10 @@ async def charge_spell(
 ):
     """给术法充灵气"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/spell/charge - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/spell/charge - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     if ctx.lianli_system.is_battling:
         result = _battle_locked_result("charge")
@@ -205,7 +217,10 @@ async def star_up_spell(
 ):
     """升星术法"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/spell/star_up - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/spell/star_up - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     if ctx.lianli_system.is_battling:
         result = _battle_locked_result("star_up")
@@ -247,7 +262,7 @@ async def get_spell_list(
 ):
     """获取术法列表"""
     start_time = time.time()
-    logger.info(f"[IN] GET /game/spell/list - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(f"[IN] GET /game/spell/list - {build_token_log_context(token_info)}")
     
     player_spells_payload = {
         spell_id: ctx.spell_system.build_spell_snapshot(spell_id)

@@ -150,16 +150,19 @@ def test_inventory_use_paths(reset_client_state):
     assert unlock_spell["success"] is True
     assert unlock_spell["reason_code"] == "INVENTORY_USE_UNLOCK_SPELL_SUCCEEDED"
     assert unlock_spell["reason_data"]["effect"]["type"] == "unlock_spell"
+    assert unlock_spell["reason_data"]["effect"]["spell_id"] == "basic_health"
 
     unlock_recipe = reset_client_state.inventory_use("recipe_health_pill")
     assert unlock_recipe["success"] is True
     assert unlock_recipe["reason_code"] == "INVENTORY_USE_UNLOCK_RECIPE_SUCCEEDED"
     assert unlock_recipe["reason_data"]["effect"]["type"] == "unlock_recipe"
+    assert unlock_recipe["reason_data"]["effect"]["recipe_id"] == "health_pill"
 
     unlock_furnace = reset_client_state.inventory_use("alchemy_furnace")
     assert unlock_furnace["success"] is True
     assert unlock_furnace["reason_code"] == "INVENTORY_USE_UNLOCK_FURNACE_SUCCEEDED"
     assert unlock_furnace["reason_data"]["effect"]["type"] == "unlock_furnace"
+    assert unlock_furnace["reason_data"]["effect"]["furnace_id"] == "alchemy_furnace"
 
 
 def test_inventory_use_supports_batch_count(reset_client_state):
@@ -215,10 +218,10 @@ def test_inventory_misc_endpoints(reset_client_state):
 
 def test_inventory_organize_sorts_by_type_then_rarity_then_id(reset_client_state):
     reset_client_state.set_inventory_items({
-        "health_pill": 1,    # type=2, quality=1
-        "test_pack": 1,      # type=3, quality=4
-        "spirit_stone": 1,   # type=0, quality=0
-        "bug_pill": 1,       # type=2, quality=4
+        "health_pill": 1,    # type=2, rarity=huang
+        "test_pack": 1,      # type=3, rarity=tian
+        "spirit_stone": 1,   # type=0, rarity=fan
+        "bug_pill": 1,       # type=2, rarity=tian
     })
 
     organize = reset_client_state.inventory_organize()

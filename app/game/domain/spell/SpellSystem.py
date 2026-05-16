@@ -500,7 +500,6 @@ class SpellSystem:
             "name": SpellData.get_spell_name(spell_id),
             "type": SpellData.get_spell_type(spell_id),
             "rarity": SpellData.get_spell_rarity(spell_id),
-            "quality": SpellData.get_spell_quality(spell_id),
             "element": SpellData.get_spell_element(spell_id),
             "description": SpellData.get_spell_description(spell_id),
             "obtained": bool(spell_info.get("obtained", False)),

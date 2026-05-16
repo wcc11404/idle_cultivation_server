@@ -27,7 +27,7 @@ class SpellData:
     SPELL_TYPE_OPENING = "opening"     # 开场型
     SPELL_TYPE_PRODUCTION = "production"        # 生产型
 
-    RARITY_TO_QUALITY = {
+    RARITY_ORDER = {
         "fan": 0,
         "huang": 1,
         "xuan": 2,
@@ -88,10 +88,10 @@ class SpellData:
         return str(spell_info.get("rarity", "fan"))
 
     @classmethod
-    def get_spell_quality(cls, spell_id: str) -> int:
-        """获取术法对应的品质序号，直接复用物品稀有度映射。"""
+    def get_spell_rarity_rank(cls, spell_id: str) -> int:
+        """获取术法稀有度排序序号。"""
         rarity = cls.get_spell_rarity(spell_id)
-        return int(cls.RARITY_TO_QUALITY.get(rarity, 0))
+        return int(cls.RARITY_ORDER.get(rarity, 0))
 
     @classmethod
     def get_spell_element(cls, spell_id: str) -> str:

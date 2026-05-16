@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 
-from app.game.application.Dependencies import GameContext, get_game_context, get_token_info, get_write_game_context
+from app.game.application.Dependencies import GameContext, build_token_log_context, get_game_context, get_token_info, get_write_game_context
 from app.core.logging.Logger import logger
 from app.game.schemas.MailSchema import (
     MailClaimRequest,
@@ -28,10 +28,7 @@ async def mail_list(
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
-    logger.info(
-        f"[IN] GET /game/mail/list - token: {token_info['token']} - "
-        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
-    )
+    logger.info(f"[IN] GET /game/mail/list - {build_token_log_context(token_info)}")
     result = await MailSystem.list_mails(str(ctx.account.id))
     response = MailListResponse(
         success=bool(result.get("success", False)),
@@ -55,10 +52,7 @@ async def mail_detail(
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
-    logger.info(
-        f"[IN] GET /game/mail/detail - mail_id: {mail_id} - token: {token_info['token']} - "
-        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
-    )
+    logger.info(f"[IN] GET /game/mail/detail - {build_token_log_context(token_info, extra={'mail_id': mail_id})}")
     result = await MailSystem.get_mail_detail_and_mark_read(str(ctx.account.id), mail_id)
     if result.get("success", False):
         ctx.player_data.last_online_at = datetime.now(timezone.utc)
@@ -84,7 +78,7 @@ async def mail_claim(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/mail/claim - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
     result = await MailSystem.claim_mail(str(ctx.account.id), request.mail_id, ctx.inventory_system)
     if result.get("success", False):
@@ -113,7 +107,7 @@ async def mail_delete(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/mail/delete - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
     result = await MailSystem.delete_mails(str(ctx.account.id), str(request.delete_mode), request.mail_ids)
     if result.get("success", False):

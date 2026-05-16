@@ -7,7 +7,7 @@ import time
 from fastapi import APIRouter, Depends
 
 from app.game.application.AntiCheatSystem import AntiCheatSystem
-from app.game.application.Dependencies import GameContext, get_game_context, get_token_info, get_write_game_context
+from app.game.application.Dependencies import GameContext, build_token_log_context, get_game_context, get_token_info, get_write_game_context
 from app.core.logging.Logger import logger
 from app.game.schemas.HerbSchema import (
     HerbPointsResponse,
@@ -88,10 +88,7 @@ async def herb_points(
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
-    logger.info(
-        f"[IN] GET /game/herb/points - token: {token_info['token']} - "
-        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
-    )
+    logger.info(f"[IN] GET /game/herb/points - {build_token_log_context(token_info)}")
     response = HerbPointsResponse(
         success=True,
         operation_id="",
@@ -118,7 +115,7 @@ async def herb_start(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/herb/start - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
 
     if not HerbPointData.point_exists(request.point_id):
@@ -223,7 +220,7 @@ async def herb_report(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/herb/report - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
 
     if not ctx.herb_system.is_gathering:
@@ -360,7 +357,7 @@ async def herb_stop(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/herb/stop - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
 
     if not ctx.herb_system.is_gathering:

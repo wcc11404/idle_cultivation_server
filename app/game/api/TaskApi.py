@@ -6,7 +6,7 @@ import time
 
 from fastapi import APIRouter, Depends
 
-from app.game.application.Dependencies import GameContext, get_game_context, get_token_info, get_write_game_context
+from app.game.application.Dependencies import GameContext, build_token_log_context, get_game_context, get_token_info, get_write_game_context
 from app.core.logging.Logger import logger
 from app.game.schemas.TaskSchema import TaskClaimRequest, TaskClaimResponse, TaskListResponse
 
@@ -19,10 +19,7 @@ async def task_list(
     token_info: dict = Depends(get_token_info),
 ):
     start_time = time.time()
-    logger.info(
-        f"[IN] GET /game/task/list - token: {token_info['token']} - "
-        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
-    )
+    logger.info(f"[IN] GET /game/task/list - {build_token_log_context(token_info)}")
     ctx.task_system.ensure_task_states()
     daily_tasks, newbie_tasks = ctx.task_system.get_task_list_payload()
     response = TaskListResponse(
@@ -47,7 +44,7 @@ async def task_claim(
     start_time = time.time()
     logger.info(
         f"[IN] POST /game/task/claim - {json.dumps(request.dict(), ensure_ascii=False)} - "
-        f"token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
+        f"{build_token_log_context(token_info, request.operation_id)}"
     )
     ctx.task_system.ensure_task_states()
     result = ctx.task_system.claim_task(request.task_id, ctx.inventory_system)

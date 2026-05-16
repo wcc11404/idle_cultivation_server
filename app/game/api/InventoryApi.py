@@ -15,7 +15,7 @@ from app.game.schemas.InventorySchema import (
 )
 from app.core.db.Models import PlayerData as DBPlayerData
 from app.core.security.Security import get_current_user, decode_token, security
-from app.game.application.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_token_log_context, get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.logging.Logger import logger
 from app.game.domain import PlayerSystem, InventorySystem, SpellSystem, AlchemySystem
 from datetime import datetime, timezone
@@ -33,7 +33,10 @@ async def use_item(
 ):
     """使用物品"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/inventory/use - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/inventory/use - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     use_count = max(1, int(request.count))
     result = ctx.inventory_system.use_item(
@@ -83,7 +86,10 @@ async def organize_inventory(
 ):
     """整理背包"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/inventory/organize - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/inventory/organize - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     result = ctx.inventory_system.organize_inventory()
     
@@ -115,7 +121,10 @@ async def discard_item(
 ):
     """丢弃物品"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/inventory/discard - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/inventory/discard - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     result = ctx.inventory_system.discard_item(request.item_id, request.count)
     
@@ -147,7 +156,10 @@ async def expand_inventory(
 ):
     """扩容背包"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/inventory/expand - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/inventory/expand - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     result = ctx.inventory_system.expand_capacity()
     
@@ -181,7 +193,7 @@ async def get_inventory_list(
 ):
     """获取背包列表"""
     start_time = time.time()
-    logger.info(f"[IN] GET /game/inventory/list - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(f"[IN] GET /game/inventory/list - {build_token_log_context(token_info)}")
     
     response_data = InventoryListResponse(
         success=True,

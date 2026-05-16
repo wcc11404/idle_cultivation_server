@@ -17,7 +17,7 @@ from app.game.schemas.LianliSchema import (
 )
 from app.core.db.Models import PlayerData as DBPlayerData
 from app.core.security.Security import get_current_user, decode_token, security
-from app.game.application.Dependencies import get_game_context, get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_log_context, build_token_log_context, get_game_context, get_write_game_context, get_token_info, GameContext
 from app.core.logging.Logger import logger
 from app.game.application.AntiCheatSystem import AntiCheatSystem
 from app.game.domain import (
@@ -54,7 +54,10 @@ async def simulate_battle(
 ):
     """历练战斗模拟"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/lianli/battle - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/lianli/battle - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if ctx.player.is_cultivating:
         response_data = LianliBattleResponse(
@@ -157,10 +160,7 @@ async def get_lianli_speed_options(
 ):
     """获取当前账号可用的历练倍速选项"""
     start_time = time.time()
-    logger.info(
-        f"[IN] GET /game/lianli/speed_options - token: {token_info['token']} - "
-        f"account_id: {token_info['account_id']} - token_version: {token_info['token_version']}"
-    )
+    logger.info(f"[IN] GET /game/lianli/speed_options - {build_token_log_context(token_info)}")
 
     available_speeds = _get_available_lianli_speeds(ctx.player, ctx.account_system)
     response_data = LianliSpeedOptionsResponse(
@@ -184,7 +184,10 @@ async def finish_battle(
 ):
     """历练战斗结算"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/lianli/finish - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/lianli/finish - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
 
     available_speeds = _get_available_lianli_speeds(ctx.player, ctx.account_system)
     requested_speed = round(float(request.speed), 2)
@@ -267,11 +270,14 @@ async def get_foundation_herb_cave_info(credentials: HTTPAuthorizationCredential
     """获取破镜草洞穴信息"""
     start_time = time.time()
     token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
+    payload = decode_token(token) or {}
+    account_id = payload.get("account_id", "")
+    token_version = payload.get("version", "")
     current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/dungeon/foundation_herb_cave - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(
+        f"[IN] GET /game/dungeon/foundation_herb_cave - "
+        f"{build_log_context(account_id=account_id, token_version=token_version)}"
+    )
     
     player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
     if not player_data:
@@ -312,11 +318,14 @@ async def get_tower_highest_floor(credentials: HTTPAuthorizationCredentials = De
     """获取无尽塔最高层数"""
     start_time = time.time()
     token = credentials.credentials
-    payload = decode_token(token)
-    account_id = payload.get("account_id")
-    token_version = payload.get("version")
+    payload = decode_token(token) or {}
+    account_id = payload.get("account_id", "")
+    token_version = payload.get("version", "")
     current_user = await get_current_user(credentials)
-    logger.info(f"[IN] GET /game/tower/highest_floor - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(
+        f"[IN] GET /game/tower/highest_floor - "
+        f"{build_log_context(account_id=account_id, token_version=token_version)}"
+    )
     
     player_data = await DBPlayerData.get_or_none(account_id=current_user.id)
     if not player_data:

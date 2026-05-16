@@ -3,14 +3,6 @@ from typing import Optional
 from app.game.schemas.BaseSchema import BaseRequest, BaseResponse
 
 
-class SaveGameRequest(BaseRequest):
-    data: dict
-
-
-class SaveGameResponse(BaseResponse):
-    last_online_at: int
-
-
 class LoadGameResponse(BaseResponse):
     data: dict
 

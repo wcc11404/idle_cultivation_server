@@ -145,10 +145,6 @@ class TestApiClient:
     def get_game_data(self) -> Dict[str, Any]:
         return self._get("/game/data")
 
-    def save_game(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        payload = {"data": data, **self._request_params()}
-        return self._post("/game/save", payload)
-
     def claim_offline_reward(self) -> Dict[str, Any]:
         return self._post("/game/claim_offline_reward", self._request_params())
 

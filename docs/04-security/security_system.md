@@ -476,9 +476,9 @@ limiter = Limiter(key_func=get_remote_address)
 async def login(request: Request):
     pass
 
-@app.post("/api/game/save")
-@limiter.limit("30/minute")  # 保存接口限制较宽松
-async def save_game(request: Request):
+@app.post("/api/game/claim_offline_reward")
+@limiter.limit("30/minute")  # 高频操作接口限制较宽松
+async def claim_offline_reward(request: Request):
     pass
 ```
 

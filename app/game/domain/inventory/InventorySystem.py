@@ -235,7 +235,7 @@ class InventorySystem:
 
         items.sort(key=lambda x: (
             ItemData.get_item_type(x["id"]),
-            -int(ItemData.get_item_quality(x["id"])),
+            -int(ItemData.get_item_rarity_rank(x["id"])),
             x["id"],
         ))
         
@@ -329,6 +329,10 @@ class InventorySystem:
 
             single_effect = single_result.get("reason_data", {}).get("effect", {})
             if isinstance(single_effect, dict) and single_effect:
+                for effect_key, effect_value in single_effect.items():
+                    if effect_key in ("health_added", "spirit_energy_added"):
+                        continue
+                    merged_effect[effect_key] = effect_value
                 merged_effect["type"] = str(single_effect.get("type", merged_effect.get("type", "")))
                 total_health_added += int(single_effect.get("health_added", 0))
                 total_spirit_added += int(single_effect.get("spirit_energy_added", 0))

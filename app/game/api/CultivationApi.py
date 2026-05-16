@@ -14,7 +14,7 @@ from app.game.schemas.CultivationSchema import (
 )
 from app.core.db.Models import PlayerData as DBPlayerData
 from app.core.security.Security import get_current_user, decode_token, security
-from app.game.application.Dependencies import get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_token_log_context, get_write_game_context, get_token_info, GameContext
 from app.core.logging.Logger import logger
 from app.game.application.AntiCheatSystem import AntiCheatSystem
 from app.game.domain import PlayerSystem, CultivationSystem, InventorySystem, SpellSystem, AccountSystem, AlchemySystem, LianliSystem
@@ -34,7 +34,10 @@ async def breakthrough(
 ):
     """突破境界"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/player/breakthrough - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/player/breakthrough - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     result = CultivationSystem.execute_breakthrough(ctx.player, ctx.inventory_system)
     
@@ -72,7 +75,10 @@ async def start_cultivation(
 ):
     """开始修炼"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/player/cultivation/start - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/player/cultivation/start - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if ctx.player.is_cultivating:
         response_data = CultivationStartResponse(
@@ -153,7 +159,10 @@ async def report_cultivation(
 ):
     """上报修炼进度"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/player/cultivation/report - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/player/cultivation/report - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if not ctx.player.is_cultivating:
         response_data = CultivationReportResponse(
@@ -273,7 +282,10 @@ async def stop_cultivation(
 ):
     """停止修炼"""
     start_time = time.time()
-    logger.info(f"[IN] POST /game/player/cultivation/stop - {json.dumps(request.dict(), ensure_ascii=False)} - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(
+        f"[IN] POST /game/player/cultivation/stop - {json.dumps(request.dict(), ensure_ascii=False)}"
+        f" - {build_token_log_context(token_info, request.operation_id)}"
+    )
     
     if not ctx.player.is_cultivating:
         response_data = CultivationStopResponse(

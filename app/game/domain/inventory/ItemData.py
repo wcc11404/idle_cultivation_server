@@ -29,6 +29,13 @@ class ItemData:
     ITEM_TYPE_UNLOCK_SPELL = 4      # 解锁术法类型（术法书等）
     ITEM_TYPE_UNLOCK_RECIPE = 5     # 解锁丹方类型（丹方等）
     ITEM_TYPE_UNLOCK_FURNACE = 6    # 解锁炼丹炉类型（丹炉等）
+    RARITY_ORDER = {
+        "fan": 0,
+        "huang": 1,
+        "xuan": 2,
+        "di": 3,
+        "tian": 4,
+    }
     
     @classmethod
     def _load_config(cls):
@@ -108,10 +115,26 @@ class ItemData:
         return item_info.get("description", "")
     
     @classmethod
-    def get_item_quality(cls, item_id: str) -> int:
-        """获取物品品质"""
+    def normalize_rarity(cls, rarity: str) -> str:
+        """规范化稀有度标识"""
+        normalized = str(rarity or "fan").lower()
+        return normalized if normalized in cls.RARITY_ORDER else "fan"
+
+    @classmethod
+    def get_rarity_rank(cls, rarity: str) -> int:
+        """获取稀有度排序序号"""
+        return cls.RARITY_ORDER.get(cls.normalize_rarity(rarity), 0)
+
+    @classmethod
+    def get_item_rarity(cls, item_id: str) -> str:
+        """获取物品稀有度"""
         item_info = cls.get_item_info(item_id)
-        return item_info.get("quality", 0)
+        return cls.normalize_rarity(item_info.get("rarity", "fan"))
+
+    @classmethod
+    def get_item_rarity_rank(cls, item_id: str) -> int:
+        """获取物品稀有度排序序号"""
+        return cls.get_rarity_rank(cls.get_item_rarity(item_id))
     
     @classmethod
     def is_currency(cls, item_id: str) -> bool:

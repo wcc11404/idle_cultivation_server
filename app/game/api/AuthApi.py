@@ -8,7 +8,7 @@ from app.core.logging.Logger import logger
 from app.game.application.AntiCheatSystem import AntiCheatSystem
 from app.core.security.Validator import Validator
 from app.game.application.DailyReset import run_daily_reset_if_needed
-from app.game.application.Dependencies import get_write_game_context, get_token_info, GameContext
+from app.game.application.Dependencies import build_log_context, build_token_log_context, get_write_game_context, get_token_info, GameContext
 from app.core.locks.WriteLock import begin_write_lock_by_username
 from app.game.domain import PlayerSystem as GamePlayerData, AccountSystem, SpellSystem
 from app.game.domain.player.PlayerSystem import PlayerSystem
@@ -339,7 +339,7 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
     payload = decode_token(token)
     account_id = payload.get("account_id") if payload else ""
     token_version = payload.get("version") if payload else ""
-    logger.info(f"[IN] POST /auth/refresh - token: {token} - account_id: {account_id} - token_version: {token_version}")
+    logger.info(f"[IN] POST /auth/refresh - {build_log_context(account_id=account_id, token_version=token_version)}")
     
     if not payload:
         logger.warning(f"[OUT] POST /auth/refresh - INVALID_TOKEN - 耗时: {time.time() - start_time:.4f}s")
@@ -391,7 +391,7 @@ async def logout(
 ):
     """登出"""
     start_time = time.time()
-    logger.info(f"[IN] POST /auth/logout - token: {token_info['token']} - account_id: {token_info['account_id']} - token_version: {token_info['token_version']}")
+    logger.info(f"[IN] POST /auth/logout - {build_token_log_context(token_info)}")
     
     reset_db_data = await _reset_runtime_state(
         account_id=str(ctx.account.id),
